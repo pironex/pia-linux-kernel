@@ -371,7 +371,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, enum v4l2_power on)
 	else
 		debug_dummy("debug_dummy -- enable clock\n");;
 
-	rval = sensor->pdata->power_set(on);
+	rval = sensor->pdata->power_set(s, on);
 	if (rval < 0) {
 		dev_err(&c->dev, "Unable to set the power state: " "mt9t111"
 								" sensor\n");
