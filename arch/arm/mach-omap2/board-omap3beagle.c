@@ -403,6 +403,56 @@ static struct twl4030_gpio_platform_data beagle_gpio_data = {
 	.setup		= beagle_twl_gpio_setup,
 };
 
+
+static struct platform_device beagle_cam_device = {
+	.name		= "beagle_cam",
+	.id		= -1,
+};
+
+static struct regulator_consumer_supply beagle_vaux3_supplies[] = {
+	{
+		.supply		= "vaux3_1",
+		.dev		= &beagle_cam_device.dev,
+	},
+};
+
+static struct regulator_consumer_supply beagle_vaux4_supplies[] = {
+	{
+		.supply		= "vaux4_1",
+		.dev		= &beagle_cam_device.dev,
+	},
+};
+
+/* VAUX3 for CAM_1V8 */
+static struct regulator_init_data beagle_vaux3 = {
+	.constraints = {
+		.min_uV			= 1800000,
+		.max_uV			= 1800000,
+		.apply_uV		= true,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL
+					| REGULATOR_MODE_STANDBY,
+		.valid_ops_mask		= REGULATOR_CHANGE_MODE
+					| REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(beagle_vaux3_supplies),
+	.consumer_supplies	= beagle_vaux3_supplies,
+};
+
+/* VAUX4 for CAM_2V8 */
+static struct regulator_init_data beagle_vaux4 = {
+	.constraints = {
+		.min_uV			= 2800000,
+		.max_uV			= 2800000,
+		.apply_uV		= true,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL
+					| REGULATOR_MODE_STANDBY,
+		.valid_ops_mask		= REGULATOR_CHANGE_MODE
+					| REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(beagle_vaux4_supplies),
+	.consumer_supplies	= beagle_vaux4_supplies,
+};
+
 /* VMMC1 for MMC1 pins CMD, CLK, DAT0..DAT3 (20 mA, plus card == max 220 mA) */
 static struct regulator_init_data beagle_vmmc1 = {
 	.constraints = {
@@ -492,6 +542,8 @@ static struct twl4030_platform_data beagle_twldata = {
 	.vsim		= &beagle_vsim,
 	.vdac		= &beagle_vdac,
 	.vpll2		= &beagle_vpll2,
+	.vaux3		= &beagle_vaux3,
+	.vaux4		= &beagle_vaux4,
 };
 
 static struct i2c_board_info __initdata beagle_i2c1_boardinfo[] = {
@@ -658,6 +710,7 @@ static struct platform_device *omap3_beagle_devices[] __initdata = {
 	&leds_gpio,
 	&keys_gpio,
 	&beagle_dss_device,
+	&beagle_cam_device,
 };
 
 static void __init omap3beagle_flash_init(void)

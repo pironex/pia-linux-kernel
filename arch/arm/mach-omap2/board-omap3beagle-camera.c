@@ -28,8 +28,9 @@
 #include <linux/gpio.h>
 #include <linux/mm.h>
 #include <linux/videodev2.h>
-#include <linux/i2c/twl.h>
+#include <linux/regulator/consumer.h>
 #include <linux/delay.h>
+#include <linux/platform_device.h>
 
 #include <plat/mux.h>
 #include <plat/board.h>
@@ -49,6 +50,11 @@
 #define MT9T111_I2C_BUSNUM	(2)
 
 #define CAM_USE_XCLKA       1
+
+static struct regulator *beagle_mt9t111_reg1;
+static struct regulator *beagle_mt9t111_reg2;
+
+static struct device *beaglecam_dev;
 
 #if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
 static struct isp_interface_config mt9t111_if_config = {
@@ -157,10 +163,13 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 
 	switch (power) {
 	case V4L2_POWER_OFF:
-		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
-		break;
-
 	case V4L2_POWER_STANDBY:
+		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
+
+		if (regulator_is_enabled(beagle_mt9t111_reg1))
+			regulator_disable(beagle_mt9t111_reg1);
+		if (regulator_is_enabled(beagle_mt9t111_reg2))
+			regulator_disable(beagle_mt9t111_reg2);
 		break;
 
 	case V4L2_POWER_ON:
@@ -169,6 +178,12 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 		isp_configure_interface(vdev->cam->isp, &mt9t111_if_config);
 #endif
+
+		/* turn on analog power */
+		regulator_enable(beagle_mt9t111_reg1);
+		regulator_enable(beagle_mt9t111_reg2);
+		udelay(100);
+
 		break;
 
 	default:
@@ -196,16 +211,22 @@ static struct i2c_board_info __initdata mt9t111_i2c_board_info = {
 
 #endif				/* #ifdef CONFIG_VIDEO_MT9T111 */
 
-/**
- * @brief omap3beaglelmb_init - module init function. Should be called before any
- *                          client driver init call
- *
- * @return result of operation - 0 is success
- */
-int __init omap3beaglelmb_init(void)
+
+static int beagle_cam_probe(struct platform_device *pdev)
 {
 	int err;
 
+	beagle_mt9t111_reg1 = regulator_get(beaglecam_dev, "vaux3_1");
+	if (IS_ERR(beagle_mt9t111_reg1)) {
+		dev_err(beaglecam_dev, "vaux3_1 regulator missing\n");
+		return PTR_ERR(beagle_mt9t111_reg1);
+	}
+	beagle_mt9t111_reg2 = regulator_get(beaglecam_dev, "vaux4_1");
+	if (IS_ERR(beagle_mt9t111_reg2)) {
+		dev_err(beaglecam_dev, "vaux4_1 regulator missing\n");
+		regulator_put(beagle_mt9t111_reg1);
+		return PTR_ERR(beagle_mt9t111_reg2);
+	}
 	/*
 	 * Register the I2C devices present in the board to the I2C
 	 * framework.
@@ -221,8 +242,59 @@ int __init omap3beaglelmb_init(void)
 		return err;
 	}
 #endif
+
+	beaglecam_dev = &pdev->dev;
+
 	printk(KERN_INFO MODULE_NAME ": Driver registration complete \n");
 
+	return 0;
+}
+
+static int beagle_cam_remove(struct platform_device *pdev)
+{
+	if (regulator_is_enabled(beagle_mt9t111_reg1))
+		regulator_disable(beagle_mt9t111_reg1);
+	regulator_put(beagle_mt9t111_reg1);
+	if (regulator_is_enabled(beagle_mt9t111_reg2))
+		regulator_disable(beagle_mt9t111_reg2);
+	regulator_put(beagle_mt9t111_reg2);
+
+	return 0;
+}
+
+static int beagle_cam_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int beagle_cam_resume(struct device *dev)
+{
+	return 0;
+}
+
+static struct dev_pm_ops beagle_cam_pm_ops = {
+	.suspend = beagle_cam_suspend,
+	.resume  = beagle_cam_resume,
+};
+
+static struct platform_driver beagle_cam_driver = {
+	.probe		= beagle_cam_probe,
+	.remove		= beagle_cam_remove,
+	.driver		= {
+		.name	= "beagle_cam",
+		.pm	= &beagle_cam_pm_ops,
+	},
+};
+
+/**
+ * @brief omap3beaglelmb_init - module init function. Should be called before any
+ *                          client driver init call
+ *
+ * @return result of operation - 0 is success
+ */
+int __init omap3beaglelmb_init(void)
+{
+	platform_driver_register(&beagle_cam_driver);
 	return 0;
 }
 arch_initcall(omap3beaglelmb_init);
