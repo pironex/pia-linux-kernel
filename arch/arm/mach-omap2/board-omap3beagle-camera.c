@@ -54,8 +54,6 @@
 static struct regulator *beagle_mt9t111_reg1;
 static struct regulator *beagle_mt9t111_reg2;
 
-static struct device *beaglecam_dev;
-
 #if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
 static struct isp_interface_config mt9t111_if_config = {
 	.ccdc_par_ser		= ISP_PARLL, 
@@ -216,14 +214,14 @@ static int beagle_cam_probe(struct platform_device *pdev)
 {
 	int err;
 
-	beagle_mt9t111_reg1 = regulator_get(beaglecam_dev, "vaux3_1");
+	beagle_mt9t111_reg1 = regulator_get(&pdev->dev, "vaux3_1");
 	if (IS_ERR(beagle_mt9t111_reg1)) {
-		dev_err(beaglecam_dev, "vaux3_1 regulator missing\n");
+		dev_err(&pdev->dev, "vaux3_1 regulator missing\n");
 		return PTR_ERR(beagle_mt9t111_reg1);
 	}
-	beagle_mt9t111_reg2 = regulator_get(beaglecam_dev, "vaux4_1");
+	beagle_mt9t111_reg2 = regulator_get(&pdev->dev, "vaux4_1");
 	if (IS_ERR(beagle_mt9t111_reg2)) {
-		dev_err(beaglecam_dev, "vaux4_1 regulator missing\n");
+		dev_err(&pdev->dev, "vaux4_1 regulator missing\n");
 		regulator_put(beagle_mt9t111_reg1);
 		return PTR_ERR(beagle_mt9t111_reg2);
 	}
@@ -242,8 +240,6 @@ static int beagle_cam_probe(struct platform_device *pdev)
 		return err;
 	}
 #endif
-
-	beaglecam_dev = &pdev->dev;
 
 	printk(KERN_INFO MODULE_NAME ": Driver registration complete \n");
 
