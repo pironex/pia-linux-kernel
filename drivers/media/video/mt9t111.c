@@ -17,20 +17,21 @@
 #include <media/mt9t111.h>
 #include "mt9t111_reg.h"
 
-#define USE_RAW // YCbCr mode does not work yet
-//#define COLOR_BAR // Create a Color bar test pattern, Blue, Green, Red, Grey
+/* YCbCr mode does not work yet */
+#define USE_RAW
+/* Create a Color bar test pattern, Blue, Green, Red, Grey */
+/* #define COLOR_BAR */
 
 #define SENSOR_DETECTED		1
 #define SENSOR_NOT_DETECTED	0
 
 static void mt9t111_loaddefault(struct i2c_client *client);
 
-/* 
-* as a place holder for further development
-*/
+/*
+ * as a place holder for further development
+ */
 static void debug_dummy(char *in_msg)
 {
-	
 }
 
 /* list of image formats supported by mt9t111 sensor */
@@ -55,8 +56,8 @@ const static struct v4l2_fmtdesc mt9t111_formats[] = {
  * smallest image size to largest.
  */
 const static struct capture_size mt9t111_sizes[] = {
-	{  640, 480 },	
-//	{ 2048, 1536}		
+	{  640, 480 },
+	/* { 2048, 1536} */
 };
 
 #define NUM_CAPTURE_SIZE ARRAY_SIZE(mt9t111_sizes)
@@ -120,17 +121,17 @@ mt9t111_read_reg(struct i2c_client *client, u16 reg, u16 *val)
 	msg->addr = client->addr;
 	msg->flags = 0;
 	msg->len = 2;
-	msg->buf = data;	
+	msg->buf = data;
 	data[0] = (reg & 0xff00) >> 8;
 	data[1] = (reg & 0x00ff);
 	err = i2c_transfer(client->adapter, msg, 1);
-	if (err >= 0) {			
-		msg->flags = I2C_M_RD;			
-		msg->len = 2;	/* 2 byte read */			
-		err = i2c_transfer(client->adapter, msg, 1);			
-		if (err >= 0) {				
-			*val = ((data[0] & 0x00ff) << 8)    
-				| (data[1] & 0x00ff);	
+	if (err >= 0) {
+		msg->flags = I2C_M_RD;
+		msg->len = 2;	/* 2 byte read */
+		err = i2c_transfer(client->adapter, msg, 1);
+		if (err >= 0) {
+			*val = ((data[0] & 0x00ff) << 8)
+				| (data[1] & 0x00ff);
 			return 0;
 		}
 	}
@@ -159,7 +160,7 @@ mt9t111_write_reg(struct i2c_client *client, u16 reg, u16 val)
 	msg->len = 4;
 	msg->buf = data;
 	data[0] = (u8)((reg & 0xff00) >> 8);
-	data[1] = (u8)(reg & 0x00ff);	
+	data[1] = (u8)(reg & 0x00ff);
 	data[2] = (u8)((val & 0xff00) >> 8);
 	data[3] = (u8)(val & 0x00ff);
 	err = i2c_transfer(client->adapter, msg, 1);
@@ -171,7 +172,7 @@ mt9t111_write_reg(struct i2c_client *client, u16 reg, u16 val)
  * mt9t111_write_regs - Write registers to an mt9t111 sensor device
  * @client: i2c driver client structure
  * @reg_in: pointer to registers to write
- * @cnt: the number of registers 
+ * @cnt: the number of registers
  *
  * Write registers .
  * Returns zero if successful, or non-zero otherwise.
@@ -182,19 +183,21 @@ mt9t111_write_regs(struct i2c_client *client, mt9t111_regs *reg_in, int cnt)
 	int err = 0;
 	int i;
 	mt9t111_regs *reg = reg_in;
-	
-	for (i=0;i<cnt;i++) {
+
+	for (i = 0; i < cnt; i++) {
 		if (reg->delay_time == 0) {
 			err |= mt9t111_write_reg(client, reg->addr, reg->data);
 		} else if (reg->addr != 0 || reg->data != 0) {
 			err |= mt9t111_write_reg(client, reg->addr, reg->data);
 			mdelay(reg->delay_time);
-		} else 
+		} else {
 			mdelay(reg->delay_time);
-			
+		}
+
 		if (err < 0) {
-			dev_warn(&client->dev, "write reg error, addr = 0x%x, data = 0x%x \n", \
-				reg->addr, reg->data);
+			dev_warn(&client->dev, "write reg error, addr = 0x%x,"
+						" data = 0x%x \n",
+						reg->addr, reg->data);
 			return err;
 		}
 		reg++;
@@ -219,10 +222,11 @@ mt9t111_detect(struct i2c_client *client)
 	if (mt9t111_read_reg(client, MT9T111_CHIP_ID, &val) < 0)
 		return -ENODEV;
 	dev_info(&client->dev, "model id detected 0x%x\n", val);
-	
+
 	if (val != MT9T111_CHIP_ID_VALUE) {
-		dev_warn(&client->dev, "model id mismatch received 0x%x expecting 0x%x\n",
-			val, MT9T111_CHIP_ID_VALUE);
+		dev_warn(&client->dev, "model id mismatch received 0x%x"
+				       " expecting 0x%x\n",
+				       val, MT9T111_CHIP_ID_VALUE);
 
 		return -ENODEV;
 	}
@@ -285,14 +289,17 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 {
 	int ifmt;
 
-printk(KERN_INFO "entering ioctl_enum_frameintervals\n");
-printk(KERN_INFO "index = %d, pixel_format = 0x%x, width = %d, height = %d\n",
-			frmi->index, frmi->pixel_format, frmi->width, frmi->height);
-printk(KERN_INFO "mt9t111 format = 0x%x\n",	mt9t111_formats[0].pixelformat);
+	printk(KERN_INFO "entering ioctl_enum_frameintervals\n");
+	printk(KERN_INFO "index = %d, pixel_format = 0x%x,"
+			 " width = %d, height = %d\n",
+			 frmi->index, frmi->pixel_format,
+			 frmi->width, frmi->height);
+	printk(KERN_INFO "mt9t111 format = 0x%x\n",
+			 mt9t111_formats[0].pixelformat);
 
 	if (frmi->index >= NUM_CAPTURE_FRAMEINTERVALS)
 		return -EINVAL;
-	
+
 	for (ifmt = 0; ifmt < NUM_CAPTURE_FORMATS; ifmt++) {
 		if (frmi->pixel_format == mt9t111_formats[ifmt].pixelformat)
 			break;
@@ -368,7 +375,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, enum v4l2_power on)
 	if (rval < 0) {
 		dev_err(&c->dev, "Unable to set the power state: " "mt9t111"
 								" sensor\n");
-		//sensor->pdata->set_xclk(0);
+		/* sensor->pdata->set_xclk(0); */
 		return rval;
 	}
 
@@ -418,7 +425,7 @@ static int ioctl_g_priv(struct v4l2_int_device *s, void *p)
 static int ioctl_s_parm(struct v4l2_int_device *s,
 			     struct v4l2_streamparm *a)
 {
-	//TODO: set paramters
+	/* TODO: set paramters */
 	debug_dummy("debug_dummy -- VIDIOC_S_PARM ");
 	return 0;
 }
@@ -483,13 +490,13 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 
 	pix->width = 640;
 	pix->height = 480;
-#ifdef USE_RAW	
+#ifdef USE_RAW
 	pix->pixelformat = V4L2_PIX_FMT_SGRBG10;
-	pix->bytesperline = pix->width; 
+	pix->bytesperline = pix->width;
 	pix->colorspace =  V4L2_COLORSPACE_SRGB;
 #else
 	pix->pixelformat = V4L2_PIX_FMT_YUYV;
-	pix->bytesperline = pix->width * 2;  
+	pix->bytesperline = pix->width * 2;
 	pix->colorspace = V4L2_COLORSPACE_JPEG;
 #endif
 	pix->field = V4L2_FIELD_NONE;
@@ -585,7 +592,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s,
 static int ioctl_g_ctrl(struct v4l2_int_device *s,
 			     struct v4l2_control *vc)
 {
-	debug_dummy("debug_dummy -- g ctrl\n");	
+	debug_dummy("debug_dummy -- g ctrl\n");
 	return 0;
 }
 
@@ -601,8 +608,8 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s,
 static int ioctl_queryctrl(struct v4l2_int_device *s,
 				struct v4l2_queryctrl *qc)
 {
-	debug_dummy("debug_dummy -- query ctrl\n");	
-	return-EINVAL;
+	debug_dummy("debug_dummy -- query ctrl\n");
+	return -EINVAL;
 }
 
 /**
@@ -647,11 +654,10 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 		return rval;
 	}
 
-	p->u.ycbcr.clock_curr = 40*1000000; // temporal value
+	p->u.ycbcr.clock_curr = 40 * 1000000; /* temporal value */
 
 	return 0;
 }
-
 
 static struct v4l2_int_ioctl_desc mt9t111_ioctl_desc[] = {
 	{ .num = vidioc_int_enum_framesizes_num,
@@ -666,8 +672,8 @@ static struct v4l2_int_ioctl_desc mt9t111_ioctl_desc[] = {
 	  .func = (v4l2_int_ioctl_func *)ioctl_s_power },
 	{ .num = vidioc_int_g_priv_num,
 	  .func = (v4l2_int_ioctl_func *)ioctl_g_priv },
-  	{vidioc_int_g_ifparm_num, 
-  	  .func = (v4l2_int_ioctl_func*) ioctl_g_ifparm},
+	{ .num = vidioc_int_g_ifparm_num,
+	  .func = (v4l2_int_ioctl_func *)ioctl_g_ifparm },
 	{ .num = vidioc_int_init_num,
 	  .func = (v4l2_int_ioctl_func *)ioctl_init },
 	{ .num = vidioc_int_enum_fmt_cap_num,
@@ -688,29 +694,30 @@ static struct v4l2_int_ioctl_desc mt9t111_ioctl_desc[] = {
 	  .func = (v4l2_int_ioctl_func *)ioctl_g_ctrl },
 	{ .num = vidioc_int_s_ctrl_num,
 	  .func = (v4l2_int_ioctl_func *)ioctl_s_ctrl },
-	{.num = vidioc_int_s_video_routing_num,
-		.func = (v4l2_int_ioctl_func *) ioctl_s_routing},	  
+	{ .num = vidioc_int_s_video_routing_num,
+	  .func = (v4l2_int_ioctl_func *)ioctl_s_routing },
 };
 
-static void mt9t111_refresh(struct i2c_client *client){	
-	int i;	
-	unsigned short value;		
-	// MCU_ADDRESS [SEQ_CMD] -- refresh	
-	mt9t111_write_reg(client, 0x098E,	    0x8400);	
-	mt9t111_write_reg(client, 0x0990,	    0x0006);	
-	for (i=0;i<100;i++){		
-		mt9t111_write_reg(client, 0x098E, 0x8400);			
-		mt9t111_read_reg(client,0x0990,&value);				
-		if ( value == 0)			
-			break;		
-		mdelay(5);	
+static void mt9t111_refresh(struct i2c_client *client)
+{
+	int i;
+	unsigned short value;
+	/* MCU_ADDRESS [SEQ_CMD] -- refresh */
+	mt9t111_write_reg(client, 0x098E, 0x8400);
+	mt9t111_write_reg(client, 0x0990, 0x0006);
+	for (i = 0; i < 100; i++) {
+		mt9t111_write_reg(client, 0x098E, 0x8400);
+		mt9t111_read_reg(client, 0x0990, &value);
+		if (value == 0)
+			break;
+		mdelay(5);
 	}
 }
 
 #ifdef COLOR_BAR
 static void mt9t111_color_bar(struct i2c_client *client)
 {
-	mt9t111_write_reg(client, 0x3210, 0x01B0); // disable lens correction
+	mt9t111_write_reg(client, 0x3210, 0x01B0); /* disable lens correction */
 
 	mt9t111_write_reg(client, 0x098E, 0x6003);
 	mt9t111_write_reg(client, 0x0990, 0x0100);
@@ -721,22 +728,25 @@ static void mt9t111_color_bar(struct i2c_client *client)
 
 static void mt9t111_bayer_format(struct i2c_client *client)
 {
-	mt9t111_write_regs(client, bayer_pattern_regs, sizeof(bayer_pattern_regs)/sizeof(mt9t111_regs));
+	mt9t111_write_regs(client, bayer_pattern_regs,
+			   sizeof(bayer_pattern_regs) / sizeof(mt9t111_regs));
 }
 
 static void mt9t111_enable_pll(struct i2c_client *client)
 {
 	int i;
-	unsigned short value; 
+	unsigned short value;
 
-	mt9t111_write_regs(client, pll_regs1, sizeof(pll_regs1)/sizeof(mt9t111_regs));
-	for (i=0;i<100;i++){
-		mt9t111_read_reg(client,0x0014,&value);
-		if (( value & 0x8000) != 0)
+	mt9t111_write_regs(client, pll_regs1,
+			   sizeof(pll_regs1) / sizeof(mt9t111_regs));
+	for (i = 0; i < 100; i++) {
+		mt9t111_read_reg(client, 0x0014, &value);
+		if ((value & 0x8000) != 0)
 			break;
 		mdelay(2);
 	}
-	mt9t111_write_regs(client, pll_regs2, sizeof(pll_regs2)/sizeof(mt9t111_regs));
+	mt9t111_write_regs(client, pll_regs2,
+			   sizeof(pll_regs2) / sizeof(mt9t111_regs));
 }
 
 
@@ -746,9 +756,12 @@ static void mt9t111_loaddefault(struct i2c_client *client)
 	mt9t111_write_reg(client, 0x001A, 0x0218);
 
 	mt9t111_enable_pll(client);
-	mt9t111_write_regs(client, def_regs1, sizeof(def_regs1)/sizeof(mt9t111_regs));
-	mt9t111_write_regs(client, patch_rev6, sizeof(patch_rev6)/sizeof(mt9t111_regs));
-	mt9t111_write_regs(client, def_regs2, sizeof(def_regs2)/sizeof(mt9t111_regs));
+	mt9t111_write_regs(client, def_regs1,
+			   sizeof(def_regs1) / sizeof(mt9t111_regs));
+	mt9t111_write_regs(client, patch_rev6,
+			   sizeof(patch_rev6) / sizeof(mt9t111_regs));
+	mt9t111_write_regs(client, def_regs2,
+			   sizeof(def_regs2) / sizeof(mt9t111_regs));
 
 #ifdef USE_RAW
 	mt9t111_bayer_format(client);
@@ -806,7 +819,7 @@ mt9t111_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	sensor->pix.width = 640;
 	sensor->pix.height = 480;
-#ifdef USE_RAW	
+#ifdef USE_RAW
 	sensor->pix.pixelformat = V4L2_PIX_FMT_SGRBG10;
 #else
 	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;

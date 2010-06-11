@@ -25,7 +25,7 @@ typedef struct {
 	u16 data;
 } mt9t111_regs;
 
-mt9t111_regs patch_rev6[] ={
+mt9t111_regs patch_rev6[] = {
 	{0, 0x0982, 0x0},
 	{0, 0x098A, 0xCE7},
 	{0, 0x0990, 0x3C3C},
@@ -658,7 +658,7 @@ mt9t111_regs patch_rev6[] ={
 	{100, 0x0990, 0x0004}
 };
 
-mt9t111_regs def_regs1[] ={
+mt9t111_regs def_regs1[] = {
 	{0, 0x001A, 0x0218},
 	{0, 0x001E, 0x0777},
 	{0, 0x3084, 0x2409},
@@ -1343,7 +1343,7 @@ mt9t111_regs pll_regs2[] = {
 	{0, 0x0014, 0x3046},
 	{0, 0x0022, 0x01E0},
 	{0, 0x001E, 0x0707},
-	{0, 0x3B84, 0x011D}	
+	{0, 0x3B84, 0x011D}
 };
 
 mt9t111_regs bayer_pattern_regs[] = {
