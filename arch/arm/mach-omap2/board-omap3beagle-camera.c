@@ -47,8 +47,6 @@
 
 #define MODULE_NAME			"omap3beaglelmb"
 
-#define MT9T111_I2C_BUSNUM	(2)
-
 #define CAM_USE_XCLKA       1
 
 static struct regulator *beagle_mt9t111_reg1;
@@ -191,7 +189,7 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	return 0;
 }
 
-static struct mt9t111_platform_data mt9t111_pdata = {
+struct mt9t111_platform_data mt9t111_pdata = {
 	.master		= "omap34xxcam",
 	.power_set	= mt9t111_power_set,
 	.priv_data_set	= mt9t111_set_prv_data,
@@ -200,11 +198,6 @@ static struct mt9t111_platform_data mt9t111_pdata = {
 	.clk_polarity	= 0, /* data clocked out on falling edge */
 	.hs_polarity	= 1, /* 0 - Active low, 1- Active high */
 	.vs_polarity	= 1, /* 0 - Active low, 1- Active high */
-};
-
-static struct i2c_board_info __initdata mt9t111_i2c_board_info = {
-	I2C_BOARD_INFO("mt9t111", MT9T111_I2C_ADDR),
-	.platform_data	= &mt9t111_pdata,
 };
 
 #endif				/* #ifdef CONFIG_VIDEO_MT9T111 */
@@ -225,21 +218,6 @@ static int beagle_cam_probe(struct platform_device *pdev)
 		regulator_put(beagle_mt9t111_reg1);
 		return PTR_ERR(beagle_mt9t111_reg2);
 	}
-	/*
-	 * Register the I2C devices present in the board to the I2C
-	 * framework.
-	 * If more I2C devices are added, then each device information should
-	 * be registered with I2C using i2c_register_board_info().
-	 */
-#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
-	err = i2c_register_board_info(MT9T111_I2C_BUSNUM,
-					&mt9t111_i2c_board_info, 1);
-	if (err) {
-		printk(KERN_ERR MODULE_NAME \
-				": MT9T111 I2C Board Registration failed \n");
-		return err;
-	}
-#endif
 
 	printk(KERN_INFO MODULE_NAME ": Driver registration complete \n");
 
