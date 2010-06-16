@@ -293,4 +293,4 @@ int __init omap3beaglelmb_init(void)
 	platform_driver_register(&beagle_cam_driver);
 	return 0;
 }
-arch_initcall(omap3beaglelmb_init);
+late_initcall(omap3beaglelmb_init);
