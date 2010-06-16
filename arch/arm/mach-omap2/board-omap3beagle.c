@@ -71,7 +71,7 @@ static struct omap_opp * _omap35x_l3_rate_table         = NULL;
 static struct omap_opp * _omap37x_l3_rate_table         = NULL;
 #endif  /* CONFIG_PM */
 
-#ifdef CONFIG_VIDEO_MT9T111
+#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
 #include <media/v4l2-int-device.h>
 #include <media/mt9t111.h>
 extern struct mt9t111_platform_data mt9t111_pdata;
@@ -594,10 +594,12 @@ static struct i2c_board_info __initdata beagle_zippy_i2c2_boardinfo[] = {};
 #endif
 
 static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
+#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
 	{
 		I2C_BOARD_INFO("mt9t111", MT9T111_I2C_ADDR),
 		.platform_data	= &mt9t111_pdata,
 	},
+#endif
 };
 
 static int __init omap3_beagle_i2c_init(void)
