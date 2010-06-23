@@ -34,6 +34,7 @@
 
 #include <plat/mux.h>
 #include <plat/board.h>
+#include <plat/control.h>
 
 #include <media/v4l2-int-device.h>
 #include <media/mt9t111.h>
@@ -160,6 +161,7 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	switch (power) {
 	case V4L2_POWER_OFF:
 	case V4L2_POWER_STANDBY:
+		omap_ctrl_writew(0x0, 0x110); /* Control XCLKA output mux */
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
 
 		if (regulator_is_enabled(beagle_mt9t111_reg1))
@@ -169,6 +171,7 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		break;
 
 	case V4L2_POWER_ON:
+		omap_ctrl_writew(0x0, 0x110); /* Control XCLKA output mux */
 		isp_set_xclk(vdev->cam->isp, MT9T111_CLK_MIN, CAM_USE_XCLKA);
 
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
