@@ -47,7 +47,7 @@
 
 #define MODULE_NAME			"omap3beaglelmb"
 
-#define CAM_USE_XCLKA       1
+#define CAM_USE_XCLKA       0
 
 static struct regulator *beagle_mt9t111_reg1;
 static struct regulator *beagle_mt9t111_reg2;
