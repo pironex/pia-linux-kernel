@@ -51,6 +51,8 @@
 
 #define ISP_MT9T111_MCLK		216000000
 
+#define LEOPARD_RESET_GPIO		98
+
 static struct regulator *beagle_mt9t111_1_8v;
 static struct regulator *beagle_mt9t111_2_8v;
 
@@ -174,16 +176,42 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		break;
 
 	case V4L2_POWER_ON:
-		isp_set_xclk(vdev->cam->isp, MT9T111_CLK_MIN, CAM_USE_XCLKA);
-
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 		isp_configure_interface(vdev->cam->isp, &mt9t111_if_config);
 #endif
 
-		/* turn on analog power */
+		/* Set RESET_BAR to 0 */
+		gpio_set_value(LEOPARD_RESET_GPIO, 0);
+
+		/* turn on VDD */
 		regulator_enable(beagle_mt9t111_1_8v);
+
+		mdelay(1);
+
+		/* turn on VDD_IO */
 		regulator_enable(beagle_mt9t111_2_8v);
-		udelay(100);
+
+		mdelay(50);
+
+		/* Enable EXTCLK */
+		isp_set_xclk(vdev->cam->isp, MT9T111_CLK_MIN, CAM_USE_XCLKA);
+
+		/*
+		 * Wait at least 70 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
+		 * ((1000000 * 70) / 6000000) = aprox 12 us.
+		 */
+
+		udelay(12);
+
+		/* Set RESET_BAR to 1 */
+		gpio_set_value(LEOPARD_RESET_GPIO, 1);
+
+		/*
+		 * Wait at least 100 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
+		 * ((1000000 * 100) / 6000000) = aprox 17 us.
+		 */
+
+		udelay(17);
 
 		break;
 
@@ -224,6 +252,17 @@ static int beagle_cam_probe(struct platform_device *pdev)
 		return PTR_ERR(beagle_mt9t111_2_8v);
 	}
 
+	if (gpio_request(LEOPARD_RESET_GPIO, "cam_rst") != 0) {
+		dev_err(&pdev->dev, "Could not request GPIO %d",
+			LEOPARD_RESET_GPIO);
+		regulator_put(beagle_mt9t111_2_8v);
+		regulator_put(beagle_mt9t111_1_8v);
+		return -ENODEV;
+	}
+
+	/* set to output mode, default value 0 */
+	gpio_direction_output(LEOPARD_RESET_GPIO, 0);
+
 	printk(KERN_INFO MODULE_NAME ": Driver registration complete \n");
 
 	return 0;
@@ -237,6 +276,8 @@ static int beagle_cam_remove(struct platform_device *pdev)
 	if (regulator_is_enabled(beagle_mt9t111_2_8v))
 		regulator_disable(beagle_mt9t111_2_8v);
 	regulator_put(beagle_mt9t111_2_8v);
+
+	gpio_free(LEOPARD_RESET_GPIO);
 
 	return 0;
 }
