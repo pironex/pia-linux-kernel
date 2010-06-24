@@ -49,6 +49,8 @@
 
 #define CAM_USE_XCLKA       0
 
+#define ISP_MT9T111_MCLK		216000000
+
 static struct regulator *beagle_mt9t111_reg1;
 static struct regulator *beagle_mt9t111_reg2;
 
@@ -60,6 +62,9 @@ static struct isp_interface_config mt9t111_if_config = {
 	.strobe			= 0x0,
 	.prestrobe		= 0x0,
 	.shutter		= 0x0,
+	.cam_mclk		= ISP_MT9T111_MCLK,
+	.wenlog 		= ISPCCDC_CFG_WENLOG_AND,
+	.wait_hs_vs		= 2,
 	.u.par.par_bridge	= 0x1,
 	.u.par.par_clk_pol	= 0x0,
 };
