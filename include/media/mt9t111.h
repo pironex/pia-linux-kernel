@@ -42,7 +42,7 @@
 /*i2c adress for MT9T111*/
 #define MT9T111_I2C_ADDR  		(0x78 >> 1)
 
-#define MT9T111_CLK_MAX 	(75000000) /* 75MHz */
+#define MT9T111_CLK_MAX 	(54000000) /* 54MHz */
 #define MT9T111_CLK_MIN	(6000000)  /* 6Mhz */
 
 #define MT9T111_I2C_CONFIG		(1)
