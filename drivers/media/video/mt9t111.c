@@ -221,7 +221,6 @@ mt9t111_detect(struct i2c_client *client)
 	/* chip ID is at address 0 */
 	if (mt9t111_read_reg(client, MT9T111_CHIP_ID, &val) < 0)
 		return -ENODEV;
-	dev_info(&client->dev, "model id detected 0x%x\n", val);
 
 	if (val != MT9T111_CHIP_ID_VALUE) {
 		dev_warn(&client->dev, "model id mismatch received 0x%x"
@@ -231,7 +230,7 @@ mt9t111_detect(struct i2c_client *client)
 		return -ENODEV;
 	}
 
-	return 0;
+	return (int)val;
 
 }
 
@@ -390,11 +389,10 @@ static int ioctl_s_power(struct v4l2_int_device *s, enum v4l2_power on)
 			sensor->state = SENSOR_NOT_DETECTED;
 			return rval;
 		}
-		mt9t111_loaddefault(c);
+		dev_info(&c->dev, "chip version 0x%02x detected\n", rval);
 		sensor->state = SENSOR_DETECTED;
 		sensor->ver = rval;
-		pr_info("mt9t111" " chip version 0x%02x detected\n",
-								sensor->ver);
+		mt9t111_loaddefault(c);
 	}
 	return 0;
 }
