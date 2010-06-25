@@ -446,8 +446,8 @@ static struct regulator_init_data beagle_vaux3 = {
 /* VAUX4 for CAM_2V8 */
 static struct regulator_init_data beagle_vaux4 = {
 	.constraints = {
-		.min_uV			= 2800000,
-		.max_uV			= 2800000,
+		.min_uV			= 1800000,
+		.max_uV			= 1800000,
 		.apply_uV		= true,
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL
 					| REGULATOR_MODE_STANDBY,
