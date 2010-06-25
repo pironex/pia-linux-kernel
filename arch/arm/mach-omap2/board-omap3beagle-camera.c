@@ -34,6 +34,7 @@
 
 #include <plat/mux.h>
 #include <plat/board.h>
+#include <plat/control.h>
 
 #include <media/v4l2-int-device.h>
 #include <media/mt9t111.h>
@@ -284,6 +285,40 @@ static int beagle_cam_remove(struct platform_device *pdev)
 	regulator_put(beagle_mt9t111_1_8v2);
 
 	gpio_free(LEOPARD_RESET_GPIO);
+
+	/* MUX init */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x10C); /* CAM_HS */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x10E); /* CAM_VS */
+	omap_ctrl_writew(OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
+			 0x110); /* CAM_XCLKA */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x112); /* CAM_PCLK */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x116); /* CAM_D0 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x118); /* CAM_D1 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11A); /* CAM_D2 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11C); /* CAM_D3 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11E); /* CAM_D4 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x120); /* CAM_D5 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x122); /* CAM_D6 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x124); /* CAM_D7 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x126); /* CAM_D8 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x128); /* CAM_D9 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x12A); /* CAM_D10 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x12C); /* CAM_D11 */
 
 	return 0;
 }
