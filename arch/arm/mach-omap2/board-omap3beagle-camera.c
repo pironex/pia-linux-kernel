@@ -57,6 +57,10 @@ static struct regulator *beagle_mt9t111_1_8v1;
 static struct regulator *beagle_mt9t111_1_8v2;
 
 #if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+
+/* Arbitrary memory handling limit */
+#define MT9T111_BIGGEST_FRAME_BYTE_SIZE	PAGE_ALIGN(2048 * 1536 * 4)
+
 static struct isp_interface_config mt9t111_if_config = {
 	.ccdc_par_ser		= ISP_PARLL, 
 	.dataline_shift		= 0x0,
@@ -125,6 +129,8 @@ static struct omap34xxcam_hw_config mt9t111_hwc = {
 	.dev_minor		= 0,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 1,
+	.u.sensor.capture_mem	= MT9T111_BIGGEST_FRAME_BYTE_SIZE * 2,
+	.u.sensor.ival_default	= { 1, 10 },
 };
 #endif
 
