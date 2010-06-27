@@ -355,7 +355,9 @@ static struct platform_driver beagle_cam_driver = {
  */
 int __init omap3beaglelmb_init(void)
 {
-	platform_driver_register(&beagle_cam_driver);
-	return 0;
+	if (cpu_is_omap3630()) {
+			platform_driver_register(&beagle_cam_driver);
+	}
+			return 0;
 }
 late_initcall(omap3beaglelmb_init);
