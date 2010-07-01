@@ -544,7 +544,7 @@ static int try_pix_parm(struct omap34xxcam_videodev *vdev,
 				pix_tmp_out.height = pix_tmp_in.height;
 			rval = isp_try_fmt_cap(isp, &pix_tmp_in, &pix_tmp_out);
 			if (rval)
-				return rval;
+				break;
 
 			dev_dbg(&vdev->vfd->dev, "this w %d\th %d\tfmt %8.8x\t"
 				"-> w %d\th %d\t fmt %8.8x"
