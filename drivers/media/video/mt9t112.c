@@ -25,10 +25,8 @@
 #include <linux/videodev2.h>
 
 #include <media/mt9t112.h>
-#include <media/soc_camera.h>
-#include <media/soc_mediabus.h>
+#include <media/v4l2-int-device.h>
 #include <media/v4l2-chip-ident.h>
-#include <media/v4l2-common.h>
 
 /* you can check PLL/clock info */
 /* #define EXT_CLOCK 24000000 */
@@ -43,8 +41,8 @@
 /*
  * frame size
  */
-#define MAX_WIDTH   2048
-#define MAX_HEIGHT  1536
+#define MAX_WIDTH   640 /* 2048 */
+#define MAX_HEIGHT  480 /* 1536 */
 
 #define VGA_WIDTH   640
 #define VGA_HEIGHT  480
@@ -91,20 +89,12 @@ struct mt9t112_frame_size {
 	u16 height;
 };
 
-struct mt9t112_format {
-	enum v4l2_mbus_pixelcode code;
-	enum v4l2_colorspace colorspace;
-	u16 fmt;
-	u16 order;
-};
-
 struct mt9t112_priv {
-	struct v4l2_subdev		 subdev;
+	struct mt9t112_platform_data	*pdata;
+	struct v4l2_int_device		*v4l2_int_device;
 	struct mt9t112_camera_info	*info;
 	struct i2c_client		*client;
-	struct soc_camera_device	 icd;
-	struct mt9t112_frame_size	 frame;
-	const struct mt9t112_format	*format;
+	struct v4l2_pix_format		 pix;
 	int				 model;
 	u32				 flags;
 /* for flags */
@@ -119,38 +109,42 @@ struct mt9t112_priv {
 
 ************************************************************************/
 
-static const struct mt9t112_format mt9t112_cfmts[] = {
+const static struct v4l2_fmtdesc mt9t112_formats[] = {
 	{
-		.code		= V4L2_MBUS_FMT_YUYV8_2X8_BE,
-		.colorspace	= V4L2_COLORSPACE_JPEG,
-		.fmt		= 1,
-		.order		= 0,
-	}, {
-		.code		= V4L2_MBUS_FMT_YVYU8_2X8_BE,
-		.colorspace	= V4L2_COLORSPACE_JPEG,
-		.fmt		= 1,
-		.order		= 1,
-	}, {
-		.code		= V4L2_MBUS_FMT_YUYV8_2X8_LE,
-		.colorspace	= V4L2_COLORSPACE_JPEG,
-		.fmt		= 1,
-		.order		= 2,
-	}, {
-		.code		= V4L2_MBUS_FMT_YVYU8_2X8_LE,
-		.colorspace	= V4L2_COLORSPACE_JPEG,
-		.fmt		= 1,
-		.order		= 3,
-	}, {
-		.code		= V4L2_MBUS_FMT_RGB555_2X8_PADHI_LE,
-		.colorspace	= V4L2_COLORSPACE_SRGB,
-		.fmt		= 8,
-		.order		= 2,
-	}, {
-		.code		= V4L2_MBUS_FMT_RGB565_2X8_LE,
-		.colorspace	= V4L2_COLORSPACE_SRGB,
-		.fmt		= 4,
-		.order		= 2,
+		.description	= "YUYV (YUV 4:2:2), packed",
+		.pixelformat	= V4L2_PIX_FMT_YUYV,
 	},
+	{
+		.description	= "RGB555, le",
+		.pixelformat	= V4L2_PIX_FMT_RGB555,
+	},
+	{
+		.description	= "RGB565, le",
+		.pixelformat	= V4L2_PIX_FMT_RGB565,
+	},
+};
+
+/************************************************************************
+
+
+			supported sizes
+
+
+************************************************************************/
+const static struct mt9t112_frame_size mt9t112_sizes[] = {
+	{  640, 480 },
+	/* { 2048, 1536} */
+};
+
+/************************************************************************
+
+
+			supported sizes
+
+
+************************************************************************/
+const struct v4l2_fract mt9t112_frameintervals[] = {
+	{  .numerator = 1, .denominator = 10 }
 };
 
 /************************************************************************
@@ -160,11 +154,32 @@ static const struct mt9t112_format mt9t112_cfmts[] = {
 
 
 ************************************************************************/
-static struct mt9t112_priv *to_mt9t112(const struct i2c_client *client)
+static u16 mt9t112_pixfmt_to_fmt(u32 pixelformat)
 {
-	return container_of(i2c_get_clientdata(client),
-			    struct mt9t112_priv,
-			    subdev);
+	switch (pixelformat) {
+	case V4L2_PIX_FMT_RGB555:
+		return 8;
+	case V4L2_PIX_FMT_RGB565:
+		return 4;
+	case V4L2_PIX_FMT_YUYV:
+		/* FALLTHROUGH */
+	default:
+		return 1;
+	}
+}
+
+static u16 mt9t112_pixfmt_to_order(u32 pixelformat)
+{
+	switch (pixelformat) {
+	case V4L2_PIX_FMT_RGB555:
+		/* FALLTHROUGH */
+	case V4L2_PIX_FMT_RGB565:
+		return 2;
+	case V4L2_PIX_FMT_YUYV:
+		/* FALLTHROUGH */
+	default:
+		return 0;
+	}
 }
 
 static int __mt9t112_reg_read(const struct i2c_client *client, u16 command)
@@ -438,7 +453,7 @@ static int mt9t112_set_pll_dividers(const struct i2c_client *client,
 
 static int mt9t112_init_pll(const struct i2c_client *client)
 {
-	struct mt9t112_priv *priv = to_mt9t112(client);
+	struct mt9t112_priv *priv = i2c_get_clientdata(client);
 	int data, i, ret;
 
 	mt9t112_reg_mask_set(ret, client, 0x0014, 0x003, 0x0001);
@@ -757,166 +772,11 @@ static int mt9t112_init_camera(const struct i2c_client *client)
 	return ret;
 }
 
-/************************************************************************
-
-
-			soc_camera_ops
-
-
-************************************************************************/
-static int mt9t112_set_bus_param(struct soc_camera_device *icd,
-				 unsigned long	flags)
-{
-	return 0;
-}
-
-static unsigned long mt9t112_query_bus_param(struct soc_camera_device *icd)
-{
-	struct i2c_client *client = to_i2c_client(to_soc_camera_control(icd));
-	struct mt9t112_priv *priv = to_mt9t112(client);
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
-	unsigned long flags = SOCAM_MASTER | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_DATA_ACTIVE_HIGH;
-
-	flags |= (priv->info->flags & MT9T112_FLAG_PCLK_RISING_EDGE) ?
-		SOCAM_PCLK_SAMPLE_RISING : SOCAM_PCLK_SAMPLE_FALLING;
-
-	if (priv->info->flags & MT9T112_FLAG_DATAWIDTH_8)
-		flags |= SOCAM_DATAWIDTH_8;
-	else
-		flags |= SOCAM_DATAWIDTH_10;
-
-	return soc_camera_apply_sensor_flags(icl, flags);
-}
-
-static struct soc_camera_ops mt9t112_ops = {
-	.set_bus_param		= mt9t112_set_bus_param,
-	.query_bus_param	= mt9t112_query_bus_param,
-};
-
-/************************************************************************
-
-
-			v4l2_subdev_core_ops
-
-
-************************************************************************/
-static int mt9t112_g_chip_ident(struct v4l2_subdev *sd,
-				struct v4l2_dbg_chip_ident *id)
-{
-	struct i2c_client *client = sd->priv;
-	struct mt9t112_priv *priv = to_mt9t112(client);
-
-	id->ident    = priv->model;
-	id->revision = 0;
-
-	return 0;
-}
-
-#ifdef CONFIG_VIDEO_ADV_DEBUG
-static int mt9t112_g_register(struct v4l2_subdev *sd,
-			      struct v4l2_dbg_register *reg)
-{
-	struct i2c_client *client = sd->priv;
-	int                ret;
-
-	reg->size = 2;
-	mt9t112_reg_read(ret, client, reg->reg);
-
-	reg->val = (__u64)ret;
-
-	return 0;
-}
-
-static int mt9t112_s_register(struct v4l2_subdev *sd,
-			      struct v4l2_dbg_register *reg)
-{
-	struct i2c_client *client = sd->priv;
-	int ret;
-
-	mt9t112_reg_write(ret, client, reg->reg, reg->val);
-
-	return ret;
-}
-#endif
-
-static struct v4l2_subdev_core_ops mt9t112_subdev_core_ops = {
-	.g_chip_ident	= mt9t112_g_chip_ident,
-#ifdef CONFIG_VIDEO_ADV_DEBUG
-	.g_register	= mt9t112_g_register,
-	.s_register	= mt9t112_s_register,
-#endif
-};
-
-
-/************************************************************************
-
-
-			v4l2_subdev_video_ops
-
-
-************************************************************************/
-static int mt9t112_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	struct i2c_client *client = sd->priv;
-	struct mt9t112_priv *priv = to_mt9t112(client);
-	int ret = 0;
-
-	if (!enable) {
-		/* FIXME
-		 *
-		 * If user selected large output size,
-		 * and used it long time,
-		 * mt9t112 camera will be very warm.
-		 *
-		 * But current driver can not stop mt9t112 camera.
-		 * So, set small size here to solve this problem.
-		 */
-		mt9t112_set_a_frame_size(client, VGA_WIDTH, VGA_HEIGHT);
-		return ret;
-	}
-
-	if (!(priv->flags & INIT_DONE)) {
-		u16 param = (MT9T112_FLAG_PCLK_RISING_EDGE &
-			     priv->info->flags) ? 0x0001 : 0x0000;
-
-		ECHECKER(ret, mt9t112_init_camera(client));
-
-		/* Invert PCLK (Data sampled on falling edge of pixclk) */
-		mt9t112_reg_write(ret, client, 0x3C20, param);
-
-		mdelay(5);
-
-		priv->flags |= INIT_DONE;
-	}
-
-	mt9t112_mcu_write(ret, client, VAR(26, 7), priv->format->fmt);
-	mt9t112_mcu_write(ret, client, VAR(26, 9), priv->format->order);
-	mt9t112_mcu_write(ret, client, VAR8(1, 0), 0x06);
-
-	mt9t112_set_a_frame_size(client,
-				 priv->frame.width,
-				 priv->frame.height);
-
-	ECHECKER(ret, mt9t112_auto_focus_trigger(client));
-
-	dev_dbg(&client->dev, "format : %d\n", priv->format->code);
-	dev_dbg(&client->dev, "size   : %d x %d\n",
-		priv->frame.width,
-		priv->frame.height);
-
-	CLOCK_INFO(client, EXT_CLOCK);
-
-	return ret;
-}
-
 static int mt9t112_set_params(struct i2c_client *client, u32 width, u32 height,
-			      enum v4l2_mbus_pixelcode code)
+			      u32 pixelformat)
 {
-	struct mt9t112_priv *priv = to_mt9t112(client);
+	struct mt9t112_priv *priv = i2c_get_clientdata(client);
 	int i;
-
-	priv->format = NULL;
 
 	/*
 	 * frame size check
@@ -926,22 +786,23 @@ static int mt9t112_set_params(struct i2c_client *client, u32 width, u32 height,
 	/*
 	 * get color format
 	 */
-	for (i = 0; i < ARRAY_SIZE(mt9t112_cfmts); i++)
-		if (mt9t112_cfmts[i].code == code)
+	for (i = 0; i < ARRAY_SIZE(mt9t112_formats); i++)
+		if (mt9t112_formats[i].pixelformat == pixelformat)
 			break;
 
-	if (i == ARRAY_SIZE(mt9t112_cfmts))
+	if (i == ARRAY_SIZE(mt9t112_formats))
 		return -EINVAL;
 
-	priv->frame.width  = (u16)width;
-	priv->frame.height = (u16)height;
+	priv->pix.width  = (u16)width;
+	priv->pix.height = (u16)height;
 
-	priv->format = mt9t112_cfmts + i;
+	priv->pix.pixelformat = pixelformat;
 
 	return 0;
 }
 
-static int mt9t112_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
+static int mt9t112_v4l2_int_cropcap(struct v4l2_int_device *s,
+				    struct v4l2_cropcap *a)
 {
 	a->bounds.left			= 0;
 	a->bounds.top			= 0;
@@ -955,7 +816,8 @@ static int mt9t112_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
 	return 0;
 }
 
-static int mt9t112_g_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
+static int mt9t112_v4l2_int_g_crop(struct v4l2_int_device *s,
+				   struct v4l2_crop *a)
 {
 	a->c.left	= 0;
 	a->c.top	= 0;
@@ -966,77 +828,116 @@ static int mt9t112_g_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	return 0;
 }
 
-static int mt9t112_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
+static int mt9t112_v4l2_int_s_crop(struct v4l2_int_device *s,
+				   struct v4l2_crop *a)
 {
-	struct i2c_client *client = sd->priv;
-	struct v4l2_rect *rect = &a->c;
-
-	return mt9t112_set_params(client, rect->width, rect->height,
-				 V4L2_MBUS_FMT_YUYV8_2X8_BE);
+	if ((a->c.left != 0) ||
+	    (a->c.top != 0) ||
+	    (a->c.width != VGA_WIDTH) ||
+	    (a->c.height != VGA_HEIGHT)) {
+		return -EINVAL;
+	}
+	return 0;
 }
 
-static int mt9t112_g_fmt(struct v4l2_subdev *sd,
-			 struct v4l2_mbus_framefmt *mf)
+static int mt9t112_v4l2_int_g_fmt_cap(struct v4l2_int_device *s,
+				      struct v4l2_format *f)
 {
-	struct i2c_client *client = sd->priv;
-	struct mt9t112_priv *priv = to_mt9t112(client);
+	struct mt9t112_priv *priv = s->priv;
+	struct i2c_client *client = priv->client;
 
-	if (!priv->format) {
+	if ((priv->pix.pixelformat == 0) ||
+	    (priv->pix.width == 0) ||
+	    (priv->pix.height == 0)) {
 		int ret = mt9t112_set_params(client, VGA_WIDTH, VGA_HEIGHT,
-					     V4L2_MBUS_FMT_YUYV8_2X8_BE);
+					     V4L2_PIX_FMT_YUYV);
 		if (ret < 0)
 			return ret;
 	}
 
-	mf->width	= priv->frame.width;
-	mf->height	= priv->frame.height;
+	f->fmt.pix.width	= priv->pix.width;
+	f->fmt.pix.height	= priv->pix.height;
 	/* TODO: set colorspace */
-	mf->code	= priv->format->code;
-	mf->field	= V4L2_FIELD_NONE;
+	f->fmt.pix.pixelformat	= priv->pix.pixelformat;
+	f->fmt.pix.field	= V4L2_FIELD_NONE;
 
 	return 0;
 }
 
-static int mt9t112_s_fmt(struct v4l2_subdev *sd,
-			 struct v4l2_mbus_framefmt *mf)
+
+static int mt9t112_v4l2_int_s_fmt_cap(struct v4l2_int_device *s,
+				      struct v4l2_format *f)
 {
-	struct i2c_client *client = sd->priv;
+	struct mt9t112_priv *priv = s->priv;
+	struct i2c_client *client = priv->client;
 
 	/* TODO: set colorspace */
-	return mt9t112_set_params(client, mf->width, mf->height, mf->code);
+	return mt9t112_set_params(client, f->fmt.pix.width, f->fmt.pix.height,
+				  f->fmt.pix.pixelformat);
 }
 
-static int mt9t112_try_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_mbus_framefmt *mf)
+static int mt9t112_v4l2_int_try_fmt_cap(struct v4l2_int_device *s,
+					struct v4l2_format *f)
 {
-	mt9t112_frame_check(&mf->width, &mf->height);
+	mt9t112_frame_check(&f->fmt.pix.width, &f->fmt.pix.height);
 
 	/* TODO: set colorspace */
-	mf->field = V4L2_FIELD_NONE;
+	f->fmt.pix.field = V4L2_FIELD_NONE;
 
 	return 0;
 }
 
-static int mt9t112_enum_fmt(struct v4l2_subdev *sd, int index,
-			   enum v4l2_mbus_pixelcode *code)
+static int mt9t112_v4l2_int_enum_fmt_cap(struct v4l2_int_device *s,
+					 struct v4l2_fmtdesc *fmt)
 {
-	if ((unsigned int)index >= ARRAY_SIZE(mt9t112_cfmts))
+	int index = fmt->index;
+	enum v4l2_buf_type type = fmt->type;
+
+	memset(fmt, 0, sizeof(*fmt));
+	fmt->index = index;
+	fmt->type = type;
+
+	switch (fmt->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		if (index >= ARRAY_SIZE(mt9t112_formats))
+			return -EINVAL;
+	break;
+	default:
+		return -EINVAL;
+	}
+
+	fmt->flags = mt9t112_formats[index].flags;
+	strlcpy(fmt->description, mt9t112_formats[index].description,
+					sizeof(fmt->description));
+	fmt->pixelformat = mt9t112_formats[index].pixelformat;
+	return 0;
+}
+
+static int mt9t112_v4l2_int_s_parm(struct v4l2_int_device *s,
+				   struct v4l2_streamparm *a)
+{
+	/* TODO: set paramters */
+	return 0;
+}
+
+static int mt9t112_v4l2_int_g_parm(struct v4l2_int_device *s,
+				   struct v4l2_streamparm *a)
+{
+	struct v4l2_captureparm *cparm = &a->parm.capture;
+
+	if (a->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	*code = mt9t112_cfmts[index].code;
+	memset(a, 0, sizeof(*a));
+	a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	cparm->capability = V4L2_CAP_TIMEPERFRAME;
+	/* FIXME: Is 10 fps really the only option? */
+	cparm->timeperframe.numerator = 1;
+	cparm->timeperframe.denominator = 10;
+
 	return 0;
 }
-
-static struct v4l2_subdev_video_ops mt9t112_subdev_video_ops = {
-	.s_stream	= mt9t112_s_stream,
-	.g_mbus_fmt	= mt9t112_g_fmt,
-	.s_mbus_fmt	= mt9t112_s_fmt,
-	.try_mbus_fmt	= mt9t112_try_fmt,
-	.cropcap	= mt9t112_cropcap,
-	.g_crop		= mt9t112_g_crop,
-	.s_crop		= mt9t112_s_crop,
-	.enum_mbus_fmt	= mt9t112_enum_fmt,
-};
 
 /************************************************************************
 
@@ -1045,25 +946,12 @@ static struct v4l2_subdev_video_ops mt9t112_subdev_video_ops = {
 
 
 ************************************************************************/
-static struct v4l2_subdev_ops mt9t112_subdev_ops = {
-	.core	= &mt9t112_subdev_core_ops,
-	.video	= &mt9t112_subdev_video_ops,
-};
 
-static int mt9t112_camera_probe(struct soc_camera_device *icd,
-				struct i2c_client *client)
+static int mt9t112_detect(struct i2c_client *client)
 {
-	struct mt9t112_priv *priv = to_mt9t112(client);
+	struct mt9t112_priv *priv = i2c_get_clientdata(client);
 	const char          *devname;
 	int                  chipid;
-
-	/*
-	 * We must have a parent by now. And it cannot be a wrong one.
-	 * So this entire test is completely redundant.
-	 */
-	if (!icd->dev.parent ||
-	    to_soc_camera_host(icd->dev.parent)->nr != icd->iface)
-		return -ENODEV;
 
 	/*
 	 * check and show chip ID
@@ -1089,37 +977,232 @@ static int mt9t112_camera_probe(struct soc_camera_device *icd,
 	return 0;
 }
 
+static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
+				    enum v4l2_power power)
+{
+	struct mt9t112_priv *priv = s->priv;
+	struct i2c_client *client = priv->client;
+	int ret;
+
+	switch (power) {
+	case V4L2_POWER_STANDBY:
+		/* FALLTHROUGH */
+	case V4L2_POWER_OFF:
+		/* FIXME
+		 *
+		 * If user selected large output size,
+		 * and used it long time,
+		 * mt9t112 camera will be very warm.
+		 *
+		 * But current driver can not stop mt9t112 camera.
+		 * So, set small size here to solve this problem.
+		 */
+		mt9t112_set_a_frame_size(client, VGA_WIDTH, VGA_HEIGHT);
+
+		ret = priv->pdata->power_set(s, power);
+		if (ret < 0) {
+			dev_err(&client->dev, "Unable to set target board power "
+					 "state (OFF/STANDBY)\n");
+			return ret;
+		}
+		break;
+	case V4L2_POWER_ON:
+		ret = priv->pdata->power_set(s, power);
+		if (ret < 0) {
+			dev_err(&client->dev, "Unable to set target board power "
+					 "state (ON)\n");
+			return ret;
+		}
+		if (!(priv->flags & INIT_DONE)) {
+			u16 param = (MT9T112_FLAG_PCLK_RISING_EDGE &
+				     priv->info->flags) ? 0x0001 : 0x0000;
+
+			ECHECKER(ret, mt9t112_detect(client));
+			ECHECKER(ret, mt9t112_init_camera(client));
+
+			/* Invert PCLK (Data sampled on falling edge of pixclk) */
+			mt9t112_reg_write(ret, client, 0x3C20, param);
+
+			mdelay(5);
+
+			priv->flags |= INIT_DONE;
+		}
+
+		mt9t112_mcu_write(ret, client, VAR(26, 7),
+				  mt9t112_pixfmt_to_fmt(priv->pix.pixelformat));
+		mt9t112_mcu_write(ret, client, VAR(26, 9),
+				  mt9t112_pixfmt_to_order(priv->pix.pixelformat));
+		mt9t112_mcu_write(ret, client, VAR8(1, 0), 0x06);
+
+		mt9t112_set_a_frame_size(client,
+					 priv->pix.width,
+					 priv->pix.height);
+
+		ECHECKER(ret, mt9t112_auto_focus_trigger(client));
+
+		dev_dbg(&client->dev, "format : %d\n", priv->pix.pixelformat);
+		dev_dbg(&client->dev, "size   : %d x %d\n",
+			priv->pix.width,
+			priv->pix.height);
+
+		CLOCK_INFO(client, EXT_CLOCK);
+	}
+	return 0;
+}
+
+static int mt9t112_v4l2_int_g_priv(struct v4l2_int_device *s, void *p)
+{
+	struct mt9t112_priv *priv = s->priv;
+
+	return priv->pdata->priv_data_set(p);
+}
+
+static int mt9t112_v4l2_int_g_ifparm(struct v4l2_int_device *s,
+				     struct v4l2_ifparm *p)
+{
+	struct mt9t112_priv *priv = s->priv;
+	int rval;
+
+	if (p == NULL)
+		return -EINVAL;
+
+	if (!priv->pdata->ifparm)
+		return -EINVAL;
+
+	rval = priv->pdata->ifparm(p);
+	if (rval) {
+		v4l_err(priv->client, "g_ifparm.Err[%d]\n", rval);
+		return rval;
+	}
+
+	p->u.ycbcr.clock_curr = 40 * 1000000; /* temporal value */
+
+	return 0;
+}
+
+static int mt9t112_v4l2_int_enum_framesizes(struct v4l2_int_device *s,
+					    struct v4l2_frmsizeenum *frms)
+{
+	int ifmt;
+
+	for (ifmt = 0; ifmt < ARRAY_SIZE(mt9t112_formats); ifmt++)
+		if (mt9t112_formats[ifmt].pixelformat == frms->pixel_format)
+			break;
+
+	if (ifmt == ARRAY_SIZE(mt9t112_formats))
+		return -EINVAL;
+
+	/* Do we already reached all discrete framesizes? */
+	if (frms->index >= ARRAY_SIZE(mt9t112_sizes))
+		return -EINVAL;
+
+	frms->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	frms->discrete.width = mt9t112_sizes[frms->index].width;
+	frms->discrete.height = mt9t112_sizes[frms->index].height;
+
+	return 0;
+
+}
+
+static int mt9t112_v4l2_int_enum_frameintervals(struct v4l2_int_device *s,
+						struct v4l2_frmivalenum *frmi)
+{
+	int ifmt;
+
+	for (ifmt = 0; ifmt < ARRAY_SIZE(mt9t112_formats); ifmt++)
+		if (mt9t112_formats[ifmt].pixelformat == frmi->pixel_format)
+			break;
+
+	if (ifmt == ARRAY_SIZE(mt9t112_formats))
+		return -EINVAL;
+
+	if (frmi->index >= ARRAY_SIZE(mt9t112_frameintervals))
+		return -EINVAL;
+
+	frmi->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	frmi->discrete.numerator =
+				mt9t112_frameintervals[frmi->index].numerator;
+	frmi->discrete.denominator =
+				mt9t112_frameintervals[frmi->index].denominator;
+	return 0;
+}
+
+static struct v4l2_int_ioctl_desc mt9t112_ioctl_desc[] = {
+	{ .num = vidioc_int_enum_framesizes_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_enum_framesizes },
+	{ .num = vidioc_int_enum_frameintervals_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_enum_frameintervals },
+	{ .num = vidioc_int_s_power_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_s_power },
+	{ .num = vidioc_int_g_priv_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_g_priv },
+	{ .num = vidioc_int_g_ifparm_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_g_ifparm },
+	{ .num = vidioc_int_enum_fmt_cap_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_enum_fmt_cap },
+	{ .num = vidioc_int_try_fmt_cap_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_try_fmt_cap },
+	{ .num = vidioc_int_g_fmt_cap_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_g_fmt_cap },
+	{ .num = vidioc_int_s_fmt_cap_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_s_fmt_cap },
+	{ .num = vidioc_int_g_parm_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_g_parm },
+	{ .num = vidioc_int_s_parm_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_s_parm },
+	{ .num = vidioc_int_cropcap_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_cropcap },
+	{ .num = vidioc_int_g_crop_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_g_crop },
+	{ .num = vidioc_int_s_crop_num,
+	  .func = (v4l2_int_ioctl_func *)mt9t112_v4l2_int_s_crop },
+};
+
+static struct v4l2_int_slave mt9t112_slave = {
+	.ioctls = mt9t112_ioctl_desc,
+	.num_ioctls = ARRAY_SIZE(mt9t112_ioctl_desc),
+};
+
 static int mt9t112_probe(struct i2c_client *client,
 			 const struct i2c_device_id *did)
 {
 	struct mt9t112_priv        *priv;
-	struct soc_camera_device   *icd = client->dev.platform_data;
-	struct soc_camera_link     *icl;
+	struct v4l2_int_device     *v4l2_int_device;
 	int                         ret;
 
-	if (!icd) {
-		dev_err(&client->dev, "mt9t112: missing soc-camera data!\n");
-		return -EINVAL;
+	if (!client->dev.platform_data) {
+		dev_err(&client->dev, "no platform data?\n");
+		return -ENODEV;
 	}
-
-	icl = to_soc_camera_link(icd);
-	if (!icl || !icl->priv)
-		return -EINVAL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
-	priv->info = icl->priv;
+	v4l2_int_device = kzalloc(sizeof(*v4l2_int_device), GFP_KERNEL);
+	if (!v4l2_int_device) {
+		kfree(priv);
+		return -ENOMEM;
+	}
 
-	v4l2_i2c_subdev_init(&priv->subdev, client, &mt9t112_subdev_ops);
+	v4l2_int_device->module = THIS_MODULE;
+	strncpy(v4l2_int_device->name, "mt9t112", sizeof(v4l2_int_device->name));
+	v4l2_int_device->type = v4l2_int_type_slave;
+	v4l2_int_device->u.slave = &mt9t112_slave;
+	v4l2_int_device->priv = priv;
 
-	icd->ops = &mt9t112_ops;
+	priv->v4l2_int_device = v4l2_int_device;
+	priv->client = client;
+	priv->pdata = client->dev.platform_data;
 
-	ret = mt9t112_camera_probe(icd, client);
+	i2c_set_clientdata(client, priv);
+
+	//ret = mt9t112_detect(client);
+
+	ret = v4l2_int_device_register(priv->v4l2_int_device);
 	if (ret) {
-		icd->ops = NULL;
 		i2c_set_clientdata(client, NULL);
+		kfree(v4l2_int_device);
 		kfree(priv);
 	}
 
@@ -1128,11 +1211,12 @@ static int mt9t112_probe(struct i2c_client *client,
 
 static int mt9t112_remove(struct i2c_client *client)
 {
-	struct mt9t112_priv *priv = to_mt9t112(client);
-	struct soc_camera_device *icd = client->dev.platform_data;
+	struct mt9t112_priv *priv = i2c_get_clientdata(client);
 
-	icd->ops = NULL;
+	v4l2_int_device_unregister(priv->v4l2_int_device);
 	i2c_set_clientdata(client, NULL);
+
+	kfree(priv->v4l2_int_device);
 	kfree(priv);
 	return 0;
 }
@@ -1172,6 +1256,6 @@ static void __exit mt9t112_module_exit(void)
 module_init(mt9t112_module_init);
 module_exit(mt9t112_module_exit);
 
-MODULE_DESCRIPTION("SoC Camera driver for mt9t112");
+MODULE_DESCRIPTION("mt9t112 sensor driver");
 MODULE_AUTHOR("Kuninori Morimoto");
 MODULE_LICENSE("GPL v2");

@@ -354,6 +354,12 @@ config VIDEO_MT9P012
 	  MT9P012 camera.  It is currently working with the TI OMAP3
 	  camera controller.
 
+config VIDEO_MT9T112
+	tristate "mt9t112 support"
+	depends on I2C && VIDEO_V4L2
+	help
+	  This driver supports MT9T112 cameras from Aptina.
+
 config VIDEO_DW9710
 	tristate "Lens driver for DW9710"
 	depends on I2C && VIDEO_V4L2
@@ -831,12 +837,6 @@ config SOC_CAMERA_MT9T031
 	depends on SOC_CAMERA && I2C
 	help
 	  This driver supports MT9T031 cameras from Micron.
-
-config SOC_CAMERA_MT9T112
-	tristate "mt9t112 support"
-	depends on SOC_CAMERA && I2C
-	help
-	  This driver supports MT9T112 cameras from Aptina.
 
 config SOC_CAMERA_MT9V022
 	tristate "mt9v022 support"

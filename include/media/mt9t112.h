@@ -11,6 +11,8 @@
 #ifndef __MT9T112_H__
 #define __MT9T112_H__
 
+#include <media/v4l2-int-device.h>
+
 #define MT9T112_FLAG_PCLK_RISING_EDGE	(1 << 0)
 #define MT9T112_FLAG_DATAWIDTH_8	(1 << 1) /* default width is 10 */
 
@@ -25,6 +27,17 @@ struct mt9t112_pll_divider {
 struct mt9t112_camera_info {
 	u32 flags;
 	struct mt9t112_pll_divider divider;
+};
+
+struct mt9t112_platform_data {
+	char *master;
+	int (*power_set) (struct v4l2_int_device *s, enum v4l2_power on);
+	int (*ifparm) (struct v4l2_ifparm *p);
+	int (*priv_data_set) (void *);
+	/* Interface control params */
+	bool clk_polarity;
+	bool hs_polarity;
+	bool vs_polarity;
 };
 
 #endif /* __MT9T112_H__ */
