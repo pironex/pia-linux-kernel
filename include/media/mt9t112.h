@@ -13,6 +13,11 @@
 
 #include <media/v4l2-int-device.h>
 
+#define MT9T112_I2C_ADDR		(0x78 >> 1)
+
+#define MT9T112_CLK_MAX			(54000000) /* 54MHz */
+#define MT9T112_CLK_MIN			(6000000)  /* 6Mhz */
+
 #define MT9T112_FLAG_PCLK_RISING_EDGE	(1 << 0)
 #define MT9T112_FLAG_DATAWIDTH_8	(1 << 1) /* default width is 10 */
 
