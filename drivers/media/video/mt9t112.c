@@ -92,7 +92,7 @@ struct mt9t112_frame_size {
 struct mt9t112_priv {
 	struct mt9t112_platform_data	*pdata;
 	struct v4l2_int_device		*v4l2_int_device;
-	struct mt9t112_camera_info	*info;
+	struct mt9t112_camera_info	info;
 	struct i2c_client		*client;
 	struct v4l2_pix_format		 pix;
 	int				 model;
@@ -463,15 +463,15 @@ static int mt9t112_init_pll(const struct i2c_client *client)
 
 	/* Replace these registers when new timing parameters are generated */
 	mt9t112_set_pll_dividers(client,
-				 priv->info->divider.m,
-				 priv->info->divider.n,
-				 priv->info->divider.p1,
-				 priv->info->divider.p2,
-				 priv->info->divider.p3,
-				 priv->info->divider.p4,
-				 priv->info->divider.p5,
-				 priv->info->divider.p6,
-				 priv->info->divider.p7);
+				 priv->info.divider.m,
+				 priv->info.divider.n,
+				 priv->info.divider.p1,
+				 priv->info.divider.p2,
+				 priv->info.divider.p3,
+				 priv->info.divider.p4,
+				 priv->info.divider.p5,
+				 priv->info.divider.p6,
+				 priv->info.divider.p7);
 
 	/*
 	 * TEST_BYPASS  on
@@ -1015,7 +1015,7 @@ static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
 		}
 		if (!(priv->flags & INIT_DONE)) {
 			u16 param = (MT9T112_FLAG_PCLK_RISING_EDGE &
-				     priv->info->flags) ? 0x0001 : 0x0000;
+				     priv->info.flags) ? 0x0001 : 0x0000;
 
 			ECHECKER(ret, mt9t112_detect(client));
 			ECHECKER(ret, mt9t112_init_camera(client));
@@ -1194,6 +1194,18 @@ static int mt9t112_probe(struct i2c_client *client,
 	priv->v4l2_int_device = v4l2_int_device;
 	priv->client = client;
 	priv->pdata = client->dev.platform_data;
+
+	/* Revisit: Init Sensor info settings */
+	priv->info.divider.m = 25;
+	priv->info.divider.n = 2;
+	priv->info.divider.p1 = 0;
+	priv->info.divider.p2 = 9;
+	priv->info.divider.p3 = 0;
+	priv->info.divider.p4 = 13;
+	priv->info.divider.p5 = 13;
+	priv->info.divider.p6 = 9;
+	priv->info.divider.p7 = 0;
+	priv->info.flags = MT9T112_FLAG_PCLK_RISING_EDGE;
 
 	i2c_set_clientdata(client, priv);
 
