@@ -115,6 +115,7 @@ enum v4l2_if_type {
 	V4L2_IF_TYPE_BT656,
 	V4L2_IF_TYPE_YCbCr,
 	V4L2_IF_TYPE_RAW,
+	V4L2_IF_TYPE_PARALLEL,
 };
 
 enum v4l2_if_type_bt656_mode {
@@ -215,12 +216,38 @@ struct v4l2_if_type_raw {
 	u32 clock_curr;
 };
 
+struct v4l2_if_type_parallel {
+	/*
+	 * 0: Frame begins when vsync is high.
+	 * 1: Frame begins when vsync changes from low to high.
+	 */
+	unsigned frame_start_on_rising_vs:1;
+	/* Swap every two adjacent image data elements. */
+	unsigned swap:1;
+	/* Inverted latch clock polarity from slave. */
+	unsigned latch_clk_inv:1;
+	/* Hs polarity. 0 is active high, 1 active low. */
+	unsigned no_hs_inv:1;
+	/* Vs polarity. 0 is active high, 1 active low. */
+	unsigned no_vs_inv:1;
+	/* Minimum accepted bus clock for slave (in Hz). */
+	u32 clock_min;
+	/* Maximum accepted bus clock for slave. */
+	u32 clock_max;
+	/*
+	 * Current wish of the slave. May only change in response to
+	 * ioctls that affect image capture.
+	 */
+	u32 clock_curr;
+};
+
 struct v4l2_ifparm {
 	enum v4l2_if_type if_type;
 	union {
 		struct v4l2_if_type_bt656 bt656;
 		struct v4l2_if_type_ycbcr ycbcr;
 		struct v4l2_if_type_raw raw;
+		struct v4l2_if_type_parallel parallel;
 	} u;
 };
 

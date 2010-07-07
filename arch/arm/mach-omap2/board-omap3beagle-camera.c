@@ -37,7 +37,7 @@
 #include <plat/control.h>
 
 #include <media/v4l2-int-device.h>
-#include <media/mt9t111.h>
+#include <media/mt9v113.h>
 
 /* Include V4L2 ISP-Camera driver related header file */
 #include <../drivers/media/video/omap34xxcam.h>
@@ -50,99 +50,99 @@
 
 #define CAM_USE_XCLKA       0
 
-#define ISP_MT9T111_MCLK		216000000
+#define ISP_MT9V113_MCLK		216000000
 
 #define LEOPARD_RESET_GPIO		98
 
-static struct regulator *beagle_mt9t111_1_8v1;
-static struct regulator *beagle_mt9t111_1_8v2;
+static struct regulator *beagle_mt9v113_1_8v1;
+static struct regulator *beagle_mt9v113_1_8v2;
 
-#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+#if defined(CONFIG_VIDEO_MT9V113) || defined(CONFIG_VIDEO_MT9V113_MODULE)
 
 /* Arbitrary memory handling limit */
-#define MT9T111_BIGGEST_FRAME_BYTE_SIZE	PAGE_ALIGN(2048 * 1536 * 4)
+#define MT9V113_BIGGEST_FRAME_BYTE_SIZE	PAGE_ALIGN(2048 * 1536 * 4)
 
-static struct isp_interface_config mt9t111_if_config = {
-	.ccdc_par_ser		= ISP_PARLL, 
+static struct isp_interface_config mt9v113_if_config = {
+	.ccdc_par_ser		= ISP_PARLL,
 	.dataline_shift		= 0x0,
 	.hsvs_syncdetect	= ISPCTRL_SYNC_DETECT_VSRISE,
 	.strobe			= 0x0,
 	.prestrobe		= 0x0,
 	.shutter		= 0x0,
-	.cam_mclk		= ISP_MT9T111_MCLK,
+	.cam_mclk		= ISP_MT9V113_MCLK,
 	.wenlog 		= ISPCCDC_CFG_WENLOG_AND,
 	.wait_hs_vs		= 2,
 	.u.par.par_bridge	= 0x1,
 	.u.par.par_clk_pol	= 0x0,
 };
 
-static struct v4l2_ifparm mt9t111_ifparm_s = {
+static struct v4l2_ifparm mt9v113_ifparm_s = {
 #if 1
-	.if_type = V4L2_IF_TYPE_RAW, 
+	.if_type = V4L2_IF_TYPE_RAW,
 	.u 	 = {
-		.raw = {  
+		.raw = {
 			.frame_start_on_rising_vs = 1,
 			.bt_sync_correct	= 0,
 			.swap			= 0,
 			.latch_clk_inv		= 0,
 			.nobt_hs_inv		= 0,	/* active high */
 			.nobt_vs_inv		= 0,	/* active high */
-			.clock_min		= MT9T111_CLK_MIN,
-			.clock_max		= MT9T111_CLK_MAX,
+			.clock_min		= MT9V113_CLK_MIN,
+			.clock_max		= MT9V113_CLK_MAX,
 		},
 	},
-#else		
-	.if_type = V4L2_IF_TYPE_YCbCr, 
+#else
+	.if_type = V4L2_IF_TYPE_YCbCr,
 	.u 	 = {
-		.ycbcr = {  
+		.ycbcr = {
 			.frame_start_on_rising_vs = 1,
 			.bt_sync_correct	= 0,
 			.swap			= 0,
 			.latch_clk_inv		= 0,
 			.nobt_hs_inv		= 0,	/* active high */
 			.nobt_vs_inv		= 0,	/* active high */
-			.clock_min		= MT9T111_CLK_MIN,
-			.clock_max		= MT9T111_CLK_MAX,
+			.clock_min		= MT9V113_CLK_MIN,
+			.clock_max		= MT9V113_CLK_MAX,
 		},
 	},
 #endif
 };
 
 /**
- * @brief mt9t111_ifparm - Returns the mt9t111 interface parameters
+ * @brief mt9v113_ifparm - Returns the mt9v113 interface parameters
  *
  * @param p - pointer to v4l2_ifparm structure
  *
  * @return result of operation - 0 is success
  */
-static int mt9t111_ifparm(struct v4l2_ifparm *p)
+static int mt9v113_ifparm(struct v4l2_ifparm *p)
 {
 	if (p == NULL)
 		return -EINVAL;
 
-	*p = mt9t111_ifparm_s;
+	*p = mt9v113_ifparm_s;
 	return 0;
 }
 
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
-static struct omap34xxcam_hw_config mt9t111_hwc = {
+static struct omap34xxcam_hw_config mt9v113_hwc = {
 	.dev_index		= 0,
 	.dev_minor		= 0,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 1,
-	.u.sensor.capture_mem	= MT9T111_BIGGEST_FRAME_BYTE_SIZE * 2,
+	.u.sensor.capture_mem	= MT9V113_BIGGEST_FRAME_BYTE_SIZE * 2,
 	.u.sensor.ival_default	= { 1, 10 },
 };
 #endif
 
 /**
- * @brief mt9t111_set_prv_data - Returns mt9t111 omap34xx driver private data
+ * @brief mt9v113_set_prv_data - Returns mt9v113 omap34xx driver private data
  *
  * @param priv - pointer to omap34xxcam_hw_config structure
  *
  * @return result of operation - 0 is success
  */
-static int mt9t111_set_prv_data(void *priv)
+static int mt9v113_set_prv_data(void *priv)
 {
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 	struct omap34xxcam_hw_config *hwc = priv;
@@ -150,10 +150,10 @@ static int mt9t111_set_prv_data(void *priv)
 	if (priv == NULL)
 		return -EINVAL;
 
-	hwc->u.sensor = mt9t111_hwc.u.sensor;
-	hwc->dev_index = mt9t111_hwc.dev_index;
-	hwc->dev_minor = mt9t111_hwc.dev_minor;
-	hwc->dev_type = mt9t111_hwc.dev_type;
+	hwc->u.sensor = mt9v113_hwc.u.sensor;
+	hwc->dev_index = mt9v113_hwc.dev_index;
+	hwc->dev_minor = mt9v113_hwc.dev_minor;
+	hwc->dev_type = mt9v113_hwc.dev_type;
 	return 0;
 #else
 	return -EINVAL;
@@ -161,13 +161,13 @@ static int mt9t111_set_prv_data(void *priv)
 }
 
 /**
- * @brief mt9t111_power_set - Power-on or power-off TVP5146 device
+ * @brief mt9v113_power_set - Power-on or power-off TVP5146 device
  *
  * @param power - enum, Power on/off, resume/standby
  *
  * @return result of operation - 0 is success
  */
-static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
+static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 {
 	struct omap34xxcam_videodev *vdev = s->u.slave->master->priv;
 
@@ -176,32 +176,32 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	case V4L2_POWER_STANDBY:
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
 
-		if (regulator_is_enabled(beagle_mt9t111_1_8v1))
-			regulator_disable(beagle_mt9t111_1_8v1);
-		if (regulator_is_enabled(beagle_mt9t111_1_8v2))
-			regulator_disable(beagle_mt9t111_1_8v2);
+		if (regulator_is_enabled(beagle_mt9v113_1_8v1))
+			regulator_disable(beagle_mt9v113_1_8v1);
+		if (regulator_is_enabled(beagle_mt9v113_1_8v2))
+			regulator_disable(beagle_mt9v113_1_8v2);
 		break;
 
 	case V4L2_POWER_ON:
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
-		isp_configure_interface(vdev->cam->isp, &mt9t111_if_config);
+		isp_configure_interface(vdev->cam->isp, &mt9v113_if_config);
 #endif
 
 		/* Set RESET_BAR to 0 */
 		gpio_set_value(LEOPARD_RESET_GPIO, 0);
 
 		/* turn on VDD */
-		regulator_enable(beagle_mt9t111_1_8v1);
+		regulator_enable(beagle_mt9v113_1_8v1);
 
 		mdelay(1);
 
 		/* turn on VDD_IO */
-		regulator_enable(beagle_mt9t111_1_8v2);
+		regulator_enable(beagle_mt9v113_1_8v2);
 
 		mdelay(50);
 
 		/* Enable EXTCLK */
-		isp_set_xclk(vdev->cam->isp, MT9T111_CLK_MIN, CAM_USE_XCLKA);
+		isp_set_xclk(vdev->cam->isp, MT9V113_CLK_MIN, CAM_USE_XCLKA);
 
 		/*
 		 * Wait at least 70 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
@@ -229,44 +229,48 @@ static int mt9t111_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	return 0;
 }
 
-struct mt9t111_platform_data mt9t111_pdata = {
+struct mt9v113_platform_data mt9v113_pdata = {
 	.master		= "omap34xxcam",
-	.power_set	= mt9t111_power_set,
-	.priv_data_set	= mt9t111_set_prv_data,
-	.ifparm		= mt9t111_ifparm,
+	.power_set	= mt9v113_power_set,
+	.priv_data_set	= mt9v113_set_prv_data,
+	.ifparm		= mt9v113_ifparm,
 	/* Some interface dependent params */
 	.clk_polarity	= 0, /* data clocked out on falling edge */
 	.hs_polarity	= 1, /* 0 - Active low, 1- Active high */
 	.vs_polarity	= 1, /* 0 - Active low, 1- Active high */
 };
 
-#endif				/* #ifdef CONFIG_VIDEO_MT9T111 */
+#endif				/* #ifdef CONFIG_VIDEO_MT9V113 */
 
 
 static int beagle_cam_probe(struct platform_device *pdev)
 {
 	int err;
 
-	beagle_mt9t111_1_8v1 = regulator_get(&pdev->dev, "vaux3_1");
-	if (IS_ERR(beagle_mt9t111_1_8v1)) {
+	printk("%s:%d\n", __func__, __LINE__);
+	beagle_mt9v113_1_8v1 = regulator_get(&pdev->dev, "vaux3_1");
+	if (IS_ERR(beagle_mt9v113_1_8v1)) {
 		dev_err(&pdev->dev, "vaux3_1 regulator missing\n");
-		return PTR_ERR(beagle_mt9t111_1_8v1);
+		return PTR_ERR(beagle_mt9v113_1_8v1);
 	}
-	beagle_mt9t111_1_8v2 = regulator_get(&pdev->dev, "vaux4_1");
-	if (IS_ERR(beagle_mt9t111_1_8v2)) {
+	printk("%s:%d\n", __func__, __LINE__);
+	beagle_mt9v113_1_8v2 = regulator_get(&pdev->dev, "vaux4_1");
+	if (IS_ERR(beagle_mt9v113_1_8v2)) {
 		dev_err(&pdev->dev, "vaux4_1 regulator missing\n");
-		regulator_put(beagle_mt9t111_1_8v1);
-		return PTR_ERR(beagle_mt9t111_1_8v2);
+		regulator_put(beagle_mt9v113_1_8v1);
+		return PTR_ERR(beagle_mt9v113_1_8v2);
 	}
 
+	printk("%s:%d\n", __func__, __LINE__);
 	if (gpio_request(LEOPARD_RESET_GPIO, "cam_rst") != 0) {
 		dev_err(&pdev->dev, "Could not request GPIO %d",
 			LEOPARD_RESET_GPIO);
-		regulator_put(beagle_mt9t111_1_8v2);
-		regulator_put(beagle_mt9t111_1_8v1);
+		regulator_put(beagle_mt9v113_1_8v2);
+		regulator_put(beagle_mt9v113_1_8v1);
 		return -ENODEV;
 	}
 
+	printk("%s:%d\n", __func__, __LINE__);
 	/* set to output mode, default value 0 */
 	gpio_direction_output(LEOPARD_RESET_GPIO, 0);
 
@@ -277,12 +281,13 @@ static int beagle_cam_probe(struct platform_device *pdev)
 
 static int beagle_cam_remove(struct platform_device *pdev)
 {
-	if (regulator_is_enabled(beagle_mt9t111_1_8v1))
-		regulator_disable(beagle_mt9t111_1_8v1);
-	regulator_put(beagle_mt9t111_1_8v1);
-	if (regulator_is_enabled(beagle_mt9t111_1_8v2))
-		regulator_disable(beagle_mt9t111_1_8v2);
-	regulator_put(beagle_mt9t111_1_8v2);
+	printk("%s:%d\n", __func__, __LINE__);
+	if (regulator_is_enabled(beagle_mt9v113_1_8v1))
+		regulator_disable(beagle_mt9v113_1_8v1);
+	regulator_put(beagle_mt9v113_1_8v1);
+	if (regulator_is_enabled(beagle_mt9v113_1_8v2))
+		regulator_disable(beagle_mt9v113_1_8v2);
+	regulator_put(beagle_mt9v113_1_8v2);
 
 	gpio_free(LEOPARD_RESET_GPIO);
 
@@ -355,9 +360,12 @@ static struct platform_driver beagle_cam_driver = {
  */
 int __init omap3beaglelmb_init(void)
 {
+	printk("%s:%d\n", __func__, __LINE__);
 	if (cpu_is_omap3630()) {
-			platform_driver_register(&beagle_cam_driver);
+	printk("%s:%d\n", __func__, __LINE__);
+		platform_driver_register(&beagle_cam_driver);
 	}
-			return 0;
+	printk("%s:%d\n", __func__, __LINE__);
+	return 0;
 }
 late_initcall(omap3beaglelmb_init);

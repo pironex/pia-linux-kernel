@@ -71,10 +71,10 @@ static struct omap_opp * _omap35x_l3_rate_table         = NULL;
 static struct omap_opp * _omap37x_l3_rate_table         = NULL;
 #endif  /* CONFIG_PM */
 
-#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+#if defined(CONFIG_VIDEO_MT9V113) || defined(CONFIG_VIDEO_MT9V113_MODULE)
 #include <media/v4l2-int-device.h>
-#include <media/mt9t111.h>
-extern struct mt9t111_platform_data mt9t111_pdata;
+#include <media/mt9v113.h>
+extern struct mt9v113_platform_data mt9v113_pdata;
 #endif
 
 #define GPMC_CS0_BASE  0x60
@@ -159,7 +159,7 @@ static void __init omap3beagle_ks8851_init(void)
 		printk(KERN_ERR "could not obtain gpio for KS8851_IRQ\n");
 		return;
 	}
-	
+
 	spi_register_board_info(omap3beagle_zippy2_spi_board_info,
 							ARRAY_SIZE(omap3beagle_zippy2_spi_board_info));
 }
@@ -369,9 +369,9 @@ static int beagle_twl_gpio_setup(struct device *dev,
 	 */
 
 	if (cpu_is_omap3630()) {
-		/* Power on DVI, Serial and PWR led */ 
+		/* Power on DVI, Serial and PWR led */
  		gpio_request(gpio + 1, "nDVI_PWR_EN");
-		gpio_direction_output(gpio + 1, 0);	
+		gpio_direction_output(gpio + 1, 0);
 
 		/* Power on camera interface */
 		gpio_request(gpio + 2, "CAM_EN");
@@ -560,7 +560,7 @@ static struct i2c_board_info __initdata beagle_i2c1_boardinfo[] = {
 	},
 };
 
-	
+
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
 
@@ -594,10 +594,10 @@ static struct i2c_board_info __initdata beagle_zippy_i2c2_boardinfo[] = {};
 #endif
 
 static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
-#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+#if defined(CONFIG_VIDEO_MT9V113) || defined(CONFIG_VIDEO_MT9V113_MODULE)
 	{
-		I2C_BOARD_INFO("mt9t111", MT9T111_I2C_ADDR),
-		.platform_data	= &mt9t111_pdata,
+		I2C_BOARD_INFO("mt9v113", MT9V113_I2C_ADDR),
+		.platform_data	= &mt9v113_pdata,
 	},
 #endif
 };
@@ -606,7 +606,7 @@ static int __init omap3_beagle_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 2600, beagle_i2c1_boardinfo,
 			ARRAY_SIZE(beagle_i2c1_boardinfo));
-	if(!strcmp(expansionboard_name, "zippy") || !strcmp(expansionboard_name, "zippy2")) 
+	if(!strcmp(expansionboard_name, "zippy") || !strcmp(expansionboard_name, "zippy2"))
 	{
 		printk(KERN_INFO "Beagle expansionboard: registering i2c2 bus for zippy/zippy2\n");
 		omap_register_i2c_bus(2, 400,  beagle_zippy_i2c2_boardinfo,
@@ -681,7 +681,7 @@ static struct spi_board_info beaglefpga_mcspi_board_info[] = {
 		.modalias	= "spidev",
 		.max_speed_hz	= 48000000, //48 Mbps
 		.bus_num	= 4,
-		.chip_select	= 0,	
+		.chip_select	= 0,
 		.mode = SPI_MODE_1,
 	},
 };
@@ -830,7 +830,7 @@ static void __init omap3_beagle_init(void)
 	/* REVISIT leave DVI powered down until it's needed ... */
 	gpio_direction_output(170, true);
 
-	if(!strcmp(expansionboard_name, "zippy")) 
+	if(!strcmp(expansionboard_name, "zippy"))
 	{
 		printk(KERN_INFO "Beagle expansionboard: initializing enc28j60\n");
 		omap3beagle_enc28j60_init();
@@ -838,8 +838,8 @@ static void __init omap3_beagle_init(void)
 		mmc[1].gpio_wp = 141;
 		mmc[1].gpio_cd = 162;
 	}
-	
-	if(!strcmp(expansionboard_name, "zippy2")) 
+
+	if(!strcmp(expansionboard_name, "zippy2"))
 	{
 		printk(KERN_INFO "Beagle expansionboard: initializing ks_8851\n");
 		omap3beagle_ks8851_init();
@@ -880,7 +880,7 @@ static void __init omap3_beagle_init(void)
 	}
 
 	if(!strcmp(expansionboard_name, "beaglefpga"))
-	{  
+	{
 		printk(KERN_INFO "Beagle expansionboard: Using McSPI for SPI\n");
 		beaglefpga_init_spi();
 	}
