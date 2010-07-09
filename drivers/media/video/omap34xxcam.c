@@ -1852,8 +1852,8 @@ static int omap34xxcam_open(struct file *file)
 				vdev->slave_config[OMAP34XXCAM_SLAVE_SENSOR]
 					.cur_input = route.input;
 		}
-		sensor_format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	}
+	sensor_format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	/* Get the format the sensor is using. */
 	rval = vidioc_int_g_fmt_cap(vdev->vdev_sensor, &sensor_format);
