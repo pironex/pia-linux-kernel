@@ -978,11 +978,12 @@ static irqreturn_t omap34xx_isp_isr(int irq, void *_pdev)
 	}
 
 	if (irqstatus & CCDC_VD0) {
-		if (isp->pipeline.pix.field == V4L2_FIELD_INTERLACED) {
+		if (((isp->pipeline.pix.field == V4L2_FIELD_INTERLACED) &&
+		     (isp->current_field != 0)) ||
+		    (isp->pipeline.pix.field != V4L2_FIELD_INTERLACED)) {
 			/* Skip even fields, and process only odd fields */
-			if (isp->current_field != 0)
-				if (RAW_CAPTURE(isp))
-					isp_buf_process(dev, bufs);
+			if (RAW_CAPTURE(isp))
+				isp_buf_process(dev, bufs);
 		}
 		if (!ispccdc_busy(&isp->isp_ccdc))
 			ispccdc_config_shadow_registers(&isp->isp_ccdc);
