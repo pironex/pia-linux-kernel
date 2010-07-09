@@ -35,9 +35,9 @@
 #define MT9V113_MODULE_NAME		"mt9v113"
 
 /* Number of pixels and number of lines per frame for different standards */
-#define VGA_NUM_ACTIVE_PIXELS		(640*2)
+#define VGA_NUM_ACTIVE_PIXELS		(640)
 #define VGA_NUM_ACTIVE_LINES		(480)
-#define QVGA_NUM_ACTIVE_PIXELS	(320*2)
+#define QVGA_NUM_ACTIVE_PIXELS	(320)
 #define QVGA_NUM_ACTIVE_LINES		(240)
 
 /**
