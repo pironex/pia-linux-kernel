@@ -602,16 +602,11 @@ static int ispccdc_config_datapath(struct isp_ccdc_device *isp_ccdc,
 		syn_mode &= ~ISPCCDC_SYN_MODE_VP2SDR;
 		syn_mode &= ~ISPCCDC_SYN_MODE_SDR2RSZ;
 		syn_mode |= ISPCCDC_SYN_MODE_WEN;
-		if (pipe->ccdc_in == CCDC_YUV_BT) {
-			syn_mode &= ~ISPCCDC_SYN_MODE_EXWEN;
-			isp_reg_and(isp_ccdc->dev, OMAP3_ISP_IOMEM_CCDC,
-					ISPCCDC_CFG, ~ISPCCDC_CFG_WENLOG);
-		} else {
-			syn_mode |= ISPCCDC_SYN_MODE_EXWEN;
-			isp_reg_or(isp_ccdc->dev, OMAP3_ISP_IOMEM_CCDC,
-					ISPCCDC_CFG, ISPCCDC_CFG_WENLOG);
-		}
-		vpcfg.bitshift_sel = BIT11_2;
+		syn_mode &= ~ISPCCDC_SYN_MODE_EXWEN;
+
+		isp_reg_and(isp_ccdc->dev, OMAP3_ISP_IOMEM_CCDC,
+				ISPCCDC_CFG, ~ISPCCDC_CFG_WENLOG);
+		vpcfg.bitshift_sel = BIT9_0;
 		vpcfg.freq_sel = PIXCLKBY2;
 		ispccdc_config_vp(isp_ccdc, vpcfg);
 		ispccdc_enable_vp(isp_ccdc, 0);
