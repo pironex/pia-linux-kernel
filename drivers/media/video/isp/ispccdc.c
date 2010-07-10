@@ -671,7 +671,7 @@ static int ispccdc_config_datapath(struct isp_ccdc_device *isp_ccdc,
 		syncif.fldstat = 0;
 		syncif.hdpol = 0;
 		syncif.ipmod = YUV16;
-		syncif.vdpol = 1;
+		syncif.vdpol = 0;
 		syncif.bt_r656_en = 0;
 		ispccdc_config_imgattr(isp_ccdc, 0);
 		ispccdc_config_sync_if(isp_ccdc, syncif);
@@ -688,7 +688,7 @@ static int ispccdc_config_datapath(struct isp_ccdc_device *isp_ccdc,
 		syncif.fldstat = 0;
 		syncif.hdpol = 0;
 		syncif.ipmod = YUV8;
-		syncif.vdpol = 1;
+		syncif.vdpol = 0;
 		syncif.bt_r656_en = 1;
 		ispccdc_config_imgattr(isp_ccdc, 0);
 		ispccdc_config_sync_if(isp_ccdc, syncif);
