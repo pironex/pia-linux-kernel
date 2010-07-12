@@ -51,8 +51,8 @@
 
 #define LEOPARD_RESET_GPIO	98
 
-static struct regulator *beagle_mt9v113_1_8v1;
-static struct regulator *beagle_mt9v113_1_8v2;
+static struct regulator *cam_1v8_reg;
+static struct regulator *cam_2v8_reg;
 
 /* Arbitrary memory handling limit */
 #define MT9V113_MAX_FRAME_SIZE	PAGE_ALIGN(640 * 480 * 4)
@@ -148,10 +148,10 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	case V4L2_POWER_OFF:
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
 
-		if (regulator_is_enabled(beagle_mt9v113_1_8v1))
-			regulator_disable(beagle_mt9v113_1_8v1);
-		if (regulator_is_enabled(beagle_mt9v113_1_8v2))
-			regulator_disable(beagle_mt9v113_1_8v2);
+		if (regulator_is_enabled(cam_1v8_reg))
+			regulator_disable(cam_1v8_reg);
+		if (regulator_is_enabled(cam_2v8_reg))
+			regulator_disable(cam_2v8_reg);
 
 		break;
 
@@ -162,10 +162,10 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		gpio_set_value(LEOPARD_RESET_GPIO, 0);
 
 		/* turn on VDD */
-		regulator_enable(beagle_mt9v113_1_8v1);
+		regulator_enable(cam_1v8_reg);
 		mdelay(1);
 		/* turn on VDD_IO */
-		regulator_enable(beagle_mt9v113_1_8v2);
+		regulator_enable(cam_2v8_reg);
 		mdelay(50);
 
 		/* Enable EXTCLK */
@@ -201,24 +201,24 @@ struct mt9v113_platform_data mt9v113_pdata = {
 
 static int beagle_cam_probe(struct platform_device *pdev)
 {
-	beagle_mt9v113_1_8v1 = regulator_get(&pdev->dev, "vaux3_1");
-	if (IS_ERR(beagle_mt9v113_1_8v1)) {
-		dev_err(&pdev->dev, "vaux3_1 regulator missing\n");
-		return PTR_ERR(beagle_mt9v113_1_8v1);
+	cam_1v8_reg = regulator_get(&pdev->dev, "cam_1v8");
+	if (IS_ERR(cam_1v8_reg)) {
+		dev_err(&pdev->dev, "cam_1v8 regulator missing\n");
+		return PTR_ERR(cam_1v8_reg);
 	}
 
-	beagle_mt9v113_1_8v2 = regulator_get(&pdev->dev, "vaux4_1");
-	if (IS_ERR(beagle_mt9v113_1_8v2)) {
-		dev_err(&pdev->dev, "vaux4_1 regulator missing\n");
-		regulator_put(beagle_mt9v113_1_8v1);
-		return PTR_ERR(beagle_mt9v113_1_8v2);
+	cam_2v8_reg = regulator_get(&pdev->dev, "cam_2v8");
+	if (IS_ERR(cam_2v8_reg)) {
+		dev_err(&pdev->dev, "cam_2v8 regulator missing\n");
+		regulator_put(cam_1v8_reg);
+		return PTR_ERR(cam_2v8_reg);
 	}
 
 	if (gpio_request(LEOPARD_RESET_GPIO, "cam_rst") != 0) {
 		dev_err(&pdev->dev, "Could not request GPIO %d",
 			LEOPARD_RESET_GPIO);
-		regulator_put(beagle_mt9v113_1_8v2);
-		regulator_put(beagle_mt9v113_1_8v1);
+		regulator_put(cam_2v8_reg);
+		regulator_put(cam_1v8_reg);
 		return -ENODEV;
 	}
 
@@ -266,13 +266,13 @@ static int beagle_cam_probe(struct platform_device *pdev)
 
 static int beagle_cam_remove(struct platform_device *pdev)
 {
-	if (regulator_is_enabled(beagle_mt9v113_1_8v1))
-		regulator_disable(beagle_mt9v113_1_8v1);
-	regulator_put(beagle_mt9v113_1_8v1);
+	if (regulator_is_enabled(cam_1v8_reg))
+		regulator_disable(cam_1v8_reg);
+	regulator_put(cam_1v8_reg);
 
-	if (regulator_is_enabled(beagle_mt9v113_1_8v2))
-		regulator_disable(beagle_mt9v113_1_8v2);
-	regulator_put(beagle_mt9v113_1_8v2);
+	if (regulator_is_enabled(cam_2v8_reg))
+		regulator_disable(cam_2v8_reg);
+	regulator_put(cam_2v8_reg);
 
 	gpio_free(LEOPARD_RESET_GPIO);
 

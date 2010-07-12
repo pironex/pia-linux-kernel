@@ -414,18 +414,14 @@ static struct platform_device beagle_cam_device = {
 	.id		= -1,
 };
 
-static struct regulator_consumer_supply beagle_vaux3_supplies[] = {
-	{
-		.supply		= "vaux3_1",
-		.dev		= &beagle_cam_device.dev,
-	},
+static struct regulator_consumer_supply beagle_vaux3_supply = {
+	.supply		= "cam_1v8",
+	.dev		= &beagle_cam_device.dev,
 };
 
-static struct regulator_consumer_supply beagle_vaux4_supplies[] = {
-	{
-		.supply		= "vaux4_1",
-		.dev		= &beagle_cam_device.dev,
-	},
+static struct regulator_consumer_supply beagle_vaux4_supply = {
+	.supply		= "cam_2v8",
+	.dev		= &beagle_cam_device.dev,
 };
 
 /* VAUX3 for CAM_1V8 */
@@ -439,8 +435,8 @@ static struct regulator_init_data beagle_vaux3 = {
 		.valid_ops_mask		= REGULATOR_CHANGE_MODE
 					| REGULATOR_CHANGE_STATUS,
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(beagle_vaux3_supplies),
-	.consumer_supplies	= beagle_vaux3_supplies,
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &beagle_vaux3_supply,
 };
 
 /* VAUX4 for CAM_2V8 */
@@ -454,8 +450,8 @@ static struct regulator_init_data beagle_vaux4 = {
 		.valid_ops_mask		= REGULATOR_CHANGE_MODE
 					| REGULATOR_CHANGE_STATUS,
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(beagle_vaux4_supplies),
-	.consumer_supplies	= beagle_vaux4_supplies,
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &beagle_vaux4_supply,
 };
 
 /* VMMC1 for MMC1 pins CMD, CLK, DAT0..DAT3 (20 mA, plus card == max 220 mA) */
