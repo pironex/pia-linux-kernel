@@ -64,7 +64,7 @@ static struct regulator *beagle_mt9v113_1_8v2;
 
 static struct isp_interface_config mt9v113_if_config = {
 	.ccdc_par_ser		= ISP_PARLL,
-	.dataline_shift		= 0x0,
+	.dataline_shift		= 0x2,
 	.hsvs_syncdetect	= ISPCTRL_SYNC_DETECT_VSRISE,
 	.strobe			= 0x0,
 	.prestrobe		= 0x0,
@@ -72,7 +72,7 @@ static struct isp_interface_config mt9v113_if_config = {
 	.cam_mclk		= ISP_MT9V113_MCLK,
 	.wenlog 		= ISPCCDC_CFG_WENLOG_AND,
 	.wait_hs_vs		= 2,
-	.u.par.par_bridge	= 0x1,
+	.u.par.par_bridge	= 0x3,
 	.u.par.par_clk_pol	= 0x0,
 };
 
