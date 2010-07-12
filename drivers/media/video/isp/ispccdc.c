@@ -664,7 +664,7 @@ static int ispccdc_config_datapath(struct isp_ccdc_device *isp_ccdc,
 	case CCDC_YUV_SYNC:
 		syncif.ccdc_mastermode = 0;
 		syncif.datapol = 0;
-		syncif.datsz = DAT8;
+		syncif.datsz = DAT10;
 		syncif.fldmode = 0;
 		syncif.fldout = 0;
 		syncif.fldpol = 0;
