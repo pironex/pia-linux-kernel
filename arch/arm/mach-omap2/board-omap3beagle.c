@@ -77,6 +77,12 @@ static struct omap_opp * _omap37x_l3_rate_table         = NULL;
 extern struct mt9v113_platform_data mt9v113_pdata;
 #endif
 
+#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+#include <media/v4l2-int-device.h>
+#include <media/mt9t111.h>
+extern struct mt9t111_platform_data mt9t111_pdata;
+#endif
+
 #define GPMC_CS0_BASE  0x60
 #define GPMC_CS_SIZE   0x30
 
@@ -594,6 +600,12 @@ static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("mt9v113", MT9V113_I2C_ADDR),
 		.platform_data	= &mt9v113_pdata,
+	},
+#endif
+#if defined(CONFIG_VIDEO_MT9T111) || defined(CONFIG_VIDEO_MT9T111_MODULE)
+	{
+		I2C_BOARD_INFO("mt9t111", MT9T111_I2C_ADDR),
+		.platform_data	= &mt9t111_pdata,
 	},
 #endif
 };
