@@ -198,7 +198,7 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		mdelay(50);
 
 		/* Enable EXTCLK */
-		isp_set_xclk(vdev->cam->isp, MT9V113_CLK_MIN, CAM_USE_XCLKA);
+		isp_set_xclk(vdev->cam->isp, MT9V113_CLK_MIN*2, CAM_USE_XCLKA);
 		/*
 		 * Wait at least 70 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
 		 * ((1000000 * 70) / 6000000) = aprox 12 us.

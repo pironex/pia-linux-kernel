@@ -76,7 +76,7 @@ struct mt9v113_platform_data {
 #define MT9V113_VGA_30FPS  (1130)
 #define MT9V113_QVGA_30FPS  (1131)
 
-#define MT9V113_CLK_MAX 	(54000000) /* 54MHz */
+#define MT9V113_CLK_MAX 	(48000000) /* 48MHz */
 #define MT9V113_CLK_MIN	(6000000)  /* 6Mhz */
 
 #endif				/* ifndef _MT9V113_H */
