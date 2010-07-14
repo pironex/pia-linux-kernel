@@ -482,10 +482,23 @@ int isp_set_callback(struct device *dev, enum isp_callback_type type,
 
 int isp_unset_callback(struct device *dev, enum isp_callback_type type);
 
+#if defined(CONFIG_VIDEO_OMAP3_ISP)
 u32 isp_set_xclk(struct device *dev, u32 xclk, u8 xclksel);
 
 int isp_configure_interface(struct device *dev,
 			    struct isp_interface_config *config);
+#else
+static inline u32 isp_set_xclk(struct device *dev, u32 xclk, u8 xclksel)
+{
+	return 0;
+}
+static inline int isp_configure_interface(struct device *dev,
+			    struct isp_interface_config *config)
+{
+	return 0;
+}
+
+#endif
 
 struct device *isp_get(void);
 
