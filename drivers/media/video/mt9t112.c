@@ -982,6 +982,8 @@ static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
 {
 	struct mt9t112_priv *priv = s->priv;
 	struct i2c_client *client = priv->client;
+	u16 param = (MT9T112_FLAG_PCLK_RISING_EDGE &
+		     priv->info.flags) ? 0x0001 : 0x0000;
 	int ret;
 
 	switch (power) {
@@ -1014,20 +1016,17 @@ static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
 			return ret;
 		}
 		if (!(priv->flags & INIT_DONE)) {
-			u16 param = (MT9T112_FLAG_PCLK_RISING_EDGE &
-				     priv->info.flags) ? 0x0001 : 0x0000;
-
 			ECHECKER(ret, mt9t112_detect(client));
-			ECHECKER(ret, mt9t112_init_camera(client));
-
-			/* Invert PCLK (Data sampled on falling edge of pixclk) */
-			mt9t112_reg_write(ret, client, 0x3C20, param);
-
-			mdelay(5);
 
 			priv->flags |= INIT_DONE;
 		}
 
+		ECHECKER(ret, mt9t112_init_camera(client));
+
+		/* Invert PCLK (Data sampled on falling edge of pixclk) */
+		mt9t112_reg_write(ret, client, 0x3C20, param);
+
+		mdelay(5);
 		mt9t112_mcu_write(ret, client, VAR(26, 7),
 				  mt9t112_pixfmt_to_fmt(priv->pix.pixelformat));
 		mt9t112_mcu_write(ret, client, VAR(26, 9),
