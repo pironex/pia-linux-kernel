@@ -262,7 +262,7 @@ static struct omap34xxcam_hw_config mt9t112_hwc = {
 	.dev_index		= 0,
 	.dev_minor		= 0,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
-	.u.sensor.sensor_isp	= 1,
+	.u.sensor.sensor_isp	= 0,
 	.u.sensor.capture_mem	= MT9T112_BIGGEST_FRAME_BYTE_SIZE,
 	.u.sensor.ival_default	= { 1, 10 },
 };
