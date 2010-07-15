@@ -41,8 +41,8 @@
 /*
  * frame size
  */
-#define MAX_WIDTH   640 /* 2048 */
-#define MAX_HEIGHT  480 /* 1536 */
+#define MAX_WIDTH   2048
+#define MAX_HEIGHT  1536
 
 #define VGA_WIDTH   640
 #define VGA_HEIGHT  480
@@ -133,7 +133,7 @@ const static struct v4l2_fmtdesc mt9t112_formats[] = {
 ************************************************************************/
 const static struct mt9t112_frame_size mt9t112_sizes[] = {
 	{  640, 480 },
-	/* { 2048, 1536} */
+	{ 2048, 1536}
 };
 
 /************************************************************************
