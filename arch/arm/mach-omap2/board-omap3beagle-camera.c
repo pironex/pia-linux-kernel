@@ -264,7 +264,7 @@ static struct omap34xxcam_hw_config mt9t112_hwc = {
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 0,
 	.u.sensor.capture_mem	= MT9T112_BIGGEST_FRAME_BYTE_SIZE,
-	.u.sensor.ival_default	= { 1, 10 },
+	.u.sensor.ival_default	= { 1, 30 },
 };
 #endif
 
@@ -331,24 +331,24 @@ static int mt9t112_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		mdelay(50);
 
 		/* Enable EXTCLK */
-		isp_set_xclk(vdev->cam->isp, MT9T112_CLK_MIN, CAM_USE_XCLKA);
+		isp_set_xclk(vdev->cam->isp, 24000000, CAM_USE_XCLKA);
 
 		/*
-		 * Wait at least 70 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
-		 * ((1000000 * 70) / 6000000) = aprox 12 us.
+		 * Wait at least 70 CLK cycles (w/EXTCLK = 24MHz):
+		 * ((1000000 * 70) / 24000000) = aprox 2.91 us.
 		 */
 
-		udelay(12);
+		udelay(3);
 
 		/* Set RESET_BAR to 1 */
 		gpio_set_value(LEOPARD_RESET_GPIO, 1);
 
 		/*
-		 * Wait at least 100 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
-		 * ((1000000 * 100) / 6000000) = aprox 17 us.
+		 * Wait at least 100 CLK cycles (w/EXTCLK = 24MHz):
+		 * ((1000000 * 100) / 24000000) = aprox 4.16 us.
 		 */
 
-		udelay(17);
+		udelay(5);
 
 		break;
 
