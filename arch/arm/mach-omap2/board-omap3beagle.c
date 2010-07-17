@@ -854,6 +854,11 @@ static void __init omap3_beagle_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	omap3_beagle_i2c_init();
+
+	if (cpu_is_omap3630()) {
+		gpio_buttons[0].gpio = 4;
+	}
+
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_serial_init();
