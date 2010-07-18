@@ -812,14 +812,6 @@ static int mt9t112_init_camera(const struct i2c_client *client)
 	mt9t112_mcu_write(ret, client, VAR(26, 160), 0x0A2E);
 	mt9t112_mcu_write(ret, client, VAR(27, 160), 0x0A2E);
 
-	/* Configure STatus in Status_before_length Format and enable header */
-	/* PRI_B_CONFIG_JPEG_OB_TX_CONTROL_VAR */
-	mt9t112_mcu_write(ret, client, VAR(27, 144), 0x0CB4);
-
-	/* Enable JPEG in context B */
-	/* PRI_B_CONFIG_JPEG_OB_TX_CONTROL_VAR */
-	mt9t112_mcu_write(ret, client, VAR8(27, 142), 0x01);
-
 	/* Disable Dac_TXLO */
 	mt9t112_reg_write(ret, client, 0x316C, 0x350F);
 
