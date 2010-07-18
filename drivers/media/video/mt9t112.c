@@ -771,6 +771,9 @@ static int mt9t112_goto_capture(const struct i2c_client *client)
 	if (ret == 0x7)
 		return 0;
 
+	/* Num Frames Run (B) */
+	mt9t112_mcu_write(ret, client, VAR(27, 5), 0);
+
 	/* Go to capture mode */
 	mt9t112_mcu_write(ret, client, VAR8(1, 0), 2);
 	do {
