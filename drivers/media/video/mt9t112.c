@@ -73,6 +73,9 @@
 #define mt9t112_reg_read(ret, client, a) \
 	ECHECKER(ret, __mt9t112_reg_read(client, a))
 
+#define mt9t112_mcu_read(ret, client, a) \
+	ECHECKER(ret, __mt9t112_mcu_read(client, a))
+
 /*
  * Logical address
  */
@@ -737,6 +740,50 @@ static int mt9t112_auto_focus_trigger(const struct i2c_client *client)
 	return ret;
 }
 
+static int mt9t112_goto_preview(const struct i2c_client *client)
+{
+	int ret, trycount = 0;
+
+	/* Is it already in preview mode? */
+	mt9t112_mcu_read(ret, client, VAR8(1, 1));
+	if (ret == 0x3)
+		return 0;
+
+	/* Go to preview mode */
+	mt9t112_mcu_write(ret, client, VAR8(1, 0), 1);
+	do {
+		mt9t112_mcu_read(ret, client, VAR8(1, 1));
+		mdelay(1);
+	} while ((ret != 0x3) && (++trycount < 100));
+
+	if (trycount >= 100)
+		return -EBUSY;
+
+	return 0;
+}
+
+static int mt9t112_goto_capture(const struct i2c_client *client)
+{
+	int ret, trycount = 0;
+
+	/* Is it already in capture mode? */
+	mt9t112_mcu_read(ret, client, VAR8(1, 1));
+	if (ret == 0x7)
+		return 0;
+
+	/* Go to capture mode */
+	mt9t112_mcu_write(ret, client, VAR8(1, 0), 2);
+	do {
+		mt9t112_mcu_read(ret, client, VAR8(1, 1));
+		mdelay(1);
+	} while ((ret != 0x7) && (++trycount < 100));
+
+	if (trycount >= 100)
+		return -EBUSY;
+
+	return 0;
+}
+
 static int mt9t112_init_camera(const struct i2c_client *client)
 {
 	int ret;
@@ -1033,6 +1080,13 @@ static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
 		mt9t112_mcu_write(ret, client, VAR8(1, 0), 0x06);
 
 		ECHECKER(ret, mt9t112_auto_focus_trigger(client));
+
+		ECHECKER(ret, mt9t112_goto_preview(client));
+
+		if ((priv->pix.width == MAX_WIDTH) &&
+		    (priv->pix.height == MAX_HEIGHT)) {
+			ECHECKER(ret, mt9t112_goto_capture(client));
+		}
 
 		dev_dbg(&client->dev, "format : %d\n", priv->pix.pixelformat);
 		dev_dbg(&client->dev, "size   : %d x %d\n",
