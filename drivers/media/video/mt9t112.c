@@ -1080,14 +1080,14 @@ static int mt9t112_v4l2_int_s_power(struct v4l2_int_device *s,
 				  mt9t112_pixfmt_to_order(priv->pix.pixelformat));
 		mt9t112_mcu_write(ret, client, VAR8(1, 0), 0x06);
 
-		ECHECKER(ret, mt9t112_auto_focus_trigger(client));
-
 		ECHECKER(ret, mt9t112_goto_preview(client));
 
 		if ((priv->pix.width == MAX_WIDTH) &&
 		    (priv->pix.height == MAX_HEIGHT)) {
 			ECHECKER(ret, mt9t112_goto_capture(client));
 		}
+
+		ECHECKER(ret, mt9t112_auto_focus_trigger(client));
 
 		dev_dbg(&client->dev, "format : %d\n", priv->pix.pixelformat);
 		dev_dbg(&client->dev, "size   : %d x %d\n",
