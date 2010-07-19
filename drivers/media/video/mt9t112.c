@@ -694,19 +694,23 @@ static int mt9t112_init_setting(const struct i2c_client *client)
 	/* RX FIFO Watermark (B) */
 	mt9t112_mcu_write(ret, client, VAR(18, 142), 0x0080);
 
-	/* MCLK: 16MHz
+	/* MCLK: 24MHz
 	 * PCLK: 73MHz
 	 * CorePixCLK: 36.5 MHz
 	 */
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x0044), 133);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x0045), 110);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x008c), 130);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x008d), 108);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x0044), 11);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x012F), 1);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x0045), 222);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x012D), 0);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x008c), 161);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x0130), 0);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x008d), 134);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x012E), 0);
 
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x00A5), 27);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a6), 30);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a7), 32);
-	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a8), 35);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x00A5), 36);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a6), 38);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a7), 43);
+	mt9t112_mcu_write(ret, client, VAR8(18, 0x00a8), 45);
 
 	return ret;
 }
