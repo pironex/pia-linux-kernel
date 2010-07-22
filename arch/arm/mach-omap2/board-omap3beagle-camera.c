@@ -107,7 +107,7 @@ static int mt9v113_ifparm(struct v4l2_ifparm *p)
 
 static struct omap34xxcam_hw_config mt9v113_hwc = {
 	.dev_index		= 0,
-	.dev_minor		= 0,
+	.dev_minor		= -1,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 1,
 	.u.sensor.capture_mem	= MT9V113_MAX_FRAME_SIZE * 2,
@@ -259,8 +259,8 @@ static int mt9t112_ifparm(struct v4l2_ifparm *p)
 
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 static struct omap34xxcam_hw_config mt9t112_hwc = {
-	.dev_index		= 0,
-	.dev_minor		= 0,
+	.dev_index		= 1,
+	.dev_minor		= -1,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 0,
 	.u.sensor.capture_mem	= MT9T112_BIGGEST_FRAME_BYTE_SIZE,
