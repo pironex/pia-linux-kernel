@@ -1251,7 +1251,6 @@ static int ioctl_s_power(struct v4l2_int_device *s, enum v4l2_power on)
 		/* Disable mux for mt9v113 data path */
 		if (decoder->pdata->power_set)
 			err |= decoder->pdata->power_set(s, on);
-		decoder->state = STATE_NOT_DETECTED;
 		break;
 
 	case V4L2_POWER_STANDBY:
@@ -1260,23 +1259,29 @@ static int ioctl_s_power(struct v4l2_int_device *s, enum v4l2_power on)
 		break;
 
 	case V4L2_POWER_ON:
-		/* Enable mux for mt9v113 data path */
+		if (decoder->pdata->power_set) {
+			err = decoder->pdata->power_set(s, on);
+			if (err)
+				return err;
+		}
+
 		if (decoder->state == STATE_NOT_DETECTED) {
-
-			if (decoder->pdata->power_set)
-				err = decoder->pdata->power_set(s, on);
-
 			/* Detect the sensor is not already detected */
-			err |= mt9v113_detect(decoder);
+			err = mt9v113_detect(decoder);
 			if (err) {
 				v4l_err(decoder->client,
 						"Unable to detect decoder\n");
+				WARN_ON(1);
 				return err;
 			}
 		}
 		/* Only VGA mode for now */
-		err |= mt9v113_configure(decoder);
-		err |= mt9v113_vga_mode(decoder);
+		err = mt9v113_configure(decoder);
+		if (err)
+			return err;
+		err = mt9v113_vga_mode(decoder);
+		if (err)
+			return err;
 		break;
 
 	default:
