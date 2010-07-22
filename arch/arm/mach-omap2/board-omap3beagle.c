@@ -89,6 +89,7 @@ extern struct mt9t112_platform_data mt9t112_pdata;
 #define NAND_BLOCK_SIZE		SZ_128K
 
 char expansionboard_name[16];
+char cameraboard_name[16];
 
 #if defined(CONFIG_ENC28J60) || defined(CONFIG_ENC28J60_MODULE)
 
@@ -595,13 +596,16 @@ static struct i2c_board_info __initdata beagle_zippy_i2c2_boardinfo[] = {
 static struct i2c_board_info __initdata beagle_zippy_i2c2_boardinfo[] = {};
 #endif
 
-static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
+static struct i2c_board_info __initdata beagle_lbcmvga_i2c2_boardinfo[] = {
 #if defined(CONFIG_VIDEO_MT9V113) || defined(CONFIG_VIDEO_MT9V113_MODULE)
 	{
 		I2C_BOARD_INFO("mt9v113", MT9V113_I2C_ADDR),
 		.platform_data	= &mt9v113_pdata,
 	},
 #endif
+};
+
+static struct i2c_board_info __initdata beagle_lbcm3m1_i2c2_boardinfo[] = {
 #if defined(CONFIG_VIDEO_MT9T112) || defined(CONFIG_VIDEO_MT9T112_MODULE)
 	{
 		I2C_BOARD_INFO("mt9t112", MT9T112_I2C_ADDR),
@@ -614,15 +618,27 @@ static int __init omap3_beagle_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 2600, beagle_i2c1_boardinfo,
 			ARRAY_SIZE(beagle_i2c1_boardinfo));
-	if(!strcmp(expansionboard_name, "zippy") || !strcmp(expansionboard_name, "zippy2"))
-	{
-		printk(KERN_INFO "Beagle expansionboard: registering i2c2 bus for zippy/zippy2\n");
+
+	if (!strcmp(expansionboard_name, "zippy") ||
+	   !strcmp(expansionboard_name, "zippy2")) {
+		printk(KERN_INFO "Beagle expansionboard:"
+				 " registering i2c2 bus for zippy/zippy2\n");
 		omap_register_i2c_bus(2, 400,  beagle_zippy_i2c2_boardinfo,
 				ARRAY_SIZE(beagle_zippy_i2c2_boardinfo));
-	} else
-	{
-		omap_register_i2c_bus(2, 400,  beagle_i2c2_boardinfo,
-				ARRAY_SIZE(beagle_i2c2_boardinfo));
+	} else {
+		if (!strcmp(cameraboard_name, "lbcmvga")) {
+			printk(KERN_INFO "Beagle cameraboard:"
+					 " registering i2c2 bus for lbcmvga\n");
+			omap_register_i2c_bus(2, 400,  beagle_lbcmvga_i2c2_boardinfo,
+					ARRAY_SIZE(beagle_lbcmvga_i2c2_boardinfo));
+		} else if (!strcmp(cameraboard_name, "lbcm3m1")) {
+			printk(KERN_INFO "Beagle cameraboard:"
+					 " registering i2c2 bus for lbcm3m1\n");
+			omap_register_i2c_bus(2, 400,  beagle_lbcm3m1_i2c2_boardinfo,
+					ARRAY_SIZE(beagle_lbcm3m1_i2c2_boardinfo));
+		} else {
+			omap_register_i2c_bus(2, 400, NULL, 0);
+		}
 	}
 	/* Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz */
@@ -825,6 +841,15 @@ static int __init expansionboard_setup(char *str)
 	return 0;
 }
 
+static int __init cameraboard_setup(char *str)
+{
+	if (!str)
+		return -EINVAL;
+	strncpy(cameraboard_name, str, 16);
+	printk(KERN_INFO "Beagle cameraboard: %s\n", cameraboard_name);
+	return 0;
+}
+
 static void __init omap3_beagle_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
@@ -910,6 +935,7 @@ static void __init omap3_beagle_map_io(void)
 }
 
 early_param("buddy", expansionboard_setup);
+early_param("camera", cameraboard_setup);
 
 MACHINE_START(OMAP3_BEAGLE, "OMAP3 Beagle Board")
 	/* Maintainer: Syed Mohammed Khasim - http://beagleboard.org */
