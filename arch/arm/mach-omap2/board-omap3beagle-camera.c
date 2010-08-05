@@ -160,8 +160,6 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	case V4L2_POWER_ON:
 
 		isp_configure_interface(vdev->cam->isp, &mt9v113_if_config);
-		/* Set RESET_BAR to 0 */
-		gpio_set_value(LEOPARD_RESET_GPIO, 0);
 
 		/* turn on VDD */
 		regulator_enable(cam_1v8_reg);
@@ -170,6 +168,9 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		regulator_enable(cam_2v8_reg);
 		mdelay(50);
 
+		/* Set RESET_BAR to 0 */
+		gpio_set_value(LEOPARD_RESET_GPIO, 0);
+
 		/* Enable EXTCLK */
 		isp_set_xclk(vdev->cam->isp, MT9V113_CLK_MIN*2, CAM_USE_XCLKA);
 		/*
@@ -177,8 +178,10 @@ static int mt9v113_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		 * ((1000000 * 70) / 6000000) = aprox 12 us.
 		 */
 		udelay(12);
+
 		/* Set RESET_BAR to 1 */
 		gpio_set_value(LEOPARD_RESET_GPIO, 1);
+
 		/*
 		 * Wait at least 100 CLK cycles (w/EXTCLK = 6MHz, or CLK_MIN):
 		 * ((1000000 * 100) / 6000000) = aprox 17 us.
@@ -317,8 +320,6 @@ static int mt9t112_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		isp_configure_interface(vdev->cam->isp, &mt9t112_if_config);
 #endif
 
-		/* Set RESET_BAR to 0 */
-		gpio_set_value(LEOPARD_RESET_GPIO, 0);
 
 		/* turn on VDD */
 		regulator_enable(cam_1v8_reg);
@@ -329,6 +330,9 @@ static int mt9t112_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		regulator_enable(cam_2v8_reg);
 
 		mdelay(50);
+
+		/* Set RESET_BAR to 0 */
+		gpio_set_value(LEOPARD_RESET_GPIO, 0);
 
 		/* Enable EXTCLK */
 		isp_set_xclk(vdev->cam->isp, 24000000, CAM_USE_XCLKA);
