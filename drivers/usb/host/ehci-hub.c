@@ -468,7 +468,8 @@ static int check_reset_complete (
 			index + 1);
 
 		// what happens if HCS_N_CC(params) == 0 ?
-#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM)
+#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM) && \
+    !defined(CONFIG_MACH_CRANEBOARD)
 		port_status |= PORT_OWNER;
 #endif
 		port_status &= ~PORT_RWC_BITS;
@@ -927,7 +928,8 @@ static int ehci_hub_control (
 				ehci_dbg (ehci,
 					"port %d low speed --> companion\n",
 					wIndex + 1);
-#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM)
+#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM) && \
+    !defined(CONFIG_MACH_CRANEBOARD)
 				temp |= PORT_OWNER;
 #endif
 			} else {
@@ -978,7 +980,8 @@ error_exit:
 
 static void ehci_relinquish_port(struct usb_hcd *hcd, int portnum)
 {
-#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM)
+#if !defined(CONFIG_MACH_OMAP3EVM) && !defined(CONFIG_MACH_OMAP3517EVM) && \
+    !defined(CONFIG_MACH_CRANEBOARD)
 	struct ehci_hcd		*ehci = hcd_to_ehci(hcd);
 
 	if (ehci_is_TDI(ehci))

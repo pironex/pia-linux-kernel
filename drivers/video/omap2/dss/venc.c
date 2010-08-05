@@ -292,7 +292,9 @@ static struct {
 	void __iomem *base;
 	struct mutex venc_lock;
 	u32 wss_data;
+#ifndef CONFIG_MACH_CRANEBOARD
 	struct regulator *vdda_dac_reg;
+#endif
 } venc;
 
 static inline void venc_write_reg(int idx, u32 val)
@@ -503,13 +505,14 @@ int venc_init(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+#ifndef CONFIG_MACH_CRANEBOARD
 	venc.vdda_dac_reg = regulator_get(&pdev->dev, "vdda_dac");
 	if (IS_ERR(venc.vdda_dac_reg)) {
 		iounmap(venc.base);
 		DSSERR("can't get VDDA_DAC regulator\n");
 		return PTR_ERR(venc.vdda_dac_reg);
 	}
-
+#endif
 	venc_enable_clocks(1);
 
 	rev_id = (u8)(venc_read_reg(VENC_REV_ID) & 0xff);
@@ -523,9 +526,9 @@ int venc_init(struct platform_device *pdev)
 void venc_exit(void)
 {
 	omap_dss_unregister_driver(&venc_driver);
-
+#ifndef CONFIG_MACH_CRANEBOARD
 	regulator_put(venc.vdda_dac_reg);
-
+#endif
 	iounmap(venc.base);
 }
 
@@ -576,8 +579,9 @@ static int venc_power_on(struct omap_dss_device *dssdev)
 	dispc_set_digit_size(dssdev->panel.timings.x_res,
 			dssdev->panel.timings.y_res/2);
 
+#ifndef CONFIG_MACH_CRANEBOARD
 	regulator_enable(venc.vdda_dac_reg);
-
+#endif
 	if (dssdev->platform_enable)
 		dssdev->platform_enable(dssdev);
 
@@ -604,8 +608,9 @@ static void venc_power_off(struct omap_dss_device *dssdev)
 	if (dssdev->platform_disable)
 		dssdev->platform_disable(dssdev);
 
+#ifndef CONFIG_MACH_CRANEBOARD
 	regulator_disable(venc.vdda_dac_reg);
-
+#endif
 #ifdef CONFIG_OMAP2_DSS_USE_DSI_PLL
 	dsi_pll_uninit();
 	dss_clk_disable(DSS_CLK_FCK2);

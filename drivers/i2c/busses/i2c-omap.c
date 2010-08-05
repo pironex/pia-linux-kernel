@@ -801,7 +801,7 @@ complete:
 							"data to send\n");
 					break;
 				}
-
+#ifndef CONFIG_CRANEBOARD
 				/*
 				 * OMAP3430 Errata 1.153: When an XRDY/XDR
 				 * is hit, wait for XUDF before writing data
@@ -821,6 +821,7 @@ complete:
 							stat = omap_i2c_read_reg(dev, OMAP_I2C_STAT_REG);
 						}
 				}
+#endif
 
 				omap_i2c_write_reg(dev, OMAP_I2C_DATA_REG, w);
 			}

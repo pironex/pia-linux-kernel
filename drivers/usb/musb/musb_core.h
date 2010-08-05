@@ -380,7 +380,7 @@ struct musb {
 	void __iomem		*sync_va;
 #endif
 
-#ifdef CONFIG_MACH_OMAP3517EVM
+#if defined(CONFIG_MACH_OMAP3517EVM) || defined(CONFIG_MACH_CRANEBOARD)
 /* Backup registers required for the workaround of AM3517 bytewise
  * read issue. FADDR, POWER, INTRTXE, INTRRXE and INTRUSBE register
  * read would actually clear the interrupt registers and would cause

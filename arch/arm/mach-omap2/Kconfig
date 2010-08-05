@@ -96,6 +96,11 @@ config MACH_OMAP3517EVM
 	depends on ARCH_OMAP3 && ARCH_OMAP34XX
 	select OMAP_PACKAGE_CBB
 
+config MACH_CRANEBOARD
+	bool "AM3517/05 Crane board"
+	depends on ARCH_OMAP3 && ARCH_OMAP34XX
+	select OMAP_PACKAGE_CBB
+
 config PMIC_TPS65023
 	bool "TPS65023 Power Module"
 	default y
@@ -170,6 +175,7 @@ config MACH_OMAP_3630SDP
 config MACH_OMAP_4430SDP
 	bool "OMAP 4430 SDP board"
 	depends on ARCH_OMAP4
+
 
 config OMAP3_EMU
 	bool "OMAP3 debugging peripherals"

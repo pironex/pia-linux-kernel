@@ -770,7 +770,7 @@ setup:
 				printk(KERN_NOTICE "%s: peripheral reset "
 						"irq lost!\n",
 						musb_driver_name);
-#ifdef CONFIG_MACH_OMAP3517EVM
+#if defined(CONFIG_MACH_OMAP3517EVM) || defined(CONFIG_MACH_CRANEBOARD)
 				musb->read_mask &= ~AM3517_READ_ISSUE_POWER;
 #endif
 				power = musb_readb(mbase, MUSB_POWER);

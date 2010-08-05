@@ -2027,7 +2027,7 @@ __acquires(musb->lock)
 
 
 	/* what speed did we negotiate? */
-#ifdef CONFIG_MACH_OMAP3517EVM
+#if defined(CONFIG_MACH_OMAP3517EVM) || defined(CONFIG_MACH_CRANEBOARD)
 	musb->read_mask &= ~AM3517_READ_ISSUE_POWER;
 #endif
 	power = musb_readb(mbase, MUSB_POWER);
