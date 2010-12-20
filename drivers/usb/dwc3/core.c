@@ -102,8 +102,8 @@ static void dwc3_free_one_event_buffer(struct dwc3 *dwc,
  * Returns a pointer to the allocated event buffer structure on succes
  * otherwise ERR_PTR(errno).
  */
-static struct dwc3_event_buffer *dwc3_alloc_one_event_buffer(struct dwc3 *dwc,
-		unsigned length)
+static struct dwc3_event_buffer *__devinit
+dwc3_alloc_one_event_buffer(struct dwc3 *dwc, unsigned length)
 {
 	struct dwc3_event_buffer	*evt;
 
@@ -148,7 +148,7 @@ static void dwc3_free_event_buffers(struct dwc3 *dwc)
  *
  * Returns 0 on success otherwise negative errno.
  */
-static int dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned num,
+static int __devinit dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned num,
 		unsigned length)
 {
 	int			i;
