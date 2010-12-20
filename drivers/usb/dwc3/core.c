@@ -27,39 +27,11 @@
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
 
+#include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
+
 #include "core.h"
 #include "io.h"
-
-struct dwc3_event_buffer {
-	struct list_head	list;
-
-	void			*buf;
-	unsigned		length;
-
-	dma_addr_t		dma;
-
-	struct dwc3		*dwc;
-};
-
-struct dwc3 {
-	/* device lock */
-	spinlock_t		lock;
-	struct device		*dev;
-
-	struct list_head	event_buffer_list;
-
-	void __iomem		*xhci;
-	void __iomem		*global;
-	void __iomem		*device;
-	void __iomem		*otg;
-	void __iomem		*ram0;
-	void __iomem		*ram1;
-	void __iomem		*ram2;
-
-	int			irq;
-
-	u32			revision;
-};
 
 #ifdef CONFIG_PM
 static int dwc3_suspend(struct device *dev)

@@ -20,6 +20,14 @@
 #ifndef __DRIVERS_USB_DWC3_CORE_H
 #define __DRIVERS_USB_DWC3_CORE_H
 
+#include <linux/device.h>
+#include <linux/spinlock.h>
+#include <linux/list.h>
+#include <linux/dma-mapping.h>
+
+#include <linux/usb/ch9.h>
+#include <linux/usb/gadget.h>
+
 /* Global constants */
 #define DWC3_EVENT_BUFFERS_NUM	32
 #define DWC3_EVENT_BUFFERS_SIZE	1024
@@ -135,5 +143,39 @@
 #define DWC3_DEPCMD_GETSEQNUMBER	(0x03 << 0)
 #define DWC3_DEPCMD_SETTRANSFRESOURCE	(0x02 << 0)
 #define DWC3_DEPCMD_SETEPCONFIG		(0x01 << 0)
+
+/* Structures */
+struct dwc3_event_buffer {
+	struct list_head	list;
+
+	void			*buf;
+	unsigned		length;
+
+	dma_addr_t		dma;
+
+	struct dwc3		*dwc;
+};
+
+struct dwc3 {
+	/* device lock */
+	spinlock_t		lock;
+	struct device		*dev;
+
+	struct list_head	event_buffer_list;
+	struct usb_gadget	gadget;
+	struct usb_gadget_driver *gadget_driver;
+
+	void __iomem		*xhci;
+	void __iomem		*global;
+	void __iomem		*device;
+	void __iomem		*otg;
+	void __iomem		*ram0;
+	void __iomem		*ram1;
+	void __iomem		*ram2;
+
+	int			irq;
+
+	u32			revision;
+};
 
 #endif /* __DRIVERS_USB_DWC3_CORE_H */
