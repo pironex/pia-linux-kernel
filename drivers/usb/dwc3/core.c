@@ -195,6 +195,22 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 	return 0;
 }
 
+static void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
+{
+	struct dwc3_event_buffer	*evt;
+	int				n = 0;
+
+	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
+		dwc3_writel(dwc->global, DWC3_GEVNTADR(n), 0);
+		dwc3_writel(dwc->global, DWC3_GEVNTADR(n + 1), 0);
+		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n), 0);
+
+		n += 2;
+	}
+
+	dwc3_writel(dwc->global, DWC3_GEVNTCOUNT, 0);
+}
+
 /**
  * dwc3_core_init - Low-level initialization of DWC3 Core
  * @dwc: Pointer to our controller context structure
@@ -442,6 +458,8 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 
 	free_irq(dwc->irq, dwc);
+	dwc3_event_buffers_cleanup(dwc);
+	dwc3_free_event_buffers(dwc);
 
 	iounmap(dwc->ram2);
 	iounmap(dwc->ram1);
