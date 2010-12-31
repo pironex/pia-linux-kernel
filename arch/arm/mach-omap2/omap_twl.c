@@ -58,7 +58,9 @@
 static bool is_offset_valid;
 static u8 smps_offset;
 
+#define TWL4030_DCDC_GLOBAL_CFG	0x06
 #define REG_SMPS_OFFSET         0xE0
+#define SMARTREFLEX_ENABLE	BIT(3)
 
 unsigned long twl4030_vsel_to_uv(const u8 vsel)
 {
@@ -256,6 +258,7 @@ int __init omap4_twl_init(void)
 int __init omap3_twl_init(void)
 {
 	struct voltagedomain *voltdm;
+	u8 temp;
 
 	if (!cpu_is_omap34xx())
 		return -ENODEV;
@@ -266,6 +269,19 @@ int __init omap3_twl_init(void)
 		omap3_core_volt_info.vp_vddmin = OMAP3630_VP2_VLIMITTO_VDDMIN;
 		omap3_core_volt_info.vp_vddmax = OMAP3630_VP2_VLIMITTO_VDDMAX;
 	}
+
+	/*
+	 * The smartreflex bit on twl4030 needs to be enabled by
+	 * default irrespective of whether smartreflex module is
+	 * enabled on the OMAP side or not. This is because without
+	 * this bit enabled the voltage scaling through
+	 * vp forceupdate does not function properly on OMAP3.
+	 */
+	twl_i2c_read_u8(TWL4030_MODULE_PM_RECEIVER, &temp,
+			TWL4030_DCDC_GLOBAL_CFG);
+	temp |= SMARTREFLEX_ENABLE;
+	twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, temp,
+			TWL4030_DCDC_GLOBAL_CFG);
 
 	voltdm = omap_voltage_domain_lookup("mpu");
 	omap_voltage_register_pmic(voltdm, &omap3_mpu_volt_info);
