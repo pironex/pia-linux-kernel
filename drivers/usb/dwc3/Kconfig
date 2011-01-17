@@ -21,3 +21,13 @@ config USB_DWC3_PIO
 	help
 	  Say Y here to disable DMA support on DWC3 Driver.
 
+choice
+	prompt "Platform Glue Layer"
+	depends on USB_DWC3
+
+config USB_DWC3_OMAP
+	tristate "OMAP"
+	depends on ARCH_OMAP
+
+endchoice
+
