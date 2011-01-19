@@ -55,6 +55,8 @@
 
 #define NAND_BLOCK_SIZE        SZ_128K
 
+char expansionboard_name[16];
+
 static struct mtd_partition am3517crane_nand_partitions[] = {
 	/* All the partition sizes are listed in terms of NAND block size */
 	{
@@ -724,6 +726,15 @@ static struct am3517_hsmmc_info mmc[] = {
 	{}      /* Terminator */
 };
 
+static int __init expansionboard_setup(char *str)
+{
+	if (!str)
+		return -EINVAL;
+	strncpy(expansionboard_name, str, 16);
+	printk(KERN_INFO "Crane expansionboard: %s\n", expansionboard_name);
+	return 0;
+}
+
 static void __init am3517_crane_init(void)
 {
 
@@ -761,6 +772,8 @@ static void __init am3517_crane_map_io(void)
 	omap2_set_globals_343x();
 	omap2_map_common_io();
 }
+
+early_param("buddy", expansionboard_setup);
 
 MACHINE_START(CRANEBOARD, "AM3517/05 CRANEBOARD")
 	.phys_io	= 0x48000000,
