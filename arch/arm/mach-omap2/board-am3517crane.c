@@ -747,6 +747,37 @@ static void __init am3517_crane_init(void)
 	am3517crane_flash_init();
 	usb_musb_init();
 
+	if(!strcmp(expansionboard_name, "trainer"))
+	{
+		printk(KERN_INFO "Beagle expansionboard: exporting GPIOs 130-141,162 to userspace\n");
+		gpio_request(130, "sysfs");
+		gpio_export(130, 1);
+		gpio_request(131, "sysfs");
+		gpio_export(131, 1);
+		gpio_request(132, "sysfs");
+		gpio_export(132, 1);
+		gpio_request(133, "sysfs");
+		gpio_export(133, 1);
+		gpio_request(134, "sysfs");
+		gpio_export(134, 1);
+		gpio_request(135, "sysfs");
+		gpio_export(135, 1);
+		gpio_request(136, "sysfs");
+		gpio_export(136, 1);
+		gpio_request(137, "sysfs");
+		gpio_export(137, 1);
+		gpio_request(138, "sysfs");
+		gpio_export(138, 1);
+		gpio_request(139, "sysfs");
+		gpio_export(139, 1);
+		gpio_request(140, "sysfs");
+		gpio_export(140, 1);
+		gpio_request(141, "sysfs");
+		gpio_export(141, 1);
+		gpio_request(162, "sysfs");
+		gpio_export(162, 1);
+	}	
+
 	/* Configure GPIO for EHCI port */
 	omap_mux_init_gpio(35, OMAP_PIN_OUTPUT);
 	gpio_request(35, "usb_ehci_enable");
