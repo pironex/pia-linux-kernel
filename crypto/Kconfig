@@ -822,3 +822,6 @@ config CRYPTO_ANSI_CPRNG
 source "drivers/crypto/Kconfig"
 
 endif	# if CRYPTO
+
+source "crypto/ocf/Kconfig"
+
