@@ -31,17 +31,22 @@
 #include <linux/usb/gadget.h>
 
 #include "core.h"
+#include "gadget.h"
 #include "io.h"
 
 static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
-		unsigned cmd, unsigned params)
+		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params)
 {
 	unsigned long		timeout = jiffies + msecs_to_jiffies(500);
 	u32			reg;
 
-	reg = (params << 16) | (cmd << 0);
+	params->param1.depcfg.ep_number = ep;
 
-	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), reg);
+	dwc3_writel(dwc->device, DWC3_DEPCMDPAR0(ep), params->param0.raw);
+	dwc3_writel(dwc->device, DWC3_DEPCMDPAR1(ep), params->param1.raw);
+	dwc3_writel(dwc->device, DWC3_DEPCMDPAR2(ep), params->param2.raw);
+
+	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
 	do {
 		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(0));
 		if (time_after(jiffies, timeout))
@@ -61,10 +66,12 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
  */
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
-	u32			params;
-	u32			reg;
+	struct dwc3_gadget_ep_cmd_params	params;
+	u32					reg;
 
-	int			ret;
+	int					ret;
+
+	memset(&params, 0x00, sizeof(params));
 
 	/*
 	 * REVISIT: Here we should flush all FIFOs and
@@ -73,6 +80,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	 */
 
 	reg = dwc3_readl(dwc->global, DWC3_GCTL);
+
 	/*
 	 * REVISIT: power down scale might be different
 	 * depending on PHY used, need to pass that via platform_data
@@ -82,41 +90,38 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	dwc3_writel(dwc->device, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, 0);
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, &params);
 	if (ret)
 		return ret;
 
-	/*
-	 * FIXME params should contain the following:
-	 *
-	 * USB Endpoint Number = 0 or 1 (for physical endpoint 0 or 1)
-	 * FIFONum= 0
-	 * XferNRdyEn and XferCmplEn = 1
-	 * Maximum Packet Size = 512
-	 * Burst Size = 0
-	 * EPType = 2’b00 (Control)
-	 *
-	 * Now, how to set those ?? Documentation doesn't fully explain.
-	 */
-	params = 0x00;
+	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
+	params.param0.depcfg.burst_size = 0;
+	params.param0.depcfg.max_packet_size = 512;
+	params.param0.depcfg.fifo_number = 0;
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, params);
+	params.param1.depcfg.xfer_not_ready_enable = true;
+	params.param1.depcfg.xfer_complete_enable = true;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return ret;
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, params);
+	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return ret;
 
 	/* set DEPCMD_PAR0(0) to 1 */
+	params.param0.raw = 0x01;
+	params.param1.raw = 0x01;
+
 	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
-			DWC3_DEPCMD_SETTRANSFRESOURCE, 0x00);
+			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
 		return ret;
 
 	/* set DEPCMD_PAR0(1) to 1 */
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1,
-			DWC3_DEPCMD_SETTRANSFRESOURCE, 0x00);
+			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
 		return ret;
 
@@ -136,7 +141,8 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_writel(dwc->device, DWC3_DEVTEN, reg);
 
 	/* Enable physical EPs 0 & 1 */
-	dwc3_writel(dwc->device, DWC3_DALEPENA, 0x03);
+	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
+			| DWC3_DALEPENA_EPIN(0));
 
 	/* Set RUN/STOP bit */
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);

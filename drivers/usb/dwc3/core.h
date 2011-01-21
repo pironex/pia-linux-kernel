@@ -111,8 +111,8 @@
 #define DWC3_DGCMD		0xc714
 #define DWC3_DALEPENA		0xc720
 #define DWC3_DEPCMDPAR2(n)	(0xc800 + (n * 0x04))
-#define DWC3_DEPCMDPAR1		(0xc804 + (n * 0x04))
-#define DWC3_DEPCMDPAR0		(0xc808 + (n * 0x04))
+#define DWC3_DEPCMDPAR1(n)	(0xc804 + (n * 0x04))
+#define DWC3_DEPCMDPAR0(n)	(0xc808 + (n * 0x04))
 #define DWC3_DEPCMD(n)		(0xc80c + (n * 0x04))
 
 /* OTG Registers */
@@ -153,7 +153,9 @@
 #define DWC3_DEVTEN_DISCONNEVTEN	(1 << 0)
 
 /* Device Endpoint Command Register */
+#define DWC3_DEPCMD_HIPRI_FORCERM	(1 << 11)
 #define DWC3_DEPCMD_CMDACT		(1 << 10)
+#define DWC3_DEPCMD_CMDIOC		(1 << 8)
 
 #define DWC3_DEPCMD_DEPSTARTCFG		(0x09 << 0)
 #define DWC3_DEPCMD_ENDTRANSFER		(0x08 << 0)
@@ -164,6 +166,14 @@
 #define DWC3_DEPCMD_GETSEQNUMBER	(0x03 << 0)
 #define DWC3_DEPCMD_SETTRANSFRESOURCE	(0x02 << 0)
 #define DWC3_DEPCMD_SETEPCONFIG		(0x01 << 0)
+
+#define DWC3_DALEPENA_EPOUT(n)		(1 << n)
+#define DWC3_DALEPENA_EPIN(n)		(1 << (n + 1))
+
+#define DWC3_DEPCMD_TYPE_CONTROL	0
+#define DWC3_DEPCMD_TYPE_ISOC		1
+#define DWC3_DEPCMD_TYPE_BULK		2
+#define DWC3_DEPCMD_TYPE_INTR		3
 
 /* Structures */
 struct dwc3_event_buffer {
