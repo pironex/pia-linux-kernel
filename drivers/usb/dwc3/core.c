@@ -59,12 +59,70 @@ static const struct dev_pm_ops dwc3_pm_ops = {
 #define DEV_PM_OPS	NULL
 #endif
 
+static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc, u32 event)
+{
+	switch (DWC3_DEVICE_EVENT(event)) {
+	case DWC3_DEVICE_EVENT_DISCONNECT:
+		/* handle disconnect IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_RESET:
+		/* handle reset IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_CONNECT_DONE:
+		/* handle connect done IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_WAKEUP:
+		/* handle wakeup IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
+		/* handle link status change IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_EOPF:
+		/* handle end of periodic frame IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_SOF:
+		/* handle start of frame IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_ERRATIC_ERROR:
+		/* handle erratic error IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_CMD_CMPL:
+		/* handle command complete IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_OVERFLOW:
+		/* handle device overflow IRQ here */
+		break;
+	default:
+		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", DWC3_DEVICE_EVENT(event));
+	}
+
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_otg_interrupt(struct dwc3 *dwc, u32 event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc, u32 event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc, u32 event)
+{
+	return IRQ_NONE;
+}
+
 static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 {
 	struct dwc3_event_buffer	*evt;
 	struct dwc3			*dwc = _dwc;
+
 	unsigned long			flags;
+
 	int				count;
+
 	irqreturn_t			ret = IRQ_NONE;
 
 	spin_lock_irqsave(&dwc->lock, flags);
@@ -74,7 +132,46 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	if (!count)
 		goto out;
 
-	/* Ack the IRQ here */
+	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
+		int			i;
+
+		/*
+		 * It's unclear if there's a possibility first of event
+		 * buffer being NULL but still have valid event buffers
+		 * after that.
+		 */
+		if (!evt->buf)
+			break;
+
+		for (i = 0; i < evt->length; i += 4) {
+			u32		event;
+
+			memcpy(&event, (evt->buf + i), sizeof(event));
+
+			/*
+			 * It's unclear if there's a possibility first of event
+			 * being 0 and still have valid events after that.
+			 */
+			if (!event)
+				break;
+
+			switch (event & DWC3_EVENT_TYPE_MASK) {
+			case DWC3_EVENT_TYPE_DEV:
+				ret |= dwc3_gadget_interrupt(dwc, event);
+				break;
+			case DWC3_EVENT_TYPE_OTG:
+				ret |= dwc3_otg_interrupt(dwc, event);
+				break;
+			case DWC3_EVENT_TYPE_CARKIT:
+				ret |= dwc3_carkit_interrupt(dwc, event);
+			case DWC3_EVENT_TYPE_I2C:
+				ret |= dwc3_i2c_interrupt(dwc, event);
+				break;
+			default:
+				dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event);
+			}
+		}
+	}
 
 out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
