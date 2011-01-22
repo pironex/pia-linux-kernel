@@ -101,6 +101,12 @@
 #define gadget_is_musbhdrc(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_DWC3
+#define gadget_is_dwc3(g)	!strncmp("dwc3-udc", (g)->name)
+#else
+#define gadget_is_dwc3(g)	0
+#endif
+
 #ifdef CONFIG_USB_GADGET_LANGWELL
 #define gadget_is_langwell(g)	(!strcmp("langwell_udc", (g)->name))
 #else
