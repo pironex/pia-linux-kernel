@@ -94,11 +94,59 @@ static int dwc_gadget_ep0_disable(struct usb_ep *ep)
 	return -EINVAL;
 }
 
+static struct usb_request *dwc_gadget_ep0_alloc_request(struct usb_ep *ep,
+	gfp_t gfp_flags)
+{
+	return NULL;
+}
+
+static void dwc_gadget_ep0_free_request(struct usb_ep *ep,
+		struct usb_request *req)
+{
+}
+
+static int dwc_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *req,
+	gfp_t gfp_flags)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep0_dequeue(struct usb_ep *ep, struct usb_request *req)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep0_set_halt(struct usb_ep *ep, int value)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep0_set_wedge(struct usb_ep *ep)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep0_fifo_status(struct usb_ep *ep)
+{
+	return 0;
+}
+
+static void dwc_gadget_ep0_fifo_flush(struct usb_ep *ep)
+{
+}
+
 const struct usb_ep_ops dwc_gadget_ep0_ops = {
 	.enable		= dwc_gadget_ep0_enable,
 	.disable	= dwc_gadget_ep0_disable,
+	.alloc_request	= dwc_gadget_ep0_alloc_request,
+	.free_request	= dwc_gadget_ep0_free_request,
+	.queue		= dwc_gadget_ep0_queue,
+	.dequeue	= dwc_gadget_ep0_dequeue,
+	.set_halt	= dwc_gadget_ep0_set_halt,
+	.set_wedge	= dwc_gadget_ep0_set_wedge,
+	.fifo_status	= dwc_gadget_ep0_fifo_status,
+	.fifo_flush	= dwc_gadget_ep0_fifo_flush,
 };
-
 /* -------------------------------------------------------------------------- */
 
 static int dwc_gadget_ep_enable(struct usb_ep *ep,
@@ -131,9 +179,58 @@ static int dwc_gadget_ep_disable(struct usb_ep *ep)
 	return dwc_disable_endpoint(d_ep);
 }
 
+static struct usb_request *dwc_gadget_ep_alloc_request(struct usb_ep *ep,
+	gfp_t gfp_flags)
+{
+	return NULL;
+}
+
+static void dwc_gadget_ep_free_request(struct usb_ep *ep,
+		struct usb_request *req)
+{
+}
+
+static int dwc_gadget_ep_queue(struct usb_ep *ep, struct usb_request *req,
+	gfp_t gfp_flags)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep_dequeue(struct usb_ep *ep, struct usb_request *req)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep_set_halt(struct usb_ep *ep, int value)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep_set_wedge(struct usb_ep *ep)
+{
+	return 0;
+}
+
+static int dwc_gadget_ep_fifo_status(struct usb_ep *ep)
+{
+	return 0;
+}
+
+static void dwc_gadget_ep_fifo_flush(struct usb_ep *ep)
+{
+}
+
 const struct usb_ep_ops dwc_gadget_ep_ops = {
 	.enable		= dwc_gadget_ep_enable,
 	.disable	= dwc_gadget_ep_disable,
+	.alloc_request	= dwc_gadget_ep_alloc_request,
+	.free_request	= dwc_gadget_ep_free_request,
+	.queue		= dwc_gadget_ep_queue,
+	.dequeue	= dwc_gadget_ep_dequeue,
+	.set_halt	= dwc_gadget_ep_set_halt,
+	.set_wedge	= dwc_gadget_ep_set_wedge,
+	.fifo_status	= dwc_gadget_ep_fifo_status,
+	.fifo_flush	= dwc_gadget_ep_fifo_flush,
 };
 
 /* -------------------------------------------------------------------------- */
