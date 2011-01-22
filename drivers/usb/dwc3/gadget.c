@@ -110,16 +110,14 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		return ret;
 
-	/* set DEPCMD_PAR0(0) to 1 */
-	params.param0.raw = 0x01;
-	params.param1.raw = 0x01;
+	params.param0.depxfercfg.number_xfer_resources = 1;
+	params.param1.raw = 0;	/* be sure parameter1 is set to zero */
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
 		return ret;
 
-	/* set DEPCMD_PAR0(1) to 1 */
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
