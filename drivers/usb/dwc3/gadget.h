@@ -87,6 +87,37 @@ struct dwc3_gadget_ep_depcfg_param0 {
 	unsigned	ignore_sequence_number:1;
 } __attribute__ ((packed));
 
+/**
+ * struct dwc3_gadget_ep_depxfercfg_param0 - Parameter 0 of DEPXFERCFG
+ * @number_xfer_resources: Defines the number of Transfer Resources allocated
+ *	to this endpoint.  This field must be set to 1.
+ * @reserved16_31: set to zero;
+ */
+struct dwc3_gadget_ep_depxfercfg_param0 {
+	u16		number_xfer_resources;
+	u16		reserved16_31;
+} __attribute__ ((packed));
+
+/**
+ * struct dwc3_gadget_ep_depstrtxfer_param1 - Parameter 1 of DEPSTRTXFER
+ * @transfer_desc_addr_low: Indicates the lower 32 bits of the external
+ *	memory's start address for the transfer descriptor. Because TRBs
+ *	must be aligned to a 16-byte boundary, the lower 4 bits of this
+ *	address must be 0.
+ */
+struct dwc3_gadget_ep_depstrtxfer_param1 {
+	u32		transfer_desc_addr_low;
+} __attribute__ ((packed));
+
+/**
+ * struct dwc3_gadget_ep_depstrtxfer_param1 - Parameter 1 of DEPSTRTXFER
+ * @transfer_desc_addr_high: Indicates the higher 32 bits of the external
+ *	memory’s start address for the transfer descriptor.
+ */
+struct dwc3_gadget_ep_depstrtxfer_param0 {
+	u32		transfer_desc_addr_high;
+} __attribute__ ((packed));
+
 struct dwc3_gadget_ep_cmd_params {
 	union {
 		u32	raw;
@@ -95,11 +126,14 @@ struct dwc3_gadget_ep_cmd_params {
 	union {
 		u32	raw;
 		struct dwc3_gadget_ep_depcfg_param1 depcfg;
+		struct dwc3_gadget_ep_depstrtxfer_param1 depstrtxfer;
 	} param1;
 
 	union {
 		u32	raw;
 		struct dwc3_gadget_ep_depcfg_param0 depcfg;
+		struct dwc3_gadget_ep_depxfercfg_param0 depxfercfg;
+		struct dwc3_gadget_ep_depstrtxfer_param0 depstrtxfer;
 	} param0;
 } __attribute__ ((packed));
 
