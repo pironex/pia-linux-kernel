@@ -58,6 +58,95 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
+/* -------------------------------------------------------------------------- */
+
+static int dwc_gadget_ep0_enable(struct usb_ep *ep,
+		const struct usb_endpoint_descriptor *desc)
+{
+	return -EINVAL;
+}
+
+static int dwc_gadget_ep0_disable(struct usb_ep *ep)
+{
+	return -EINVAL;
+}
+
+const struct usb_ep_ops dwc_gadget_ep0_ops = {
+	.enable		= dwc_gadget_ep0_enable,
+	.disable	= dwc_gadget_ep0_disable,
+};
+
+/* -------------------------------------------------------------------------- */
+
+static int dwc_gadget_ep_enable(struct usb_ep *ep,
+		const struct usb_endpoint_descriptor *desc)
+{
+	/*
+	 * REVISIT this is probably the best location to allocate
+	 * more event buffers and initialize the endpoint. With
+	 * current design all EPs will be initialized at probe()
+	 * time, making it more difficult for core to conserve
+	 * power by shutting down unused EPs.
+	 */
+	return 0;
+}
+
+static int dwc_gadget_ep_disable(struct usb_ep *ep)
+{
+	/*
+	 * REVISIT this is the location to actually undo
+	 * what usb_ep_enable() did before.
+	 *
+	 * So here we should free a specific event buffer
+	 * and disable the endpoint.
+	 */
+	return 0;
+}
+
+const struct usb_ep_ops dwc_gadget_ep_ops = {
+	.enable		= dwc_gadget_ep_enable,
+	.disable	= dwc_gadget_ep_disable,
+};
+
+/* -------------------------------------------------------------------------- */
+
+static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
+{
+	struct dwc3_ep			*ep;
+	u8				epnum;
+
+	INIT_LIST_HEAD(&dwc->gadget.ep_list);
+
+	/* we know we have 32 EPs */
+	for (epnum = 0; epnum < 32; epnum++) {
+		ep = kzalloc(sizeof(*ep), GFP_KERNEL);
+		if (!ep) {
+			dev_err(dwc->dev, "can't allocate endpoint %d\n", epnum);
+			return;
+		}
+
+		INIT_LIST_HEAD(&ep->endpoint.ep_list);
+
+		ep->dwc = dwc;
+
+		snprintf(ep->name, 20, "ep%d%s", epnum, !epnum ? "shared" :
+				(epnum % 2) ? "in" : "false");
+		ep->endpoint.name = ep->name;
+
+		if (epnum == 0) {
+			ep->endpoint.maxpacket = 64;
+			ep->endpoint.ops = &dwc_gadget_ep0_ops;
+			dwc->gadget.ep0 = &ep->endpoint;
+		} else {
+			ep->endpoint.maxpacket = 512;
+			ep->endpoint.ops = &dwc_gadget_ep_ops;
+			ep->direction = (epnum % 2) ? true : false;
+			list_add_tail(&ep->endpoint.ep_list,
+					&dwc->gadget.ep_list);
+		}
+	}
+}
+
 /**
  * dwc3_gadget_init - Initializes gadget related registers
  * @dwc: Pointer to out controller context structure
@@ -141,6 +230,8 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	/* Enable physical EPs 0 & 1 */
 	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
 			| DWC3_DALEPENA_EPIN(0));
+
+	dwc3_gadget_init_endpoints(dwc);
 
 	/* Set RUN/STOP bit */
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);

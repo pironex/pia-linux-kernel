@@ -176,6 +176,15 @@
 #define DWC3_DEPCMD_TYPE_INTR		3
 
 /* Structures */
+
+/**
+ * struct dwc3_event_buffer - Software event buffer representation
+ * @list: a list of event buffers
+ * @buf: _THE_ buffer
+ * @length: size of this buffer
+ * @dma: dma_addr_t
+ * @dwc: pointer to DWC controller
+ */
 struct dwc3_event_buffer {
 	struct list_head	list;
 
@@ -187,6 +196,56 @@ struct dwc3_event_buffer {
 	struct dwc3		*dwc;
 };
 
+#define DWC3_EP_FLAG_STALLED	(1 << 0)
+#define DWC3_EP_FLAG_WEDGED	(1 << 1)
+
+#define DWC3_EP_DIRECTION_TX	true
+#define DWC3_EP_DIRECTION_RX	false
+
+/**
+ * struct dwc3_ep - device side endpoint representation
+ * @endpoint: usb endpoint
+ * @endpoint_list: list of endpoints we have
+ * @desc: usb_endpoint_descriptor pointer
+ * @dwc: pointer to DWC controller
+ * @flags: endpoint flags (wedged, stalled, ...)
+ * @number: endpoint number (1 - 15)
+ * @type: set to bmAttributes & USB_ENDPOINT_XFERTYPE_MASK
+ * @name: a human readable name e.g. ep1out-bulk
+ * @direction: true for TX, false for RX
+ */
+struct dwc3_ep {
+	struct usb_ep		endpoint;
+	struct list_head	endpoint_list;
+
+	struct usb_endpoint_descriptor *desc;
+	struct dwc3		*dwc;
+
+	unsigned		flags;
+
+	u8			number;
+	u8			type;
+
+	char			name[20];
+
+	unsigned		direction:1;
+};
+
+/**
+ * struct dwc3 - representation of our controller
+ * @lock: for synchronizing
+ * @dev: pointer to our struct device
+ * @event_buffer_list: a list of event buffers
+ * @gadget: device side representation of the peripheral controller
+ * @gadget_driver: pointer to the gadget driver
+ * @xhci: xHCI memory base
+ * @global: global registers
+ * @device: device registers
+ * @otg: OTG registers
+ * @ram0: for debug purposes, access to internal RAM
+ * @ram1: for debug purposes, access to internal RAM
+ * @ram2: for debug purposes, access to internal RAM
+ */
 struct dwc3 {
 	/* device lock */
 	spinlock_t		lock;
