@@ -34,6 +34,8 @@
 #include "gadget.h"
 #include "io.h"
 
+#define to_dwc_ep(ep)		(container_of(ep, struct dwc_ep, endpoint))
+
 static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params)
 {
@@ -54,6 +56,27 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 
 		cpu_relax();
 	} while (!(reg & DWC3_DEPCMD_CMDACT));
+
+	return 0;
+}
+
+static int dwc_init_endpoint(struct dwc3_ep *ep,
+		const struct usb_endpoint_descriptor *desc)
+{
+	/*
+	 * REVISIT here I should be sending the correct commands
+	 * to initialize the HW endpoint.
+	 */
+
+	return 0;
+}
+
+static int dwc_disable_endpoint(struct dwc3_ep *ep)
+{
+	/*
+	 * REVISIT here I should be sending correct commands
+	 * to disable the HW endpoint.
+	 */
 
 	return 0;
 }
@@ -81,26 +104,31 @@ const struct usb_ep_ops dwc_gadget_ep0_ops = {
 static int dwc_gadget_ep_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
-	/*
-	 * REVISIT this is probably the best location to allocate
-	 * more event buffers and initialize the endpoint. With
-	 * current design all EPs will be initialized at probe()
-	 * time, making it more difficult for core to conserve
-	 * power by shutting down unused EPs.
-	 */
-	return 0;
+	struct dwc3_ep		*d_ep;
+
+	if (!ep || !desc || desc->bDescriptorType != USB_DT_ENDPOINT) {
+		pr_debug("dwc3: invalid parameters\n");
+		return -EINVAL;
+	}
+
+	if (!desc->wMaxPacketSize) {
+		pr_debug("dwc3: missing bMaxPacketSize\n");
+		return -EINVAL;
+	}
+
+	return dwc_init_endpoint(d_ep, desc);
 }
 
 static int dwc_gadget_ep_disable(struct usb_ep *ep)
 {
-	/*
-	 * REVISIT this is the location to actually undo
-	 * what usb_ep_enable() did before.
-	 *
-	 * So here we should free a specific event buffer
-	 * and disable the endpoint.
-	 */
-	return 0;
+	struct dwc3_ep		*d_ep;
+
+	if (!ep) {
+		pr_debug("dwc3: invalid parameters\n");
+		return -EINVAL;
+	}
+
+	return dwc_disable_endpoint(d_ep);
 }
 
 const struct usb_ep_ops dwc_gadget_ep_ops = {
