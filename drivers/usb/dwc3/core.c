@@ -62,7 +62,25 @@ static const struct dev_pm_ops dwc3_pm_ops = {
 static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
-	return IRQ_NONE;
+	irqreturn_t		ret = IRQ_NONE;
+	u8			epnum = event->endpoint_number;
+
+	switch (event->endpoint_event) {
+	case DWC3_DEPEVT_XFERCOMPLETE:
+		break;
+	case DWC3_DEPEVT_XFERINPROGRESS:
+		break;
+	case DWC3_DEPEVT_XFERNOTREADY:
+		break;
+	case DWC3_DEPEVT_RXTXFIFOEVT:
+		break;
+	case DWC3_DEPEVT_STREAMEVT:
+		break;
+	case DWC3_DEPEVT_EPCMDCMPLT:
+		break;
+	}
+
+	return ret;
 }
 
 static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,

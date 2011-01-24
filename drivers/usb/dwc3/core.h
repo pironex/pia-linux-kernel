@@ -295,6 +295,13 @@ struct dwc3 {
 
 /* -------------------------------------------------------------------------- */
 
+#define DWC3_DEPEVT_XFERCOMPLETE	0x01
+#define DWC3_DEPEVT_XFERINPROGRESS	0x02
+#define DWC3_DEPEVT_XFERNOTREADY	0x03
+#define DWC3_DEPEVT_RXTXFIFOEVT		0x04
+#define DWC3_DEPEVT_STREAMEVT		0x06
+#define DWC3_DEPEVT_EPCMDCMPLT		0x07
+
 /**
  * struct dwc3_event_depvt - Device Endpoint Events
  * @one_bit: indicates this is an endpoint event (not used)
