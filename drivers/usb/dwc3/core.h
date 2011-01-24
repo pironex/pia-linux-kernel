@@ -93,9 +93,10 @@
 #define DWC3_GTXFIFOSIZ(n)	(0xc300 + (n * 0x04))
 #define DWC3_GRXFIFOSIZ(n)	(0xc380 + (n * 0x04))
 
-#define DWC3_GEVNTADR(n)	(0xc400 + (n * 0x04))
-#define DWC3_GEVNTSIZ(n)	(0xc408 + (n * 0x04))
-#define DWC3_GEVNTCOUNT		0xc40c
+#define DWC3_GEVNTADRLO(n)	(0xc400 + (n * 0x10))
+#define DWC3_GEVNTADRHI(n)	(0xc404 + (n * 0x10))
+#define DWC3_GEVNTSIZ(n)	(0xc408 + (n * 0x10))
+#define DWC3_GEVNTCOUNT(n)	(0xc40c + (n * 0x10))
 
 #define DWC3_GHWPARAMS8		0xc600
 

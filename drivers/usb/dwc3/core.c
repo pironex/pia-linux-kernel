@@ -211,7 +211,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
-	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT);
+	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT(0));
 	count &= DWC3_GEVNTCOUNT_MASK;
 	if (!count)
 		goto out;
@@ -369,15 +369,13 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 		dev_dbg(dwc->dev, "Event buf %p dma %u length %d\n",
 				evt->buf, evt->dma, evt->length);
 
-		dwc3_writel(dwc->global, DWC3_GEVNTADR(n), evt->dma);
-		dwc3_writel(dwc->global, DWC3_GEVNTADR(n + 1), 0);
+		dwc3_writel(dwc->global, DWC3_GEVNTADRLO(n), evt->dma);
+		dwc3_writel(dwc->global, DWC3_GEVNTADRHI(n), 0);
 		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n),
 				evt->length & 0xffff);
-		n += 2;
+		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
+		n++;
 	}
-
-	dwc3_writel(dwc->global, DWC3_GEVNTCOUNT, 0);
-
 	return 0;
 }
 
@@ -387,14 +385,12 @@ static void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 	int				n = 0;
 
 	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
-		dwc3_writel(dwc->global, DWC3_GEVNTADR(n), 0);
-		dwc3_writel(dwc->global, DWC3_GEVNTADR(n + 1), 0);
+		dwc3_writel(dwc->global, DWC3_GEVNTADRLO(n), 0);
+		dwc3_writel(dwc->global, DWC3_GEVNTADRHI(n), 0);
 		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n), 0);
-
-		n += 2;
+		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
+		n++;
 	}
-
-	dwc3_writel(dwc->global, DWC3_GEVNTCOUNT, 0);
 }
 
 /**
