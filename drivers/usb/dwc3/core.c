@@ -240,12 +240,13 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 				break;
 
 			/* Endpoint IRQ, handle it and return early */
-			if (!(event.raw & (1 << 0))) {
+			if (event.typeevt.is_devspec == 0 ) {
+				/* depevt */
 				ret = dwc3_endpoint_interrupt(dwc, &event.depevt);
 				goto out;
 			}
 
-			switch (event.raw & DWC3_EVENT_TYPE_MASK) {
+			switch (event.typeevt.type) {
 			case DWC3_EVENT_TYPE_DEV:
 				ret |= dwc3_gadget_interrupt(dwc, &event.devt);
 				break;

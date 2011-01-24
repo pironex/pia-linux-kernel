@@ -294,6 +294,11 @@ struct dwc3 {
 };
 
 /* -------------------------------------------------------------------------- */
+struct dwc3_event_type {
+	unsigned	is_devspec:1;
+	unsigned	type:6;
+	unsigned	reserved8_31:25;
+} __attribute__ ((packed));
 
 #define DWC3_DEPEVT_XFERCOMPLETE	0x01
 #define DWC3_DEPEVT_XFERINPROGRESS	0x02
@@ -382,6 +387,7 @@ struct dwc3_event_gevt {
  */
 union dwc3_event {
 	u32				raw;
+	struct dwc3_event_type		typeevt;
 	struct dwc3_event_depevt	depevt;
 	struct dwc3_event_devt		devt;
 	struct dwc3_event_gevt		gevt;
