@@ -125,6 +125,8 @@
 #define DWC3_GCTL_DISSCRAMBLE	(1 << 3)
 
 /* Device Configuration Register */
+#define DWC3_DCFG_DEVADDR(addr)	((addr) << 3)
+
 #define DWC3_DCFG_SUPERSPEED	(4 << 0)
 #define DWC3_DCFG_HIGHSPEED	(0 << 0)
 #define DWC3_DCFG_FULLSPEED2	(1 << 0)
@@ -159,6 +161,21 @@
 #define DWC3_DEVTEN_CONNECTDONEEN	(1 << 2)
 #define DWC3_DEVTEN_USBRSTEN		(1 << 1)
 #define DWC3_DEVTEN_DISCONNEVTEN	(1 << 0)
+
+/* Device Status Register */
+#define DWC3_DSTS_PWRUPREQ		(1 << 24)
+#define DWC3_DSTS_COREIDLE		(1 << 23)
+#define DWC3_DSTS_DEVCTRLHLT		(1 << 22)
+
+#define DWC3_DSTS_USBLNKST_MASK		(0x0f << 18)
+#define DWC3_DSTS_USBLNKST(n)		(((n) & DWC3_DSTS_USBLNKST_MASK) >> 18)
+
+#define DWC3_DSTS_RXFIFOEMPTY		(1 << 17)
+
+#define DWC3_DSTS_SOFFN_MASK		(0x3ff << 3)
+#define DWC3_DSTS_SOFFN(n)		(((n) & DWC3_DSTS_SOFFN_MASK) >> 3)
+
+#define DWC3_DSTS_CONNECTSPD		(7 << 0)
 
 /* Device Endpoint Command Register */
 #define DWC3_DEPCMD_HIPRI_FORCERM	(1 << 11)

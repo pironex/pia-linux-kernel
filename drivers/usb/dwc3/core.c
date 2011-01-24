@@ -105,7 +105,37 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		dwc3_writel(dwc->device, DWC3_DCTL, reg);
 		break;
 	case DWC3_DEVICE_EVENT_RESET:
-		/* handle reset IRQ here */
+		/* Reset device address to zero */
+		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg &= ~(DWC3_DCFG_DEVADDR(0));
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+		/* Enable ep0 in DALEPENA register */
+		reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+		reg |= DWC3_DALEPENA_EPOUT(0) | DWC3_DALEPENA_EPIN(0);
+		dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+
+		/* FIXME stop any activity on all other endpoints */
+
+		/*
+		 * Wait for RxFifo to drain
+		 *
+		 * REVISIT probably shouldn't wait forever.
+		 * In case Hardware ends up in a screwed up
+		 * case, we error out, notify the user and,
+		 * maybe, WARN() or BUG() but leave the rest
+		 * of the kernel working fine.
+		 *
+		 * REVISIT the below is rather CPU intensive,
+		 * maybe we should read and if it doesn't work
+		 * sleep (not busy wait) for a few useconds.
+		 */
+		while (!(dwc3_readl(dwc->device, DWC3_DSTS)
+				& DWC3_DSTS_RXFIFOEMPTY))
+			cpu_relax();
+
+		/* FIXME Set EP0 state to ep0Idle */
+
 		break;
 	case DWC3_DEVICE_EVENT_CONNECT_DONE:
 		/* handle connect done IRQ here */
