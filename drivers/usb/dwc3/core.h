@@ -38,9 +38,6 @@
 #define DWC3_EVENT_TYPE_CARKIT	3
 #define DWC3_EVENT_TYPE_I2C	4
 
-#define DWC3_DEVICE_EVENT_MASK	0x0f00
-#define DWC3_DEVICE_EVENT(evt)	((evt & DWC3_DEVICE_EVENT_MASK) >> 8)
-
 #define DWC3_DEVICE_EVENT_DISCONNECT		0
 #define DWC3_DEVICE_EVENT_RESET			1
 #define DWC3_DEVICE_EVENT_CONNECT_DONE		2
@@ -266,6 +263,93 @@ struct dwc3 {
 	int			irq;
 
 	u32			revision;
+};
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * struct dwc3_event_depvt - Device Endpoint Events
+ * @one_bit: indicates this is an endpoint event (not used)
+ * @endpoint_number: number of the endpoint
+ * @endpoint_event: The event we have:
+ *	0x00	- Reserved
+ *	0x01	- XferComplete
+ *	0x02	- XferInProgress
+ *	0x03	- XferNotReady
+ *	0x04	- RxTxFifoEvt (IN->Underrun, OUT->Overrun)
+ *	0x05	- Reserved
+ *	0x06	- StreamEvt
+ *	0x07	- EPCmdCmplt
+ * @reserved11_10: Reserved, don't use.
+ * @event_status: Indicates the status of the event. Refer to databook for
+ *	more information.
+ * @event_parameters: Parameters of the current event. Refer to databook for
+ *	more information.
+ */
+struct dwc3_event_depevt {
+	unsigned	one_bit:1;
+	unsigned	endpoint_number:5;
+	unsigned	endpoint_event:4;
+	unsigned	reserved11_10:2;
+	unsigned	event_status:4;
+	u16		event_parameters;
+} __attribute__ ((packed));
+
+/**
+ * struct dwc3_event_devt - Device Events
+ * @one_bit: indicates this is a non-endpoint event (not used)
+ * @device_event: indicates it's a device event. Should read as 0x00
+ * @type: indicates the type of device event.
+ *	0	- DisconnEvt
+ *	1	- USBRst
+ *	2	- ConnectDone
+ *	3	- ULStChng
+ *	4	- WkUpEvt
+ *	5	- Reserved
+ *	6	- EOPF
+ *	7	- SOF
+ *	8	- Reserved
+ *	9	- ErrticErr
+ *	10	- CmdCmplt
+ *	11	- EvntOverflow
+ *	12	- VndrDevTstRcved
+ * @reserved15_12: Reserved, not used
+ * @event_info: Information about this event
+ * @reserved31_24: Reserved, not used
+ */
+struct dwc3_event_devt {
+	unsigned	one_bit:1;
+	unsigned	device_event:7;
+	unsigned	type:4;
+	unsigned	reserved15_12:4;
+	u8		event_info;
+	u8		reserved31_24;
+} __attribute__ ((packed));
+
+/**
+ * struct dwc3_event_gevt - Other Core Events
+ * @one_bit: indicates this is a non-endpoint event (not used)
+ * @device_event: indicates it's (0x03) Carkit or (0x04) I2C event.
+ * @phy_port_number: self-explanatory
+ * @reserved31_12: Reserved, not used.
+ */
+struct dwc3_event_gevt {
+	unsigned	one_bit:1;
+	unsigned	device_event:7;
+	unsigned	phy_port_number:4;
+	unsigned	reserved31_12:20;
+} __attribute__ ((packed));
+
+/**
+ * union dwc3_event - representation of Event Buffer contents
+ * @raw: raw 32-bit event
+ * @depevt: Device Endpoint Event
+ */
+union dwc3_event {
+	u32				raw;
+	struct dwc3_event_depevt	depevt;
+	struct dwc3_event_devt		devt;
+	struct dwc3_event_gevt		gevt;
 };
 
 #endif /* __DRIVERS_USB_DWC3_CORE_H */

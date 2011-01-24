@@ -59,9 +59,16 @@ static const struct dev_pm_ops dwc3_pm_ops = {
 #define DEV_PM_OPS	NULL
 #endif
 
-static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc, u32 event)
+static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
 {
-	switch (DWC3_DEVICE_EVENT(event)) {
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_devt *event)
+{
+	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
 		/* handle disconnect IRQ here */
 		break;
@@ -93,7 +100,7 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc, u32 event)
 		/* handle device overflow IRQ here */
 		break;
 	default:
-		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", DWC3_DEVICE_EVENT(event));
+		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
 	}
 
 	return IRQ_NONE;
@@ -104,12 +111,14 @@ static irqreturn_t dwc3_otg_interrupt(struct dwc3 *dwc, u32 event)
 	return IRQ_NONE;
 }
 
-static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc, u32 event)
+static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_gevt *event)
 {
 	return IRQ_NONE;
 }
 
-static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc, u32 event)
+static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_gevt *event)
 {
 	return IRQ_NONE;
 }
@@ -144,31 +153,37 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 			break;
 
 		for (i = 0; i < evt->length; i += 4) {
-			u32		event;
+			union dwc3_event	event;
 
-			memcpy(&event, (evt->buf + i), sizeof(event));
+			memcpy(&event.raw, (evt->buf + i), sizeof(event.raw));
 
 			/*
 			 * It's unclear if there's a possibility first of event
 			 * being 0 and still have valid events after that.
 			 */
-			if (!event)
+			if (!event.raw)
 				break;
 
-			switch (event & DWC3_EVENT_TYPE_MASK) {
+			/* Endpoint IRQ, handle it and return early */
+			if (!(event.raw & (1 << 0))) {
+				ret = dwc3_endpoint_interrupt(dwc, &event.depevt);
+				goto out;
+			}
+
+			switch (event.raw & DWC3_EVENT_TYPE_MASK) {
 			case DWC3_EVENT_TYPE_DEV:
-				ret |= dwc3_gadget_interrupt(dwc, event);
+				ret |= dwc3_gadget_interrupt(dwc, &event.devt);
 				break;
 			case DWC3_EVENT_TYPE_OTG:
-				ret |= dwc3_otg_interrupt(dwc, event);
+				ret |= dwc3_otg_interrupt(dwc, event.raw);
 				break;
 			case DWC3_EVENT_TYPE_CARKIT:
-				ret |= dwc3_carkit_interrupt(dwc, event);
+				ret |= dwc3_carkit_interrupt(dwc, &event.gevt);
 			case DWC3_EVENT_TYPE_I2C:
-				ret |= dwc3_i2c_interrupt(dwc, event);
+				ret |= dwc3_i2c_interrupt(dwc, &event.gevt);
 				break;
 			default:
-				dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event);
+				dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event.raw);
 			}
 		}
 	}
