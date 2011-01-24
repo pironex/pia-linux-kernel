@@ -179,6 +179,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 				break;
 			case DWC3_EVENT_TYPE_CARKIT:
 				ret |= dwc3_carkit_interrupt(dwc, &event.gevt);
+				break;
 			case DWC3_EVENT_TYPE_I2C:
 				ret |= dwc3_i2c_interrupt(dwc, &event.gevt);
 				break;
