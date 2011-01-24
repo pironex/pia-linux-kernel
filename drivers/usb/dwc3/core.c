@@ -243,10 +243,9 @@ dwc3_alloc_one_event_buffer(struct dwc3 *dwc, unsigned length)
 static void dwc3_free_event_buffers(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
+	struct dwc3_event_buffer	*n;
 
-	while (!list_empty(&dwc->event_buffer_list)) {
-		evt = list_first_entry(&dwc->event_buffer_list,
-				struct dwc3_event_buffer, list);
+	list_for_each_entry_safe(evt, n, &dwc->event_buffer_list, list) {
 		list_del(&evt->list);
 		dwc3_free_one_event_buffer(dwc, evt);
 	}
@@ -258,7 +257,8 @@ static void dwc3_free_event_buffers(struct dwc3 *dwc)
  * @num: number of event buffers to allocate
  * @length: size of event buffer
  *
- * Returns 0 on success otherwise negative errno.
+ * Returns 0 on success otherwise negative errno. In error the case, dwc
+ * may contain some buffers allocated but not all which were requested.
  */
 static int __devinit dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned num,
 		unsigned length)
