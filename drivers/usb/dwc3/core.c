@@ -59,10 +59,34 @@ static const struct dev_pm_ops dwc3_pm_ops = {
 #define DEV_PM_OPS	NULL
 #endif
 
-static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
+static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	irqreturn_t			ret;
+
+	/*
+	 * The way endpoints are managed at the hardware level
+	 * is so that OUT endpoints will always have even numbers
+	 * while IN endpoints will always have odd numbers.
+	 */
+	if (event->endpoint_number & 1)
+		ret = dwc3_in_endpoint_interrupt(dwc, event);
+	else
+		ret = dwc3_out_endpoint_interrupt(dwc, event);
+
+	return ret;
 }
 
 static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
