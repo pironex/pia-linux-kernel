@@ -68,9 +68,17 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_devt *event)
 {
+	irqreturn_t		ret = IRQ_NONE;
+	u32			reg;
+
 	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
-		/* handle disconnect IRQ here */
+		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg &= ~DWC3_DCTL_INITU1ENA;
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+		reg &= ~DWC3_DCTL_INITU2ENA;
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
 		break;
 	case DWC3_DEVICE_EVENT_RESET:
 		/* handle reset IRQ here */
@@ -103,7 +111,7 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
 	}
 
-	return IRQ_NONE;
+	return ret;
 }
 
 static irqreturn_t dwc3_otg_interrupt(struct dwc3 *dwc, u32 event)

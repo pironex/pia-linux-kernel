@@ -134,6 +134,17 @@
 /* Device Control Register */
 #define DWC3_DCTL_RUN_STOP	(1 << 31)
 #define DWC3_DCTL_CSFTRST	(1 << 30)
+#define DWC3_DCTL_LSFTRST	(1 << 29)
+
+#define DWC3_DCTL_HIRD_THRES_MASK	(0x1f << 24)
+#define DWC3_DCTL_HIRD_THRES(n)	(((n) & DWC3_DCTL_HIRD_THRES_MASK) >> 24)
+
+#define DWC3_DCTL_APPL1RES	(1 << 23)
+
+#define DWC3_DCTL_INITU2ENA	(1 << 12)
+#define DWC3_DCTL_ACCEPTU2ENA	(1 << 11)
+#define DWC3_DCTL_INITU1ENA	(1 << 10)
+#define DWC3_DCTL_ACCEPTU1ENA	(1 << 9)
 
 /* Device Event Enable Register */
 #define DWC3_DEVTEN_INACTTIMEOUTRCVEDEN	(1 << 13)
