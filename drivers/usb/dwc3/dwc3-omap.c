@@ -111,8 +111,7 @@ static int __devexit dwc3_omap_remove(struct platform_device *pdev)
 {
 	struct dwc3_omap	*omap = platform_get_drvdata(pdev);
 
-	platform_device_del(omap->dwc3);
-	platform_device_put(omap->dwc3);
+	platform_device_unregister(omap->dwc3);
 
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
