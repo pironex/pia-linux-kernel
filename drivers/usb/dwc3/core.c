@@ -168,11 +168,6 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 	return ret;
 }
 
-static irqreturn_t dwc3_otg_interrupt(struct dwc3 *dwc, u32 event)
-{
-	return IRQ_NONE;
-}
-
 static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_gevt *event)
 {
@@ -235,9 +230,6 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 			switch (event.raw & DWC3_EVENT_TYPE_MASK) {
 			case DWC3_EVENT_TYPE_DEV:
 				ret |= dwc3_gadget_interrupt(dwc, &event.devt);
-				break;
-			case DWC3_EVENT_TYPE_OTG:
-				ret |= dwc3_otg_interrupt(dwc, event.raw);
 				break;
 			case DWC3_EVENT_TYPE_CARKIT:
 				ret |= dwc3_carkit_interrupt(dwc, &event.gevt);
