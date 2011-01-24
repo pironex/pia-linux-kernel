@@ -49,7 +49,8 @@
 #define DWC3_DEVICE_EVENT_OVERFLOW		11
 
 #define DWC3_GEVNTCOUNT_MASK	0xffff
-#define DWC3_GSNPSID_MASK	0xff00
+#define DWC3_GSNPSID_MASK	0xffff0000
+#define DWC3_GSNPSREV_MASK	0xffff
 
 /* Global Registers */
 #define DWC3_GSBUSCFG0		0xc100

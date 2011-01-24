@@ -392,13 +392,14 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 	int			ret;
 
 	reg = dwc3_readl(dwc->global, DWC3_GSNPSID);
-	if ((reg & 0xff00) != DWC3_GSNPSID_MASK) {
+	/* This should read as U3 followed by revision number */
+	if ((reg & DWC3_GSNPSID_MASK) != 0x55330000) {
 		dev_err(dwc->dev, "this is not a DesignWare USB3 DRD Core\n");
 		ret = -ENODEV;
 		goto err0;
 	}
 
-	dwc->revision = reg;
+	dwc->revision = reg & DWC3_GSNPSREV_MASK;
 
 	dwc3_writel(dwc->device, DWC3_DCTL, DWC3_DCTL_CSFTRST);
 
