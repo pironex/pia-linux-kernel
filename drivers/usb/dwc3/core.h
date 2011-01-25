@@ -24,13 +24,14 @@
 #include <linux/spinlock.h>
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
+#include <linux/mm.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 
 /* Global constants */
-#define DWC3_EVENT_BUFFERS_NUM	32
-#define DWC3_EVENT_BUFFERS_SIZE	1024
+#define DWC3_EVENT_BUFFERS_NUM	2
+#define DWC3_EVENT_BUFFERS_SIZE	PAGE_SIZE
 #define DWC3_EVENT_TYPE_MASK	0xfe
 
 #define DWC3_EVENT_TYPE_DEV	0
