@@ -49,7 +49,7 @@
 #define DWC3_DEVICE_EVENT_CMD_CMPL		10
 #define DWC3_DEVICE_EVENT_OVERFLOW		11
 
-#define DWC3_GEVNTCOUNT_MASK	0xffff
+#define DWC3_GEVNTCOUNT_MASK	0xfffc
 #define DWC3_GSNPSID_MASK	0xffff0000
 #define DWC3_GSNPSREV_MASK	0xffff
 
@@ -213,10 +213,9 @@
  * @dwc: pointer to DWC controller
  */
 struct dwc3_event_buffer {
-	struct list_head	list;
-
 	void			*buf;
 	unsigned		length;
+	unsigned int		lpos;
 
 	dma_addr_t		dma;
 
@@ -278,7 +277,7 @@ struct dwc3 {
 	spinlock_t		lock;
 	struct device		*dev;
 
-	struct list_head	event_buffer_list;
+	struct dwc3_event_buffer *ev_buffs[DWC3_EVENT_BUFFERS_NUM];
 	struct usb_gadget	gadget;
 	struct usb_gadget_driver *gadget_driver;
 

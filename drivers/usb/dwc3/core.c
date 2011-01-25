@@ -198,71 +198,83 @@ static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc,
 	return IRQ_NONE;
 }
 
+static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
+		union dwc3_event *event)
+{
+	irqreturn_t ret;
+
+	/* Endpoint IRQ, handle it and return early */
+	if (event->typeevt.is_devspec == 0 ) {
+		/* depevt */
+		return dwc3_endpoint_interrupt(dwc, &event->depevt);
+	}
+
+	switch (event->typeevt.type) {
+	case DWC3_EVENT_TYPE_DEV:
+		ret = dwc3_gadget_interrupt(dwc, &event->devt);
+		break;
+	case DWC3_EVENT_TYPE_CARKIT:
+		ret = dwc3_carkit_interrupt(dwc, &event->gevt);
+		break;
+	case DWC3_EVENT_TYPE_I2C:
+		ret = dwc3_i2c_interrupt(dwc, &event->gevt);
+		break;
+	default:
+		ret = -EINVAL;
+		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
+}
+	return ret;
+}
+
+static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
+{
+	struct dwc3_event_buffer *evt;
+	int left;
+	u32 count;
+
+	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT(buf));
+	count &= DWC3_GEVNTCOUNT_MASK;
+	if (!count)
+		return IRQ_NONE;
+
+	evt = dwc->ev_buffs[buf];
+	left = count;
+	while (left > 0) {
+		union dwc3_event event;
+
+		memcpy(&event.raw, (evt->buf + evt->lpos), sizeof(event.raw));
+		dwc3_process_event_entry(dwc, &event);
+		/* what with the ret? */
+		/*
+		 * XXX we wrap around correctly to the next entry as almost all
+		 * entries are 4 bytes in size. There is one entry which has 12
+		 * bytes which is a regular entry followed by 8 bytes data. ATM
+		 * I don't know how things are organized if were get next to the
+		 * a boundary so I worry about that once we try to handle that.
+		 */
+		evt->lpos = (evt->lpos + 4) % DWC3_EVENT_BUFFERS_SIZE;
+		left -= 4;
+	}
+	dwc3_writel(dwc->dev, DWC3_GEVNTCOUNT(buf), count);
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 {
-	struct dwc3_event_buffer	*evt;
 	struct dwc3			*dwc = _dwc;
-
 	unsigned long			flags;
-
-	int				count;
-
+	int				i;
 	irqreturn_t			ret = IRQ_NONE;
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
-	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT(0));
-	count &= DWC3_GEVNTCOUNT_MASK;
-	if (!count)
-		goto out;
+	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
+		irqreturn_t status;
 
-	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
-		int			i;
-
-		/*
-		 * It's unclear if there's a possibility first of event
-		 * buffer being NULL but still have valid event buffers
-		 * after that.
-		 */
-		if (!evt->buf)
-			break;
-
-		for (i = 0; i < evt->length; i += 4) {
-			union dwc3_event	event;
-
-			memcpy(&event.raw, (evt->buf + i), sizeof(event.raw));
-
-			/*
-			 * It's unclear if there's a possibility first of event
-			 * being 0 and still have valid events after that.
-			 */
-			if (!event.raw)
-				break;
-
-			/* Endpoint IRQ, handle it and return early */
-			if (event.typeevt.is_devspec == 0 ) {
-				/* depevt */
-				ret = dwc3_endpoint_interrupt(dwc, &event.depevt);
-				goto out;
-			}
-
-			switch (event.typeevt.type) {
-			case DWC3_EVENT_TYPE_DEV:
-				ret |= dwc3_gadget_interrupt(dwc, &event.devt);
-				break;
-			case DWC3_EVENT_TYPE_CARKIT:
-				ret |= dwc3_carkit_interrupt(dwc, &event.gevt);
-				break;
-			case DWC3_EVENT_TYPE_I2C:
-				ret |= dwc3_i2c_interrupt(dwc, &event.gevt);
-				break;
-			default:
-				dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event.raw);
-			}
-		}
+		status = dwc3_process_event_buf(dwc, i);
+		if (status == IRQ_HANDLED)
+			ret = status;
 	}
-
-out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
@@ -297,7 +309,6 @@ dwc3_alloc_one_event_buffer(struct dwc3 *dwc, unsigned length)
 	if (!evt)
 		return ERR_PTR(-ENOMEM);
 
-	INIT_LIST_HEAD(&evt->list);
 	evt->dwc	= dwc;
 	evt->length	= length;
 	evt->buf	= dma_alloc_coherent(dwc->dev, length,
@@ -317,11 +328,14 @@ dwc3_alloc_one_event_buffer(struct dwc3 *dwc, unsigned length)
 static void dwc3_free_event_buffers(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
-	struct dwc3_event_buffer	*n;
+	int i;
 
-	list_for_each_entry_safe(evt, n, &dwc->event_buffer_list, list) {
-		list_del(&evt->list);
-		dwc3_free_one_event_buffer(dwc, evt);
+	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
+		evt = dwc->ev_buffs[i];
+		if (evt) {
+			dwc3_free_one_event_buffer(dwc, evt);
+			dwc->ev_buffs[i] = NULL;
+		}
 	}
 }
 
@@ -347,8 +361,7 @@ static int __devinit dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned num,
 			dev_err(dwc->dev, "can't allocate event buffer\n");
 			return PTR_ERR(evt);
 		}
-
-		list_add_tail(&evt->list, &dwc->event_buffer_list);
+		dwc->ev_buffs[i] = evt;
 	}
 
 	return 0;
@@ -363,9 +376,10 @@ static int __devinit dwc3_alloc_event_buffers(struct dwc3 *dwc, unsigned num,
 static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
-	int				n = 0;
+	int				n;
 
-	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
+	for (n = 0; n < DWC3_EVENT_BUFFERS_NUM; n++) {
+		evt = dwc->ev_buffs[n];
 		dev_dbg(dwc->dev, "Event buf %p dma %u length %d\n",
 				evt->buf, evt->dma, evt->length);
 
@@ -374,7 +388,6 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n),
 				evt->length & 0xffff);
 		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
-		n++;
 	}
 	return 0;
 }
@@ -382,14 +395,14 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 static void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 {
 	struct dwc3_event_buffer	*evt;
-	int				n = 0;
+	int				n;
 
-	list_for_each_entry(evt, &dwc->event_buffer_list, list) {
+	for (n = 0; n < DWC3_EVENT_BUFFERS_NUM; n++) {
+		evt = dwc->ev_buffs[n];
 		dwc3_writel(dwc->global, DWC3_GEVNTADRLO(n), 0);
 		dwc3_writel(dwc->global, DWC3_GEVNTADRHI(n), 0);
 		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n), 0);
 		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
-		n++;
 	}
 }
 
@@ -575,7 +588,6 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		goto err8;
 	}
 
-	INIT_LIST_HEAD(&dwc->event_buffer_list);
 	spin_lock_init(&dwc->lock);
 	platform_set_drvdata(pdev, dwc);
 
