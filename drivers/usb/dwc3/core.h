@@ -301,6 +301,69 @@ struct dwc3 {
 };
 
 /* -------------------------------------------------------------------------- */
+
+#define DWC3_TRBSTS_OK			0
+#define DWC3_TRBSTS_MISSED_ISOC		1
+#define DWC3_TRBSTS_SETUP_PENDING	2
+
+#define DWC3_TRBCTL_NORMAL		1
+#define DWC3_TRBCTL_CONTROL_SETUP	2
+#define DWC3_TRBCTL_CONTROL_STATUS2	3
+#define DWC3_TRBCTL_CONTROL_STATUS3	4
+#define DWC3_TRBCTL_CONTROL_DATA	5
+#define DWC3_TRBCTL_ISOCHRONOUS_FIRST	6
+#define DWC3_TRBCTL_ISOCHRONOUS		7
+#define DWC3_TRBCTL_LINK_TRB		8
+
+/**
+ * struct dwc3_trb - transfer request block
+ * @dma: up to 64 bit addressing
+ * @length: buffer size (up to 16mb - 1)
+ * @pcm1: packet count m1
+ * @trbsts: trb status
+ *	0 = ok
+ *	1 = missed isoc
+ *	2 = setup pending
+ * @hwo: hardware owner of descriptor
+ * @lst: last trm
+ * @chn: chain buffers
+ * @csp: continue on short packets (only supported on isoc eps)
+ * @trbctl: trb control
+ *	1 = normal
+ *	2 = control-setup
+ *	3 = control-status-2
+ *	4 = control-status-3
+ *	5 = control-data (first trb of data stage)
+ *	6 = isochronous-first (first trb of service interval)
+ *	7 = isochronous
+ *	8 = link trb
+ *	others = reserved
+ * @isp_imi: interrupt on short packet / interrupt on missed isoc
+ * @ioc: interrupt on complete
+ * @sid_sofn: Stream ID / SOF Number
+ */
+struct dwc3_trb {
+	dma_addr_t		dma;
+	unsigned		length:24;
+	unsigned		pcm1:2;
+	unsigned		reserved27_26:2;
+	unsigned		trbsts:4;
+
+	unsigned		hwo:1;
+	unsigned		lst:1;
+	unsigned		chn:1;
+	unsigned		csp:1;
+	unsigned		trbctl:6;
+	unsigned		isp_imi:1;
+	unsigned		ioc:1;
+	unsigned		reserved13_12:2;
+	u16			sid_sofn;
+	unsigned		reserved31_30:2;
+
+} __attribute__ ((packed));
+
+/* -------------------------------------------------------------------------- */
+
 struct dwc3_event_type {
 	unsigned	is_devspec:1;
 	unsigned	type:6;
