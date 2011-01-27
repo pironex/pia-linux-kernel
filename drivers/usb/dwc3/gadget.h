@@ -20,6 +20,10 @@
 #ifndef __DRIVERS_USB_DWC3_GADGET_H
 #define __DRIVERS_USB_DWC3_GADGET_H
 
+#include <linux/list.h>
+
+#include <linux/usb/gadget.h>
+
 struct dwc3;
 
 /**
@@ -136,6 +140,19 @@ struct dwc3_gadget_ep_cmd_params {
 		struct dwc3_gadget_ep_depstrtxfer_param0 depstrtxfer;
 	} param0;
 } __attribute__ ((packed));
+
+/* -------------------------------------------------------------------------- */
+
+struct dwc3_request {
+	struct usb_request	request;
+	struct list_head	list;
+	struct dwc3_ep		*dep;
+
+	u8			epnum;
+
+	unsigned		direction:1;
+};
+#define to_dwc3_request(r)	(container_of(r, struct dwc3_request, request))
 
 int dwc3_gadget_init(struct dwc3 *dwc);
 
