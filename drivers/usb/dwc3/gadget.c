@@ -35,17 +35,17 @@
 #include "io.h"
 
 #define to_dwc3_ep(ep)		(container_of(ep, struct dwc3_ep, endpoint))
-#define gadget_to_dwc(g)	(container_of(g, struct dwc, gadget))
+#define gadget_to_dwc(g)	(container_of(g, struct dwc3, gadget))
 
-static void dwc_map_buffer_to_dma(struct dwc3_request *req)
+static void dwc3_map_buffer_to_dma(struct dwc3_request *req)
 {
 }
 
-static void dwc_unmap_buffer_from_dma(struct dwc3_request *req)
+static void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 {
 }
 
-static void dwc_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
+static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 		int status)
 {
 	struct dwc3			*dwc = dep->dwc;
@@ -54,7 +54,7 @@ static void dwc_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	if (req->request.status == -EINPROGRESS)
 		req->request.status = status;
 
-	dwc_unmap_buffer_from_dma(req);
+	dwc3_unmap_buffer_from_dma(req);
 
 	spin_unlock(&dwc->lock);
 	req->request.complete(&req->dep->endpoint, &req->request);
@@ -89,7 +89,7 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
-static int dwc_init_endpoint(struct dwc3_ep *ep,
+static int dwc3_init_endpoint(struct dwc3_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
 	/*
@@ -100,7 +100,7 @@ static int dwc_init_endpoint(struct dwc3_ep *ep,
 	return 0;
 }
 
-static int dwc_disable_endpoint(struct dwc3_ep *ep)
+static int dwc3_disable_endpoint(struct dwc3_ep *ep)
 {
 	/*
 	 * REVISIT here I should be sending correct commands
@@ -112,73 +112,73 @@ static int dwc_disable_endpoint(struct dwc3_ep *ep)
 
 /* -------------------------------------------------------------------------- */
 
-static int dwc_gadget_ep0_enable(struct usb_ep *ep,
+static int dwc3_gadget_ep0_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
 	return -EINVAL;
 }
 
-static int dwc_gadget_ep0_disable(struct usb_ep *ep)
+static int dwc3_gadget_ep0_disable(struct usb_ep *ep)
 {
 	return -EINVAL;
 }
 
-static struct usb_request *dwc_gadget_ep0_alloc_request(struct usb_ep *ep,
+static struct usb_request *dwc3_gadget_ep0_alloc_request(struct usb_ep *ep,
 	gfp_t gfp_flags)
 {
 	return NULL;
 }
 
-static void dwc_gadget_ep0_free_request(struct usb_ep *ep,
+static void dwc3_gadget_ep0_free_request(struct usb_ep *ep,
 		struct usb_request *req)
 {
 }
 
-static int dwc_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *req,
+static int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *req,
 	gfp_t gfp_flags)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep0_dequeue(struct usb_ep *ep, struct usb_request *req)
+static int dwc3_gadget_ep0_dequeue(struct usb_ep *ep, struct usb_request *req)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep0_set_halt(struct usb_ep *ep, int value)
+static int dwc3_gadget_ep0_set_halt(struct usb_ep *ep, int value)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep0_set_wedge(struct usb_ep *ep)
+static int dwc3_gadget_ep0_set_wedge(struct usb_ep *ep)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep0_fifo_status(struct usb_ep *ep)
+static int dwc3_gadget_ep0_fifo_status(struct usb_ep *ep)
 {
 	return 0;
 }
 
-static void dwc_gadget_ep0_fifo_flush(struct usb_ep *ep)
+static void dwc3_gadget_ep0_fifo_flush(struct usb_ep *ep)
 {
 }
 
-static const struct usb_ep_ops dwc_gadget_ep0_ops = {
-	.enable		= dwc_gadget_ep0_enable,
-	.disable	= dwc_gadget_ep0_disable,
-	.alloc_request	= dwc_gadget_ep0_alloc_request,
-	.free_request	= dwc_gadget_ep0_free_request,
-	.queue		= dwc_gadget_ep0_queue,
-	.dequeue	= dwc_gadget_ep0_dequeue,
-	.set_halt	= dwc_gadget_ep0_set_halt,
-	.set_wedge	= dwc_gadget_ep0_set_wedge,
-	.fifo_status	= dwc_gadget_ep0_fifo_status,
-	.fifo_flush	= dwc_gadget_ep0_fifo_flush,
+static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
+	.enable		= dwc3_gadget_ep0_enable,
+	.disable	= dwc3_gadget_ep0_disable,
+	.alloc_request	= dwc3_gadget_ep0_alloc_request,
+	.free_request	= dwc3_gadget_ep0_free_request,
+	.queue		= dwc3_gadget_ep0_queue,
+	.dequeue	= dwc3_gadget_ep0_dequeue,
+	.set_halt	= dwc3_gadget_ep0_set_halt,
+	.set_wedge	= dwc3_gadget_ep0_set_wedge,
+	.fifo_status	= dwc3_gadget_ep0_fifo_status,
+	.fifo_flush	= dwc3_gadget_ep0_fifo_flush,
 };
 /* -------------------------------------------------------------------------- */
 
-static int dwc_gadget_ep_enable(struct usb_ep *ep,
+static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
 	struct dwc3_ep		*d_ep;
@@ -193,10 +193,10 @@ static int dwc_gadget_ep_enable(struct usb_ep *ep,
 		return -EINVAL;
 	}
 
-	return dwc_init_endpoint(d_ep, desc);
+	return dwc3_init_endpoint(d_ep, desc);
 }
 
-static int dwc_gadget_ep_disable(struct usb_ep *ep)
+static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 {
 	struct dwc3_ep		*d_ep;
 
@@ -205,10 +205,10 @@ static int dwc_gadget_ep_disable(struct usb_ep *ep)
 		return -EINVAL;
 	}
 
-	return dwc_disable_endpoint(d_ep);
+	return dwc3_disable_endpoint(d_ep);
 }
 
-static struct usb_request *dwc_gadget_ep_alloc_request(struct usb_ep *ep,
+static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
 	gfp_t gfp_flags)
 {
 	struct dwc3_request		*req;
@@ -233,7 +233,7 @@ static struct usb_request *dwc_gadget_ep_alloc_request(struct usb_ep *ep,
 	return &req->request;
 }
 
-static void dwc_gadget_ep_free_request(struct usb_ep *ep,
+static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 		struct usb_request *request)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
@@ -242,7 +242,7 @@ static void dwc_gadget_ep_free_request(struct usb_ep *ep,
 	kfree(req);
 }
 
-static int dwc_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
+static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	gfp_t gfp_flags)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
@@ -264,7 +264,7 @@ static int dwc_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
 
-	dwc_map_buffer_to_dma(req);
+	dwc3_map_buffer_to_dma(req);
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
@@ -287,7 +287,7 @@ static int dwc_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	return 0;
 }
 
-static int dwc_gadget_ep_dequeue(struct usb_ep *ep, struct usb_request *request)
+static int dwc3_gadget_ep_dequeue(struct usb_ep *ep, struct usb_request *request)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
 	struct dwc3_request		*r = NULL;
@@ -313,7 +313,7 @@ static int dwc_gadget_ep_dequeue(struct usb_ep *ep, struct usb_request *request)
 	}
 
 	/* giveback the request */
-	dwc_gadget_giveback(dep, req, -ECONNRESET);
+	dwc3_gadget_giveback(dep, req, -ECONNRESET);
 
 out0:
 	spin_unlock_irqrestore(&dwc->lock, flags);
@@ -321,36 +321,36 @@ out0:
 	return ret;
 }
 
-static int dwc_gadget_ep_set_halt(struct usb_ep *ep, int value)
+static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep_set_wedge(struct usb_ep *ep)
+static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 {
 	return 0;
 }
 
-static int dwc_gadget_ep_fifo_status(struct usb_ep *ep)
+static int dwc3_gadget_ep_fifo_status(struct usb_ep *ep)
 {
 	return 0;
 }
 
-static void dwc_gadget_ep_fifo_flush(struct usb_ep *ep)
+static void dwc3_gadget_ep_fifo_flush(struct usb_ep *ep)
 {
 }
 
-static const struct usb_ep_ops dwc_gadget_ep_ops = {
-	.enable		= dwc_gadget_ep_enable,
-	.disable	= dwc_gadget_ep_disable,
-	.alloc_request	= dwc_gadget_ep_alloc_request,
-	.free_request	= dwc_gadget_ep_free_request,
-	.queue		= dwc_gadget_ep_queue,
-	.dequeue	= dwc_gadget_ep_dequeue,
-	.set_halt	= dwc_gadget_ep_set_halt,
-	.set_wedge	= dwc_gadget_ep_set_wedge,
-	.fifo_status	= dwc_gadget_ep_fifo_status,
-	.fifo_flush	= dwc_gadget_ep_fifo_flush,
+static const struct usb_ep_ops dwc3_gadget_ep_ops = {
+	.enable		= dwc3_gadget_ep_enable,
+	.disable	= dwc3_gadget_ep_disable,
+	.alloc_request	= dwc3_gadget_ep_alloc_request,
+	.free_request	= dwc3_gadget_ep_free_request,
+	.queue		= dwc3_gadget_ep_queue,
+	.dequeue	= dwc3_gadget_ep_dequeue,
+	.set_halt	= dwc3_gadget_ep_set_halt,
+	.set_wedge	= dwc3_gadget_ep_set_wedge,
+	.fifo_status	= dwc3_gadget_ep_fifo_status,
+	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -380,11 +380,11 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 
 		if (epnum == 0) {
 			ep->endpoint.maxpacket = 64;
-			ep->endpoint.ops = &dwc_gadget_ep0_ops;
+			ep->endpoint.ops = &dwc3_gadget_ep0_ops;
 			dwc->gadget.ep0 = &ep->endpoint;
 		} else {
 			ep->endpoint.maxpacket = 512;
-			ep->endpoint.ops = &dwc_gadget_ep_ops;
+			ep->endpoint.ops = &dwc3_gadget_ep_ops;
 			ep->direction = (epnum % 2) ? true : false;
 			list_add_tail(&ep->endpoint.ep_list,
 					&dwc->gadget.ep_list);
