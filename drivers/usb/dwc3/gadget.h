@@ -151,6 +151,7 @@ struct dwc3_request {
 	u8			epnum;
 
 	unsigned		direction:1;
+	unsigned		mapped:1;
 };
 #define to_dwc3_request(r)	(container_of(r, struct dwc3_request, request))
 

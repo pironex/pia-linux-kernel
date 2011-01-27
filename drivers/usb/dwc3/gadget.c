@@ -37,12 +37,39 @@
 #define to_dwc3_ep(ep)		(container_of(ep, struct dwc3_ep, endpoint))
 #define gadget_to_dwc(g)	(container_of(g, struct dwc3, gadget))
 
+#define	DMA_ADDR_INVALID	(~(dma_addr_t)0)
+
 static void dwc3_map_buffer_to_dma(struct dwc3_request *req)
 {
+	struct dwc3			*dwc = req->dep->dwc;
+
+	if (req->request.dma == DMA_ADDR_INVALID) {
+		req->request.dma = dma_map_single(dwc->dev, req->request.buf,
+				req->request.length, req->direction
+				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		req->mapped = true;
+	} else {
+		dma_sync_single_for_device(dwc-> dev, req->request.dma,
+				req->request.length, req->direction
+				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		req->mapped = false;
+	}
 }
 
 static void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 {
+	struct dwc3			*dwc = req->dep->dwc;
+
+	if (req->mapped) {
+		dma_unmap_single(dwc->dev, req->request.dma,
+				req->request.length, req->direction
+				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		req->mapped = 0;
+	} else {
+		dma_sync_single_for_cpu(dwc->dev, req->request.dma,
+				req->request.length, req->direction
+				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+	}
 }
 
 static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
