@@ -84,6 +84,7 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 	spin_lock_init(&omap->lock);
 	platform_set_drvdata(pdev, omap);
 
+	dwc3->dev.parent = &pdev->dev;
 	omap->dev	= &pdev->dev;
 	omap->dwc3	= dwc3;
 
