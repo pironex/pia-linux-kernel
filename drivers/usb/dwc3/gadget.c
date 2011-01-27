@@ -376,6 +376,10 @@ static int dwc3_gadget_wakeup(struct usb_gadget *g)
 static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
 		int is_selfpowered)
 {
+	struct dwc3		*dwc = gadget_to_dwc(g);
+
+	dwc->is_selfpowered = !!is_selfpowered;
+
 	return 0;
 }
 
