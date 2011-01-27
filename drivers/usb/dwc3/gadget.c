@@ -355,6 +355,55 @@ static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 
 /* -------------------------------------------------------------------------- */
 
+static int dwc3_gadget_get_frame(struct usb_gadget *g)
+{
+	return 0;
+}
+
+static int dwc3_gadget_wakeup(struct usb_gadget *g)
+{
+	return 0;
+}
+
+static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
+		int is_selfpowered)
+{
+	return 0;
+}
+
+static int dwc3_gadget_vbus_session(struct usb_gadget *g, int is_active)
+{
+	return 0;
+}
+
+static int dwc3_gadget_vbus_draw(struct usb_gadget *g, unsigned mA)
+{
+	return 0;
+}
+
+static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
+{
+	return 0;
+}
+
+static int dwc3_gadget_ioctl(struct usb_gadget *g,
+		unsigned code, unsigned long param)
+{
+	return 0;
+}
+
+static const struct usb_gadget_ops dwc3_gadget_ops = {
+	.get_frame		= dwc3_gadget_get_frame,
+	.wakeup			= dwc3_gadget_wakeup,
+	.set_selfpowered	= dwc3_gadget_set_selfpowered,
+	.vbus_session		= dwc3_gadget_vbus_session,
+	.vbus_draw		= dwc3_gadget_vbus_draw,
+	.pullup			= dwc3_gadget_pullup,
+	.ioctl			= dwc3_gadget_ioctl,
+};
+
+/* -------------------------------------------------------------------------- */
+
 static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 {
 	struct dwc3_ep			*ep;
@@ -392,6 +441,11 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 	}
 }
 
+static void dwc3_gadget_release(struct device *dev)
+{
+	dev_dbg(dev, "%s\n", __func__);
+}
+
 /**
  * dwc3_gadget_init - Initializes gadget related registers
  * @dwc: Pointer to out controller context structure
@@ -404,6 +458,16 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	u32					reg;
 
 	int					ret;
+
+	dev_set_name(&dwc->gadget.dev, "gadget");
+
+	dwc->gadget.ops			= &dwc3_gadget_ops;
+	dwc->gadget.is_dualspeed	= true;
+	dwc->gadget.speed		= USB_SPEED_UNKNOWN;
+	dwc->gadget.dev.parent		= dwc->dev;
+	dwc->gadget.dev.dma_mask	= dwc->dev->dma_mask;
+	dwc->gadget.dev.release		= dwc3_gadget_release;
+	dwc->gadget.name		= "dwc3-gadget";
 
 	memset(&params, 0x00, sizeof(params));
 
