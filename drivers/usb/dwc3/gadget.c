@@ -480,6 +480,8 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 	}
 }
 
+static struct dwc3	*the_dwc;
+
 static void dwc3_gadget_release(struct device *dev)
 {
 	dev_dbg(dev, "%s\n", __func__);
@@ -507,6 +509,8 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc->gadget.dev.dma_mask	= dwc->dev->dma_mask;
 	dwc->gadget.dev.release		= dwc3_gadget_release;
 	dwc->gadget.name		= "dwc3-gadget";
+
+	the_dwc				= dwc;
 
 	memset(&params, 0x00, sizeof(params));
 
@@ -584,3 +588,104 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	return 0;
 }
 
+/* -------------------------------------------------------------------------- */
+
+/**
+ * usb_gadget_probe_driver - registers and probes the gadget driver.
+ * @driver: the gadget driver to register and probe
+ * @bind: the bind function
+ */
+int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
+		int (*bind)(struct usb_gadget *))
+{
+	struct dwc3		*dwc = the_dwc;
+	unsigned long		flags;
+	int			ret;
+
+	if (!driver || !bind || !driver->setup) {
+		ret = -EINVAL;
+		goto err0;
+	}
+
+	if (!dwc) {
+		ret = -ENODEV;
+		goto err0;
+	}
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
+	if (dwc->gadget_driver) {
+		dev_err(dwc->dev, "%s is already bound to %s\n",
+				dwc->gadget.name,
+				dwc->gadget_driver->driver.name);
+		ret = -EBUSY;
+		goto err1;
+	}
+
+	dwc->gadget_driver	= driver;
+	dwc->gadget.dev.driver	= &driver->driver;
+	driver->driver.bus	= NULL;
+
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	ret = bind(&dwc->gadget);
+	if (ret) {
+		dev_err(dwc->dev, "bind failed\n");
+		goto err2;
+	}
+
+	return 0;
+
+err2:
+	dwc->gadget_driver	= NULL;
+	dwc->gadget.dev.driver	= NULL;
+
+err1:
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+err0:
+	return ret;
+}
+EXPORT_SYMBOL_GPL(usb_gadget_probe_driver);
+
+/**
+ * usb_gadget_unregister_driver - unregisters a gadget driver.
+ * @driver: the gadget driver to unregister
+ */
+int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
+{
+	struct dwc3		*dwc = the_dwc;
+	unsigned long		flags;
+	int			ret;
+
+	if (!driver || !driver->unbind) {
+		ret = -EINVAL;
+		goto err0;
+	}
+
+	if (!dwc) {
+		ret = -ENODEV;
+		goto err0;
+	}
+
+	if (dwc->gadget_driver != driver) {
+		ret = -EINVAL;
+		goto err0;
+	}
+
+	driver->unbind(&dwc->gadget);
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
+	dwc->gadget_driver	= NULL;
+	dwc->gadget.dev.driver	= NULL;
+
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+
+	return 0;
+
+err0:
+	return ret;
+}
+EXPORT_SYMBOL_GPL(usb_gadget_unregister_driver);
