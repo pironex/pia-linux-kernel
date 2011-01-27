@@ -357,7 +357,15 @@ static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 
 static int dwc3_gadget_get_frame(struct usb_gadget *g)
 {
-	return 0;
+	struct dwc3		*dwc = gadget_to_dwc(g);
+	unsigned long		flags;
+	u32			reg;
+
+	spin_lock_irqsave(&dwc->lock, flags);
+	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	return DWC3_DSTS_SOFFN(reg);
 }
 
 static int dwc3_gadget_wakeup(struct usb_gadget *g)
