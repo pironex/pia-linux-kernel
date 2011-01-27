@@ -460,6 +460,7 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 		INIT_LIST_HEAD(&ep->endpoint.ep_list);
 
 		ep->dwc = dwc;
+		dwc->eps[epnum] = ep;
 
 		snprintf(ep->name, 20, "ep%d%s", epnum, !epnum ? "shared" :
 				(epnum % 2) ? "in" : "false");

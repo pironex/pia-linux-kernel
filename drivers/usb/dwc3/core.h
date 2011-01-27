@@ -30,6 +30,8 @@
 #include <linux/usb/gadget.h>
 
 /* Global constants */
+#define DWC3_ENDPOINTS_NUM	32
+
 #define DWC3_EVENT_BUFFERS_NUM	2
 #define DWC3_EVENT_BUFFERS_SIZE	PAGE_SIZE
 #define DWC3_EVENT_TYPE_MASK	0xfe
@@ -231,7 +233,6 @@ struct dwc3_event_buffer {
 /**
  * struct dwc3_ep - device side endpoint representation
  * @endpoint: usb endpoint
- * @endpoint_list: list of endpoints we have
  * @request_list: list of requests for this endpoint
  * @desc: usb_endpoint_descriptor pointer
  * @dwc: pointer to DWC controller
@@ -243,7 +244,6 @@ struct dwc3_event_buffer {
  */
 struct dwc3_ep {
 	struct usb_ep		endpoint;
-	struct list_head	endpoint_list;
 	struct list_head	request_list;
 
 	struct usb_endpoint_descriptor *desc;
@@ -280,6 +280,8 @@ struct dwc3 {
 	struct device		*dev;
 
 	struct dwc3_event_buffer *ev_buffs[DWC3_EVENT_BUFFERS_NUM];
+	struct dwc3_ep		*eps[DWC3_ENDPOINTS_NUM];
+
 	struct usb_gadget	gadget;
 	struct usb_gadget_driver *gadget_driver;
 
