@@ -424,12 +424,6 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	return 0;
 }
 
-static int dwc3_gadget_ioctl(struct usb_gadget *g,
-		unsigned code, unsigned long param)
-{
-	return 0;
-}
-
 static const struct usb_gadget_ops dwc3_gadget_ops = {
 	.get_frame		= dwc3_gadget_get_frame,
 	.wakeup			= dwc3_gadget_wakeup,
@@ -437,7 +431,6 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
 	.vbus_session		= dwc3_gadget_vbus_session,
 	.vbus_draw		= dwc3_gadget_vbus_draw,
 	.pullup			= dwc3_gadget_pullup,
-	.ioctl			= dwc3_gadget_ioctl,
 };
 
 /* -------------------------------------------------------------------------- */
