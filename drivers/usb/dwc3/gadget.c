@@ -381,8 +381,34 @@ static int dwc3_gadget_vbus_draw(struct usb_gadget *g, unsigned mA)
 	return 0;
 }
 
+static void __dwc3_gadget_pullup(struct dwc3 *dwc, int is_on)
+{
+	u32			reg;
+
+	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+	if (is_on)
+		reg |= DWC3_DCTL_RUN_STOP;
+	else
+		reg &= ~DWC3_DCTL_RUN_STOP;
+
+	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
+			dwc->gadget_driver->function,
+			is_on ? "connect" : "disconnect");
+}
+
 static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 {
+	struct dwc3		*dwc = gadget_to_dwc(g);
+	unsigned long		flags;
+
+	is_on = !!is_on;
+
+	spin_lock_irqsave(&dwc->lock, flags);
+	__dwc3_gadget_pullup(dwc, is_on);
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
 	return 0;
 }
 
@@ -541,11 +567,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 			| DWC3_DALEPENA_EPIN(0));
 
 	dwc3_gadget_init_endpoints(dwc);
-
-	/* Set RUN/STOP bit */
-	reg = dwc3_readl(dwc->device, DWC3_DCTL);
-	reg |= DWC3_DCTL_RUN_STOP;
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
 
 	return 0;
 }
