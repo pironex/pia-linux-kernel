@@ -135,7 +135,7 @@ static void dwc_gadget_ep0_fifo_flush(struct usb_ep *ep)
 {
 }
 
-const struct usb_ep_ops dwc_gadget_ep0_ops = {
+static const struct usb_ep_ops dwc_gadget_ep0_ops = {
 	.enable		= dwc_gadget_ep0_enable,
 	.disable	= dwc_gadget_ep0_disable,
 	.alloc_request	= dwc_gadget_ep0_alloc_request,
@@ -220,7 +220,7 @@ static void dwc_gadget_ep_fifo_flush(struct usb_ep *ep)
 {
 }
 
-const struct usb_ep_ops dwc_gadget_ep_ops = {
+static const struct usb_ep_ops dwc_gadget_ep_ops = {
 	.enable		= dwc_gadget_ep_enable,
 	.disable	= dwc_gadget_ep_disable,
 	.alloc_request	= dwc_gadget_ep_alloc_request,
