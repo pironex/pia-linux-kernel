@@ -507,6 +507,12 @@ static void dwc3_gadget_release(struct device *dev)
 	dev_dbg(dev, "%s\n", __func__);
 }
 
+static struct dwc3_trb *dwc3_alloc_trb(struct dwc3 *dwc,
+		unsigned type, unsigned length)
+{
+	return NULL;
+}
+
 /**
  * dwc3_gadget_init - Initializes gadget related registers
  * @dwc: Pointer to out controller context structure
@@ -516,8 +522,9 @@ static void dwc3_gadget_release(struct device *dev)
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params	params;
-	u32					reg;
+	struct dwc3_trb				*trb;
 
+	u32					reg;
 	int					ret;
 
 	dev_set_name(&dwc->gadget.dev, "gadget");
@@ -551,6 +558,11 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	dwc3_writel(dwc->device, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
 
+	/* Disable Start and End of Frame IRQs */
+	reg = dwc3_readl(dwc->device, DWC3_DEVTEN);
+	reg &= ~(DWC3_DEVTEN_SOFEN | DWC3_DEVTEN_EOPFEN);
+	dwc3_writel(dwc->device, DWC3_DEVTEN, reg);
+
 	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, &params);
 	if (ret)
 		return ret;
@@ -571,8 +583,10 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		return ret;
 
+	/* first zero the whole thing */
+	memset(&params, 0x00, sizeof(params));
+
 	params.param0.depxfercfg.number_xfer_resources = 1;
-	params.param1.raw = 0;	/* be sure parameter1 is set to zero */
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
@@ -584,20 +598,20 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		return ret;
 
-	/**
-	 * TODO: Prepare a buffer for a setup packet, initialize
-	 * a setup TRB, and issue a DEPSTRTXFER command for physical
-	 * endpoint 0, pointing to the setup TRB. Poll CmdAct for completion.
-	 *
-	 * Note: The core will attempt to fetch the setup TRB via the master
-	 * interface after this command completes.
-	 */
+	/* first zero the whole thing */
+	memset(&params, 0x00, sizeof(params));
 
-	reg = dwc3_readl(dwc->device, DWC3_DEVTEN);
+	trb = dwc3_alloc_trb(dwc, 2, PAGE_SIZE);
+	if (!trb)
+		return -ENOMEM;
 
-	/* Disable Start and End of Frame IRQs */
-	reg &= ~(DWC3_DEVTEN_SOFEN | DWC3_DEVTEN_EOPFEN);
-	dwc3_writel(dwc->device, DWC3_DEVTEN, reg);
+	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
+	params.param1.depstrtxfer.transfer_desc_addr_low = trb->dma;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
+			DWC3_DEPCMD_STARTTRANSFER, &params);
+	if (ret)
+		return ret;
 
 	/* Enable physical EPs 0 & 1 */
 	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
