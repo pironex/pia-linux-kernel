@@ -155,7 +155,7 @@ static int dwc3_gadget_ep0_disable(struct usb_ep *ep)
 static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
-	struct dwc3_ep		*d_ep;
+	struct dwc3_ep		*dep;
 
 	if (!ep || !desc || desc->bDescriptorType != USB_DT_ENDPOINT) {
 		pr_debug("dwc3: invalid parameters\n");
@@ -167,19 +167,19 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		return -EINVAL;
 	}
 
-	return dwc3_init_endpoint(d_ep, desc);
+	return dwc3_init_endpoint(dep, desc);
 }
 
 static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 {
-	struct dwc3_ep		*d_ep;
+	struct dwc3_ep		*dep;
 
 	if (!ep) {
 		pr_debug("dwc3: invalid parameters\n");
 		return -EINVAL;
 	}
 
-	return dwc3_disable_endpoint(d_ep);
+	return dwc3_disable_endpoint(dep);
 }
 
 static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
