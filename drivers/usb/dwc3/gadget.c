@@ -469,8 +469,7 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 
 	INIT_LIST_HEAD(&dwc->gadget.ep_list);
 
-	/* we know we have 32 EPs */
-	for (epnum = 0; epnum < 32; epnum++) {
+	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
 		ep = kzalloc(sizeof(*ep), GFP_KERNEL);
 		if (!ep) {
 			dev_err(dwc->dev, "can't allocate endpoint %d\n", epnum);
