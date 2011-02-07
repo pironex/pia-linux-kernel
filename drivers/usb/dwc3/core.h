@@ -181,6 +181,15 @@
 
 #define DWC3_DSTS_CONNECTSPD		(7 << 0)
 
+/* Device Generic Command Register */
+#define DWC3_DGCMD_SET_LMP		0x01
+#define DWC3_DGCMD_SET_PERIODIC_PAR	0x02
+#define DWC3_DGCMD_XMIT_FUNCTION	0x03
+#define DWC3_DGCMD_SELECTED_FIFO_FLUSH	0x09
+#define DWC3_DGCMD_ALL_FIFO_FLUSH	0x0a
+#define DWC3_DGCMD_SET_ENDPOINT_NRDY	0x0c
+#define DWC3_DGCMD_RUN_SOC_BUS_LOOPBACK	0x10
+
 /* Device Endpoint Command Register */
 #define DWC3_DEPCMD_HIPRI_FORCERM	(1 << 11)
 #define DWC3_DEPCMD_CMDACT		(1 << 10)
