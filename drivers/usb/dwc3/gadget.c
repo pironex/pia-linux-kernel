@@ -346,6 +346,7 @@ static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
 	.fifo_status	= dwc3_gadget_ep_fifo_status,
 	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
+
 static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 	.enable		= dwc3_gadget_ep_enable,
 	.disable	= dwc3_gadget_ep_disable,
