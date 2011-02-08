@@ -607,6 +607,8 @@ static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
 
+	dev_vdbg(dwc->dev, "%s\n", __func__);
+
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
 	reg &= ~DWC3_DCTL_INITU1ENA;
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
@@ -620,6 +622,8 @@ static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
+
+	dev_vdbg(dwc->dev, "%s\n", __func__);
 
 	/* Reset device address to zero */
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
