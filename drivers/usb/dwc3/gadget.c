@@ -456,8 +456,6 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 			return -ENOMEM;
 		}
 
-		INIT_LIST_HEAD(&ep->endpoint.ep_list);
-
 		ep->dwc = dwc;
 		dwc->eps[epnum] = ep;
 
