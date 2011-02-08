@@ -479,6 +479,19 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 	return 0;
 }
 
+static void __devexit dwc3_gadget_free_endpoints(struct dwc3 *dwc)
+{
+	struct dwc3_ep			*dep;
+	u8				epnum;
+
+	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
+		dep = dwc->eps[epnum];
+		if (epnum != 0)
+			list_del(&dep->endpoint.ep_list);
+		kfree(dep);
+	}
+}
+
 static struct dwc3	*the_dwc;
 
 static void dwc3_gadget_release(struct device *dev)
@@ -992,6 +1005,7 @@ void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
 	free_irq(irq, dwc);
+	dwc3_gadget_free_endpoints(dwc);
 }
 
 /* -------------------------------------------------------------------------- */
