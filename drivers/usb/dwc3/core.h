@@ -181,6 +181,12 @@
 
 #define DWC3_DSTS_CONNECTSPD		(7 << 0)
 
+#define DWC3_DSTS_SUPERSPEED		(4 << 0)
+#define DWC3_DSTS_HIGHSPEED		(0 << 0)
+#define DWC3_DSTS_FULLSPEED2		(1 << 0)
+#define DWC3_DSTS_LOWSPEED		(2 << 0)
+#define DWC3_DSTS_FULLSPEED1		(3 << 0)
+
 /* Device Generic Command Register */
 #define DWC3_DGCMD_SET_LMP		0x01
 #define DWC3_DGCMD_SET_PERIODIC_PAR	0x02
@@ -323,6 +329,8 @@ struct dwc3 {
 	unsigned		is_selfpowered:1;
 
 	enum dwc3_ep0_state	ep0state;
+
+	u8			speed;
 };
 
 /* -------------------------------------------------------------------------- */

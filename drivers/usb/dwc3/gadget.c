@@ -659,6 +659,55 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
+{
+	struct dwc3_gadget_ep_cmd_params params;
+
+	u32			reg;
+	int			ret;
+
+	u8			speed;
+
+	dev_vdbg(dwc->dev, "%s\n", __func__);
+
+	memset(&params, 0x00, sizeof(params));
+
+	dwc->ep0state = EP0_IDLE;
+	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+	speed = reg & DWC3_DSTS_CONNECTSPD;
+	dwc->speed = speed;
+
+	params.param0.depcfg.ep_type = 0;
+
+	params.param1.depcfg.xfer_complete_enable = true;
+	params.param1.depcfg.xfer_in_progress_enable = true;
+	params.param1.depcfg.xfer_not_ready_enable = true;
+
+	switch (speed) {
+	case DWC3_DSTS_SUPERSPEED:
+		params.param0.depcfg.max_packet_size = 512;
+		break;
+	case DWC3_DSTS_HIGHSPEED:
+	case DWC3_DSTS_FULLSPEED2:
+	case DWC3_DSTS_FULLSPEED1:
+		params.param0.depcfg.max_packet_size = 64;
+		break;
+	case DWC3_DSTS_LOWSPEED:
+		params.param0.depcfg.max_packet_size = 8;
+		break;
+	}
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, &params);
+	if (ret)
+		return IRQ_NONE;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_DEPSTARTCFG, &params);
+	if (ret)
+		return IRQ_NONE;
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_devt *event)
 {
@@ -672,7 +721,7 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		ret = dwc3_gadget_reset_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_CONNECT_DONE:
-		/* handle connect done IRQ here */
+		ret = dwc3_gadget_conndone_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_WAKEUP:
 		/* handle wakeup IRQ here */
