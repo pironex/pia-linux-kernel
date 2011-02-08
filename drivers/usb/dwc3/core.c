@@ -245,6 +245,12 @@ err0:
 	return ret;
 }
 
+static void dwc3_core_exit(struct dwc3 *dwc)
+{
+	dwc3_event_buffers_cleanup(dwc);
+	dwc3_free_event_buffers(dwc);
+}
+
 static int __devinit dwc3_probe(struct platform_device *pdev)
 {
 	struct resource		*res;
@@ -382,12 +388,15 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	ret = dwc3_gadget_init(dwc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialized gadget\n");
-		goto err8;
+		goto err9;
 	}
 
 	pm_runtime_allow(&pdev->dev);
 
 	return 0;
+
+err9:
+	dwc3_core_exit(dwc);
 
 err8:
 	iounmap(dwc->ram2);
@@ -425,8 +434,7 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 
 	dwc3_gadget_exit(dwc);
-	dwc3_event_buffers_cleanup(dwc);
-	dwc3_free_event_buffers(dwc);
+	dwc3_core_exit(dwc);
 
 	iounmap(dwc->ram2);
 	iounmap(dwc->ram1);
