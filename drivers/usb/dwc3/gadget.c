@@ -492,6 +492,227 @@ static struct dwc3_trb *dwc3_alloc_trb(struct dwc3 *dwc,
 	return NULL;
 }
 
+static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	irqreturn_t		ret = IRQ_NONE;
+	u8			epnum = event->endpoint_number;
+
+	switch (event->endpoint_event) {
+	case DWC3_DEPEVT_XFERCOMPLETE:
+		break;
+	case DWC3_DEPEVT_XFERINPROGRESS:
+		break;
+	case DWC3_DEPEVT_XFERNOTREADY:
+		break;
+	case DWC3_DEPEVT_RXTXFIFOEVT:
+		break;
+	case DWC3_DEPEVT_STREAMEVT:
+		break;
+	case DWC3_DEPEVT_EPCMDCMPLT:
+		break;
+	}
+
+	return ret;
+}
+
+static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	irqreturn_t			ret;
+
+	/*
+	 * The way endpoints are managed at the hardware level
+	 * is so that OUT endpoints will always have even numbers
+	 * while IN endpoints will always have odd numbers.
+	 */
+	if (event->endpoint_number & 1)
+		ret = dwc3_in_endpoint_interrupt(dwc, event);
+	else
+		ret = dwc3_out_endpoint_interrupt(dwc, event);
+
+	return ret;
+}
+
+static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_devt *event)
+{
+	irqreturn_t		ret = IRQ_NONE;
+	u32			reg;
+
+	switch (event->type) {
+	case DWC3_DEVICE_EVENT_DISCONNECT:
+		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg &= ~DWC3_DCTL_INITU1ENA;
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+		reg &= ~DWC3_DCTL_INITU2ENA;
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+		break;
+	case DWC3_DEVICE_EVENT_RESET:
+		/* Reset device address to zero */
+		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg &= ~(DWC3_DCFG_DEVADDR(0));
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+		/* Enable ep0 in DALEPENA register */
+		reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+		reg |= DWC3_DALEPENA_EPOUT(0) | DWC3_DALEPENA_EPIN(0);
+		dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+
+		/* FIXME stop any activity on all other endpoints */
+
+		/*
+		 * Wait for RxFifo to drain
+		 *
+		 * REVISIT probably shouldn't wait forever.
+		 * In case Hardware ends up in a screwed up
+		 * case, we error out, notify the user and,
+		 * maybe, WARN() or BUG() but leave the rest
+		 * of the kernel working fine.
+		 *
+		 * REVISIT the below is rather CPU intensive,
+		 * maybe we should read and if it doesn't work
+		 * sleep (not busy wait) for a few useconds.
+		 */
+		while (!(dwc3_readl(dwc->device, DWC3_DSTS)
+				& DWC3_DSTS_RXFIFOEMPTY))
+			cpu_relax();
+
+		/* FIXME Set EP0 state to ep0Idle */
+
+		break;
+	case DWC3_DEVICE_EVENT_CONNECT_DONE:
+		/* handle connect done IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_WAKEUP:
+		/* handle wakeup IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
+		/* handle link status change IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_EOPF:
+		/* handle end of periodic frame IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_SOF:
+		/* handle start of frame IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_ERRATIC_ERROR:
+		/* handle erratic error IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_CMD_CMPL:
+		/* handle command complete IRQ here */
+		break;
+	case DWC3_DEVICE_EVENT_OVERFLOW:
+		/* handle device overflow IRQ here */
+		break;
+	default:
+		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
+	}
+
+	return ret;
+}
+
+static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_gevt *event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_gevt *event)
+{
+	return IRQ_NONE;
+}
+
+static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
+		union dwc3_event *event)
+{
+	irqreturn_t ret;
+
+	/* Endpoint IRQ, handle it and return early */
+	if (event->type.is_devspec == 0 ) {
+		/* depevt */
+		return dwc3_endpoint_interrupt(dwc, &event->depevt);
+	}
+
+	switch (event->type.type) {
+	case DWC3_EVENT_TYPE_DEV:
+		ret = dwc3_gadget_interrupt(dwc, &event->devt);
+		break;
+	case DWC3_EVENT_TYPE_CARKIT:
+		ret = dwc3_carkit_interrupt(dwc, &event->gevt);
+		break;
+	case DWC3_EVENT_TYPE_I2C:
+		ret = dwc3_i2c_interrupt(dwc, &event->gevt);
+		break;
+	default:
+		ret = -EINVAL;
+		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
+}
+	return ret;
+}
+
+static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
+{
+	struct dwc3_event_buffer *evt;
+	int left;
+	u32 count;
+
+	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT(buf));
+	count &= DWC3_GEVNTCOUNT_MASK;
+	if (!count)
+		return IRQ_NONE;
+
+	evt = dwc->ev_buffs[buf];
+	left = count;
+	while (left > 0) {
+		union dwc3_event event;
+
+		memcpy(&event.raw, (evt->buf + evt->lpos), sizeof(event.raw));
+		dwc3_process_event_entry(dwc, &event);
+		/* what with the ret? */
+		/*
+		 * XXX we wrap around correctly to the next entry as almost all
+		 * entries are 4 bytes in size. There is one entry which has 12
+		 * bytes which is a regular entry followed by 8 bytes data. ATM
+		 * I don't know how things are organized if were get next to the
+		 * a boundary so I worry about that once we try to handle that.
+		 */
+		evt->lpos = (evt->lpos + 4) % DWC3_EVENT_BUFFERS_SIZE;
+		left -= 4;
+	}
+	dwc3_writel(dwc->dev, DWC3_GEVNTCOUNT(buf), count);
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
+{
+	struct dwc3			*dwc = _dwc;
+	unsigned long			flags;
+	int				i;
+	irqreturn_t			ret = IRQ_NONE;
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
+	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
+		irqreturn_t status;
+
+		status = dwc3_process_event_buf(dwc, i);
+		if (status == IRQ_HANDLED)
+			ret = status;
+	}
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	return ret;
+}
+
 /**
  * dwc3_gadget_init - Initializes gadget related registers
  * @dwc: Pointer to out controller context structure
@@ -505,6 +726,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	u32					reg;
 	int					ret;
+	int					irq;
 
 	dev_set_name(&dwc->gadget.dev, "gadget");
 
@@ -601,7 +823,25 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	dwc3_gadget_init_endpoints(dwc);
 
+	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
+
+	ret = request_irq(irq, dwc3_interrupt, 0, "dwc3", dwc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
+				irq, ret);
+		return ret;
+	}
+
 	return 0;
+}
+
+void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
+{
+	int			irq;
+
+	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
+
+	free_irq(irq, dwc);
 }
 
 /* -------------------------------------------------------------------------- */

@@ -156,5 +156,6 @@ struct dwc3_request {
 #define to_dwc3_request(r)	(container_of(r, struct dwc3_request, request))
 
 int dwc3_gadget_init(struct dwc3 *dwc);
+void dwc3_gadget_exit(struct dwc3 *dwc);
 
 #endif /* __DRIVERS_USB_DWC3_GADGET_H */

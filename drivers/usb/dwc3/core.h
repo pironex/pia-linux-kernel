@@ -462,11 +462,14 @@ struct dwc3_event_gevt {
 /**
  * union dwc3_event - representation of Event Buffer contents
  * @raw: raw 32-bit event
+ * @type: the type of the event
  * @depevt: Device Endpoint Event
+ * @devt: Device Event
+ * @gevt: Global Event
  */
 union dwc3_event {
 	u32				raw;
-	struct dwc3_event_type		typeevt;
+	struct dwc3_event_type		type;
 	struct dwc3_event_depevt	depevt;
 	struct dwc3_event_devt		devt;
 	struct dwc3_event_gevt		gevt;
