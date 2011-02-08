@@ -822,7 +822,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 	int left;
 	u32 count;
 
-	count = dwc3_readl(dwc->dev, DWC3_GEVNTCOUNT(buf));
+	count = dwc3_readl(dwc->device, DWC3_GEVNTCOUNT(buf));
 	count &= DWC3_GEVNTCOUNT_MASK;
 	if (!count)
 		return IRQ_NONE;
@@ -847,7 +847,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 		left -= 4;
 	}
 
-	dwc3_writel(dwc->dev, DWC3_GEVNTCOUNT(buf), count);
+	dwc3_writel(dwc->device, DWC3_GEVNTCOUNT(buf), count);
 
 	return IRQ_HANDLED;
 }
