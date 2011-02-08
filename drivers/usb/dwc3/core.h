@@ -268,6 +268,20 @@ struct dwc3_ep {
 	unsigned		direction:1;
 };
 
+enum dwc3_ep0_state {
+	EP0_UNCONNECTED,
+	EP0_IDLE,
+	EP0_IN_DATA_PHASE,
+	EP0_OUT_DATA_PHASE,
+	EP0_IN_WAIT_GADGET,
+	EP0_OUT_WAIT_GADGET,
+	EP0_IN_WAIT_NRDY,
+	EP0_OUT_WAIT_NRDY,
+	EP0_IN_STATUS_PHASE,
+	EP0_OUT_STATUS_PHASE,
+	EP0_STALL,
+};
+
 /**
  * struct dwc3 - representation of our controller
  * @lock: for synchronizing
@@ -307,6 +321,8 @@ struct dwc3 {
 	u32			revision;
 
 	unsigned		is_selfpowered:1;
+
+	enum dwc3_ep0_state	ep0state;
 };
 
 /* -------------------------------------------------------------------------- */
