@@ -9,25 +9,24 @@ config USB_DWC3
 	  If you choose to build this driver is a dynamically linked
 	  module, the module will be called dwc3.ko.
 
+if USB_DWC3
+
 config USB_DWC3_DEBUG
 	bool "Enable Debugging Messages"
-	depends on USB_DWC3
 	help
 	  Say Y here to enable debugging messages on DWC3 Driver.
 
 config USB_DWC3_PIO
 	bool "Disable DMA Support"
-	depends on USB_DWC3
 	help
 	  Say Y here to disable DMA support on DWC3 Driver.
 
 choice
 	prompt "Platform Glue Layer"
-	depends on USB_DWC3
 
 config USB_DWC3_OMAP
 	tristate "OMAP"
 	depends on ARCH_OMAP
 
 endchoice
-
+endif
