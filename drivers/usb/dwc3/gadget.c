@@ -816,6 +816,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 
 	evt = dwc->ev_buffs[buf];
 	left = count;
+
 	while (left > 0) {
 		union dwc3_event event;
 
@@ -832,7 +833,9 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 		evt->lpos = (evt->lpos + 4) % DWC3_EVENT_BUFFERS_SIZE;
 		left -= 4;
 	}
+
 	dwc3_writel(dwc->dev, DWC3_GEVNTCOUNT(buf), count);
+
 	return IRQ_HANDLED;
 }
 
@@ -852,6 +855,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 		if (status == IRQ_HANDLED)
 			ret = status;
 	}
+
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
