@@ -288,6 +288,22 @@ enum dwc3_ep0_state {
 	EP0_STALL,
 };
 
+enum dwc3_link_state {
+	/* In SuperSpeed */
+	DWC3_LINK_STATE_U0		= 0x00, /* in HS, means ON */
+	DWC3_LINK_STATE_U1		= 0x01,
+	DWC3_LINK_STATE_U2		= 0x02, /* in HS, means SLEEP */
+	DWC3_LINK_STATE_U3		= 0x03, /* in HS, means SUSPEND */
+	DWC3_LINK_STATE_SS_DIS		= 0x04,
+	DWC3_LINK_STATE_RX_DET		= 0x05, /* in HS, means Early Suspend */
+	DWC3_LINK_STATE_SS_INACT	= 0x06,
+	DWC3_LINK_STATE_POLL		= 0x07,
+	DWC3_LINK_STATE_RECOV		= 0x08,
+	DWC3_LINK_STATE_HRESET		= 0x09,
+	DWC3_LINK_STATE_CMPLY		= 0x0a,
+	DWC3_LINK_STATE_LPBK		= 0x0b,
+};
+
 /**
  * struct dwc3 - representation of our controller
  * @lock: for synchronizing
@@ -302,6 +318,12 @@ enum dwc3_ep0_state {
  * @ram0: for debug purposes, access to internal RAM
  * @ram1: for debug purposes, access to internal RAM
  * @ram2: for debug purposes, access to internal RAM
+ * @irq: IRQ number
+ * @revision: revision register contents
+ * @is_selfpowered: true when we are selfpowered
+ * @ep0state: state of endpoint zero
+ * @link_state: link state
+ * @speed: device speed (super, high, full, low)
  */
 struct dwc3 {
 	/* device lock */
@@ -329,6 +351,7 @@ struct dwc3 {
 	unsigned		is_selfpowered:1;
 
 	enum dwc3_ep0_state	ep0state;
+	enum dwc3_link_state	link_state;
 
 	u8			speed;
 };

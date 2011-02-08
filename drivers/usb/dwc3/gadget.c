@@ -708,6 +708,34 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
+{
+	dev_vdbg(dwc->dev, "%s\n", __func__);
+
+	/*
+	 * TODO take core out of low power mode when that's
+	 * implemented.
+	 */
+
+	dwc->gadget_driver->resume(&dwc->gadget);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc)
+{
+	u32			reg;
+	u8			state;
+
+	dev_vdbg(dwc->dev, "%s\n", __func__);
+
+	reg = dwc3_readl(dwc->dev, DWC3_DSTS);
+	state = DWC3_DSTS_USBLNKST(reg);
+	dwc->link_state = state;
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_devt *event)
 {
@@ -724,25 +752,25 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		ret = dwc3_gadget_conndone_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_WAKEUP:
-		/* handle wakeup IRQ here */
+		ret = dwc3_gadget_wakeup_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
-		/* handle link status change IRQ here */
+		ret = dwc3_gadget_linksts_change_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_EOPF:
-		/* handle end of periodic frame IRQ here */
+		dev_vdbg(dwc->dev, "End of Periodic Frame\n");
 		break;
 	case DWC3_DEVICE_EVENT_SOF:
-		/* handle start of frame IRQ here */
+		dev_vdbg(dwc->dev, "Start of Periodic Frame\n");
 		break;
 	case DWC3_DEVICE_EVENT_ERRATIC_ERROR:
-		/* handle erratic error IRQ here */
+		dev_vdbg(dwc->dev, "Erratic Error\n");
 		break;
 	case DWC3_DEVICE_EVENT_CMD_CMPL:
-		/* handle command complete IRQ here */
+		dev_vdbg(dwc->dev, "Command Complete\n");
 		break;
 	case DWC3_DEVICE_EVENT_OVERFLOW:
-		/* handle device overflow IRQ here */
+		dev_vdbg(dwc->dev, "Overflow\n");
 		break;
 	default:
 		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
