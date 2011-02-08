@@ -619,18 +619,6 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 	return ret;
 }
 
-static irqreturn_t dwc3_carkit_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_gevt *event)
-{
-	return IRQ_NONE;
-}
-
-static irqreturn_t dwc3_i2c_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_gevt *event)
-{
-	return IRQ_NONE;
-}
-
 static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
 		union dwc3_event *event)
 {
@@ -646,16 +634,12 @@ static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
 	case DWC3_EVENT_TYPE_DEV:
 		ret = dwc3_gadget_interrupt(dwc, &event->devt);
 		break;
-	case DWC3_EVENT_TYPE_CARKIT:
-		ret = dwc3_carkit_interrupt(dwc, &event->gevt);
-		break;
-	case DWC3_EVENT_TYPE_I2C:
-		ret = dwc3_i2c_interrupt(dwc, &event->gevt);
-		break;
+	/* REVISIT what to do with Carkit and I2C events ? */
 	default:
 		ret = -EINVAL;
 		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
-}
+	}
+
 	return ret;
 }
 
