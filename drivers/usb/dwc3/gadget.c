@@ -442,7 +442,7 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
 
 /* -------------------------------------------------------------------------- */
 
-static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
+static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 {
 	struct dwc3_ep			*ep;
 	u8				epnum;
@@ -453,7 +453,7 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 		ep = kzalloc(sizeof(*ep), GFP_KERNEL);
 		if (!ep) {
 			dev_err(dwc->dev, "can't allocate endpoint %d\n", epnum);
-			return;
+			return -ENOMEM;
 		}
 
 		INIT_LIST_HEAD(&ep->endpoint.ep_list);
@@ -477,6 +477,8 @@ static void __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 					&dwc->gadget.ep_list);
 		}
 	}
+
+	return 0;
 }
 
 static struct dwc3	*the_dwc;
@@ -969,7 +971,9 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
 			| DWC3_DALEPENA_EPIN(0));
 
-	dwc3_gadget_init_endpoints(dwc);
+	ret = dwc3_gadget_init_endpoints(dwc);
+	if (ret)
+		return ret;
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
