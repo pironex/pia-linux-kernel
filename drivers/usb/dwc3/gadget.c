@@ -742,7 +742,7 @@ static irqreturn_t dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc)
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
-	reg = dwc3_readl(dwc->dev, DWC3_DSTS);
+	reg = dwc3_readl(dwc->device, DWC3_DSTS);
 	state = DWC3_DSTS_USBLNKST(reg);
 	dwc->link_state = state;
 
