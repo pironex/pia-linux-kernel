@@ -123,6 +123,7 @@ static int dwc3_init_endpoint(struct dwc3_ep *ep,
 	 * REVISIT here I should be sending the correct commands
 	 * to initialize the HW endpoint.
 	 */
+	ep->flags |= DWC3_EP_ENABLED;
 
 	return 0;
 }
@@ -133,6 +134,7 @@ static int dwc3_disable_endpoint(struct dwc3_ep *ep)
 	 * REVISIT here I should be sending correct commands
 	 * to disable the HW endpoint.
 	 */
+	ep->flags &= ~DWC3_EP_ENABLED;
 
 	return 0;
 }
@@ -635,9 +637,16 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 
 static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 {
-	u32			reg;
+	struct dwc3_gadget_ep_cmd_params params;
+	struct dwc3_ep *ep;
+	int ret;
+	int epnum;
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
+#if 0
+	XXX
+	U1/U2 is powersave optimization. Skip it for now. Anyway we need to
+	enable it before we can disable it.
 
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
 	reg &= ~DWC3_DCTL_INITU1ENA;
@@ -645,6 +654,39 @@ static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 
 	reg &= ~DWC3_DCTL_INITU2ENA;
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+#endif
+	if (dwc->gadget_driver && dwc->gadget_driver->disconnect) {
+		spin_unlock(&dwc->lock);
+		dwc->gadget_driver->disconnect(&dwc->gadget);
+		spin_lock(&dwc->lock);
+	}
+	/* 9.1.7 Device-Initiated Disconnect */
+	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
+		u32 cmd;
+
+		if (epnum == 0) {
+			/*
+			 * XXX
+			 * get the core into the "Setup a Control-Setup TRB /
+			 * Start Transfer" state in case it is busy here.
+			 */
+			continue;
+		}
+		ep = dwc->eps[epnum];
+
+		if (!(ep->flags & DWC3_EP_ENABLED))
+			continue;
+
+		cmd = DWC3_DEPCMD_ENDTRANSFER;
+		cmd |= DWC3_DEPCMD_CMDIOC;
+		cmd |= DWC3_DEPCMD_HIPRI_FORCERM;
+		/* cmd |= DWC3_DEPCMD_PARAM(ep->transfer_resource_index_of_the_TRB); */
+		memset(&params, 0, sizeof(params));
+		ret = dwc3_send_gadget_ep_cmd(dwc, ep->number, cmd, &params);
+		WARN_ON_ONCE(ret);
+	}
+
+	dwc3_gadget_run_stop(dwc, 0);
 
 	return IRQ_HANDLED;
 }
