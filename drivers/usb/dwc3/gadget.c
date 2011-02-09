@@ -403,6 +403,7 @@ static int dwc3_gadget_vbus_draw(struct usb_gadget *g, unsigned mA)
 static void __dwc3_gadget_pullup(struct dwc3 *dwc, int is_on)
 {
 	u32			reg;
+	unsigned long timeout;
 
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
 	if (is_on)
@@ -411,6 +412,21 @@ static void __dwc3_gadget_pullup(struct dwc3 *dwc, int is_on)
 		reg &= ~DWC3_DCTL_RUN_STOP;
 
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+	timeout = jiffies + msecs_to_jiffies(500);
+	do {
+		reg = dwc3_readl(dwc->device, DWC3_DSTS);
+		if (is_on) {
+			if (!(reg & DWC3_DSTS_DEVCTRLHLT))
+				break;
+		} else {
+			if (reg & DWC3_DSTS_DEVCTRLHLT)
+				break;
+		}
+		cpu_relax();
+		if (time_after(jiffies, timeout))
+			break;
+	} while (1);
 
 	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
 			dwc->gadget_driver->function,
