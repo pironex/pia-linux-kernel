@@ -267,6 +267,7 @@ struct dwc3_ep {
 
 	unsigned		flags;
 #define DWC3_EP_ENABLED		(1 << 0)
+#define DWC3_EP_STALL		(1 << 1)
 
 	u8			number;
 	u8			type;

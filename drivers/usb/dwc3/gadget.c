@@ -681,13 +681,31 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 	}
 }
 
+static void dwc3_clear_stall_all_ep(struct dwc3 *dwc)
+{
+	u32 epnum;
+
+	for (epnum = 1; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
+		struct dwc3_ep *ep;
+		struct dwc3_gadget_ep_cmd_params params;
+		int ret;
+
+		ep = dwc->eps[epnum];
+
+		if (!(ep->flags & DWC3_EP_STALL))
+			continue;
+
+		ep->flags &= ~DWC3_EP_STALL;
+
+		memset(&params, 0, sizeof(params));
+		ret = dwc3_send_gadget_ep_cmd(dwc, ep->number,
+				DWC3_DEPCMD_CLEARSTALL, &params);
+		WARN_ON_ONCE(ret);
+	}
+}
+
 static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 {
-	struct dwc3_gadget_ep_cmd_params params;
-	struct dwc3_ep *ep;
-	int ret;
-	int epnum;
-
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 #if 0
 	XXX
@@ -715,17 +733,20 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
+	dwc3_disconnect_gadget(dwc);
+	dwc3_stop_active_transfers(dwc);
+	dwc3_clear_stall_all_ep(dwc);
+
 	/* Reset device address to zero */
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
 	reg &= ~(DWC3_DCFG_DEVADDR(0));
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
 
+	/* The following could be part of dwc3_stop_active_transfers() on EP0 */
 	/* Enable ep0 in DALEPENA register */
 	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
 	reg |= DWC3_DALEPENA_EPOUT(0) | DWC3_DALEPENA_EPIN(0);
 	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
-
-	/* FIXME stop any activity on all other endpoints */
 
 	/*
 	 * Wait for RxFifo to drain
@@ -739,6 +760,8 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	 * REVISIT the below is rather CPU intensive,
 	 * maybe we should read and if it doesn't work
 	 * sleep (not busy wait) for a few useconds.
+	 *
+	 * REVISIT why wait until the RXFIFO is empty anyway?
 	 */
 	while (!(dwc3_readl(dwc->device, DWC3_DSTS)
 				& DWC3_DSTS_RXFIFOEMPTY))
