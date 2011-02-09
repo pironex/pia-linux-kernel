@@ -457,6 +457,7 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 		}
 
 		ep->dwc = dwc;
+		ep->number = epnum;
 		dwc->eps[epnum] = ep;
 
 		snprintf(ep->name, 20, "ep%d%s", epnum, !epnum ? "shared" :
@@ -862,11 +863,10 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	spin_lock_irqsave(&dwc->lock, flags);
 
 	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
-		irqreturn_t status;
 
-		status = dwc3_process_event_buf(dwc, i);
-		if (status == IRQ_HANDLED)
-			ret = status;
+		ret = dwc3_process_event_buf(dwc, i);
+		if (ret == IRQ_NONE)
+			break;
 	}
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
