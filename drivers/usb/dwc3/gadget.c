@@ -400,7 +400,7 @@ static int dwc3_gadget_vbus_draw(struct usb_gadget *g, unsigned mA)
 	return 0;
 }
 
-static void __dwc3_gadget_pullup(struct dwc3 *dwc, int is_on)
+static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 {
 	u32			reg;
 	unsigned long timeout;
@@ -441,7 +441,7 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 	is_on = !!is_on;
 
 	spin_lock_irqsave(&dwc->lock, flags);
-	__dwc3_gadget_pullup(dwc, is_on);
+	dwc3_gadget_run_stop(dwc, is_on);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return 0;
