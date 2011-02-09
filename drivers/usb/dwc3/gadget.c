@@ -1057,6 +1057,8 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 	return 0;
 
 err2:
+	spin_lock_irqsave(&dwc->lock, flags);
+
 	dwc->gadget_driver	= NULL;
 	dwc->gadget.dev.driver	= NULL;
 
