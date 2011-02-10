@@ -63,7 +63,7 @@ struct dwc3_gadget_ep_depcfg_param1 {
 	unsigned	ep_number:5;
 	unsigned	bulk_based:1;
 	unsigned	fifo_based:1;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_gadget_ep_depcfg_param0 - Parameter 0 for DEPCFG
@@ -89,7 +89,7 @@ struct dwc3_gadget_ep_depcfg_param0 {
 	unsigned	burst_size:4;
 	unsigned	data_sequence_number:5;
 	unsigned	ignore_sequence_number:1;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_gadget_ep_depxfercfg_param0 - Parameter 0 of DEPXFERCFG
@@ -100,7 +100,7 @@ struct dwc3_gadget_ep_depcfg_param0 {
 struct dwc3_gadget_ep_depxfercfg_param0 {
 	u16		number_xfer_resources;
 	u16		reserved16_31;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_gadget_ep_depstrtxfer_param1 - Parameter 1 of DEPSTRTXFER
@@ -111,7 +111,7 @@ struct dwc3_gadget_ep_depxfercfg_param0 {
  */
 struct dwc3_gadget_ep_depstrtxfer_param1 {
 	u32		transfer_desc_addr_low;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_gadget_ep_depstrtxfer_param1 - Parameter 1 of DEPSTRTXFER
@@ -120,7 +120,7 @@ struct dwc3_gadget_ep_depstrtxfer_param1 {
  */
 struct dwc3_gadget_ep_depstrtxfer_param0 {
 	u32		transfer_desc_addr_high;
-} __attribute__ ((packed));
+} __packed;
 
 struct dwc3_gadget_ep_cmd_params {
 	union {
@@ -139,7 +139,7 @@ struct dwc3_gadget_ep_cmd_params {
 		struct dwc3_gadget_ep_depxfercfg_param0 depxfercfg;
 		struct dwc3_gadget_ep_depstrtxfer_param0 depstrtxfer;
 	} param0;
-} __attribute__ ((packed));
+} __packed;
 
 /* -------------------------------------------------------------------------- */
 

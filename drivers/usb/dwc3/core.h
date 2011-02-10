@@ -419,7 +419,7 @@ struct dwc3_trb {
 	u16			sid_sofn;
 	unsigned		reserved31_30:2;
 
-} __attribute__ ((packed));
+} __packed;
 
 /* -------------------------------------------------------------------------- */
 
@@ -427,7 +427,7 @@ struct dwc3_event_type {
 	unsigned	is_devspec:1;
 	unsigned	type:6;
 	unsigned	reserved8_31:25;
-} __attribute__ ((packed));
+} __packed;
 
 #define DWC3_DEPEVT_XFERCOMPLETE	0x01
 #define DWC3_DEPEVT_XFERINPROGRESS	0x02
@@ -462,7 +462,7 @@ struct dwc3_event_depevt {
 	unsigned	reserved11_10:2;
 	unsigned	event_status:4;
 	u16		event_parameters;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_event_devt - Device Events
@@ -493,7 +493,7 @@ struct dwc3_event_devt {
 	unsigned	reserved15_12:4;
 	u8		event_info;
 	u8		reserved31_24;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * struct dwc3_event_gevt - Other Core Events
@@ -507,7 +507,7 @@ struct dwc3_event_gevt {
 	unsigned	device_event:7;
 	unsigned	phy_port_number:4;
 	unsigned	reserved31_12:20;
-} __attribute__ ((packed));
+} __packed;
 
 /**
  * union dwc3_event - representation of Event Buffer contents
