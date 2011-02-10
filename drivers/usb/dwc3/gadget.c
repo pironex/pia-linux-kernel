@@ -119,11 +119,20 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 static int dwc3_init_endpoint(struct dwc3_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
+	struct dwc3		*dwc = ep->dwc;
+
 	/*
 	 * REVISIT here I should be sending the correct commands
 	 * to initialize the HW endpoint.
 	 */
 	ep->flags |= DWC3_EP_ENABLED;
+	ep->trb_pool = dma_pool_create(ep->name, dwc->dev,
+			sizeof(struct dwc3_trb), 128, PAGE_SIZE);
+	if (!ep->trb_pool) {
+		dev_err(dwc->dev, "failed to allocate trb pool for %s\n",
+				ep->name);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -135,6 +144,7 @@ static int dwc3_disable_endpoint(struct dwc3_ep *ep)
 	 * to disable the HW endpoint.
 	 */
 	ep->flags &= ~DWC3_EP_ENABLED;
+	dma_pool_destroy(ep->trb_pool);
 
 	return 0;
 }
@@ -169,6 +179,8 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		return -EINVAL;
 	}
 
+	dep = to_dwc3_ep(ep);
+
 	return dwc3_init_endpoint(dep, desc);
 }
 
@@ -180,6 +192,8 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 		pr_debug("dwc3: invalid parameters\n");
 		return -EINVAL;
 	}
+
+	dep = to_dwc3_ep(ep);
 
 	return dwc3_disable_endpoint(dep);
 }
