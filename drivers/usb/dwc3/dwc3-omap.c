@@ -49,7 +49,7 @@ static int dwc3_omap_resume(struct device *dev)
 	return 0;
 }
 
-static struct dev_pm_ops dwc3_omap_pm_ops = {
+static const struct dev_pm_ops dwc3_omap_pm_ops = {
 	.suspend	= dwc3_omap_suspend,
 	.resume		= dwc3_omap_resume,
 };
