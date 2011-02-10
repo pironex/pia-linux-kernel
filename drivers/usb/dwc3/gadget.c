@@ -49,7 +49,7 @@ static void dwc3_map_buffer_to_dma(struct dwc3_request *req)
 				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 		req->mapped = true;
 	} else {
-		dma_sync_single_for_device(dwc-> dev, req->request.dma,
+		dma_sync_single_for_device(dwc->dev, req->request.dma,
 				req->request.length, req->direction
 				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 		req->mapped = false;
@@ -263,7 +263,8 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	return 0;
 }
 
-static int dwc3_gadget_ep_dequeue(struct usb_ep *ep, struct usb_request *request)
+static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
+		struct usb_request *request)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
 	struct dwc3_request		*r = NULL;
@@ -470,7 +471,8 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
 		ep = kzalloc(sizeof(*ep), GFP_KERNEL);
 		if (!ep) {
-			dev_err(dwc->dev, "can't allocate endpoint %d\n", epnum);
+			dev_err(dwc->dev, "can't allocate endpoint %d\n",
+					epnum);
 			return -ENOMEM;
 		}
 
@@ -898,7 +900,7 @@ static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
 	irqreturn_t ret;
 
 	/* Endpoint IRQ, handle it and return early */
-	if (event->type.is_devspec == 0 ) {
+	if (event->type.is_devspec == 0) {
 		/* depevt */
 		return dwc3_endpoint_interrupt(dwc, &event->depevt);
 	}
