@@ -24,6 +24,7 @@
 #include <linux/spinlock.h>
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
+#include <linux/dmapool.h>
 #include <linux/mm.h>
 
 #include <linux/usb/ch9.h>
@@ -250,6 +251,7 @@ struct dwc3_event_buffer {
  * struct dwc3_ep - device side endpoint representation
  * @endpoint: usb endpoint
  * @request_list: list of requests for this endpoint
+ * @trb_pool: dma pool of transaction buffers
  * @desc: usb_endpoint_descriptor pointer
  * @dwc: pointer to DWC controller
  * @flags: endpoint flags (wedged, stalled, ...)
@@ -262,6 +264,7 @@ struct dwc3_ep {
 	struct usb_ep		endpoint;
 	struct list_head	request_list;
 
+	struct dma_pool		*trb_pool;
 	struct usb_endpoint_descriptor *desc;
 	struct dwc3		*dwc;
 
