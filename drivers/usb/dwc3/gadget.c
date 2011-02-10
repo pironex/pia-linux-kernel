@@ -144,6 +144,7 @@ static int dwc3_disable_endpoint(struct dwc3_ep *ep)
 	 * to disable the HW endpoint.
 	 */
 	ep->flags &= ~DWC3_EP_ENABLED;
+
 	dma_pool_destroy(ep->trb_pool);
 
 	return 0;
@@ -232,6 +233,28 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 	kfree(req);
 }
 
+static struct dwc3_trb *dwc3_alloc_trb(struct dwc3_ep *dep,
+		unsigned type, unsigned length, dma_addr_t dma)
+{
+	struct dwc3_trb			*trb;
+	dma_addr_t			trb_dma;
+
+	trb = dma_pool_alloc(dep->trb_pool, GFP_KERNEL, &trb_dma);
+	if (!trb)
+		return NULL;
+
+	trb->trbctl	= type;
+	trb->length	= length;
+	trb->dma	= dma;
+
+	return trb;
+}
+
+static void dwc3_free_trb(struct dwc3_ep *dep, struct dwc3_trb *trb)
+{
+	/* TODO */
+}
+
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	gfp_t gfp_flags)
 {
@@ -239,7 +262,11 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	struct dwc3_ep			*dep = to_dwc3_ep(ep);
 	struct dwc3			*dwc = dep->dwc;
 
+	struct dwc3_trb			*trb;
+
 	unsigned long			flags;
+
+	unsigned			trb_type;
 
 	if (!dep->desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
@@ -255,6 +282,27 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	req->epnum		= dep->number;
 
 	dwc3_map_buffer_to_dma(req);
+
+	switch (usb_endpoint_type(dep->desc)) {
+	case USB_ENDPOINT_XFER_CONTROL:
+		trb_type = 2;
+		break;
+	case USB_ENDPOINT_XFER_ISOC:
+		trb_type = 7;
+		break;
+	case USB_ENDPOINT_XFER_BULK:
+		trb_type = 1;
+		break;
+	case USB_ENDPOINT_XFER_INT:
+		trb_type = 1;
+		break;
+	}
+
+	trb = dwc3_alloc_trb(dep, trb_type, request->length, request->dma);
+	if (!trb) {
+		dev_err(dwc->dev, "can't allocate TRB\n");
+		return -ENOMEM;
+	}
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
@@ -532,12 +580,6 @@ static struct dwc3	*the_dwc;
 static void dwc3_gadget_release(struct device *dev)
 {
 	dev_dbg(dev, "%s\n", __func__);
-}
-
-static struct dwc3_trb *dwc3_alloc_trb(struct dwc3 *dwc,
-		unsigned type, unsigned length)
-{
-	return NULL;
 }
 
 static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
@@ -998,7 +1040,6 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params	params;
-	struct dwc3_trb				*trb;
 
 	u32					reg;
 	int					ret;
@@ -1081,6 +1122,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	/* first zero the whole thing */
 	memset(&params, 0x00, sizeof(params));
 
+#if 0
 	trb = dwc3_alloc_trb(dwc, 2, PAGE_SIZE);
 	if (!trb)
 		return -ENOMEM;
@@ -1092,6 +1134,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret)
 		return ret;
+#endif
 
 	/* Enable physical EPs 0 & 1 */
 	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
