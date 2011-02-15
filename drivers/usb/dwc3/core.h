@@ -127,6 +127,12 @@
 
 /* Global Configuration Register */
 #define DWC3_GCTL_PWRDNSCALE(n)	(n << 19)
+#define DWC3_GCTL_RAMCLKSEL(x)	((x & DWC3_GCTL_CLK_MASK) << 6)
+#define DWC3_GCTL_CLK_BUS	(0)
+#define DWC3_GCTL_CLK_PIPE	(1)
+#define DWC3_GCTL_CLK_PIPEHALF	(2)
+#define DWC3_GCTL_CLK_MASK	(3)
+
 #define DWC3_GCTL_DISSCRAMBLE	(1 << 3)
 
 /* Device Configuration Register */

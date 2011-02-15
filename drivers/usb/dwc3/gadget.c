@@ -830,6 +830,30 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	return IRQ_HANDLED;
 }
 
+static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
+{
+	u32 reg;
+	u32 usb30_clock = DWC3_GCTL_CLK_BUS;
+
+	/*
+	 * We change the clock only at SS but I dunno why I would want to do
+	 * this. Maybe it becomes part of the power saving plan.
+	 */
+
+	if (speed != DWC3_DSTS_SUPERSPEED)
+		return;
+	/*
+	 * RAMClkSel is reset to 0 after USB reset, so it must be reprogrammed
+	 * each time on Connect Done.
+	 */
+	if (!usb30_clock)
+		return;
+
+	reg = dwc3_readl(dwc->global, DWC3_GCTL);
+	reg |= DWC3_GCTL_RAMCLKSEL(usb30_clock);
+	dwc3_writel(dwc->global, DWC3_GCTL, reg);
+}
+
 static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params params;
@@ -848,33 +872,51 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	speed = reg & DWC3_DSTS_CONNECTSPD;
 	dwc->speed = speed;
 
-	params.param0.depcfg.ep_type = 0;
+	dwc3_update_ram_clk_sel(dwc, speed);
 
-	params.param1.depcfg.xfer_complete_enable = true;
-	params.param1.depcfg.xfer_in_progress_enable = true;
-	params.param1.depcfg.xfer_not_ready_enable = true;
+	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
+	params.param0.depcfg.ignore_sequence_number = true;
 
 	switch (speed) {
 	case DWC3_DSTS_SUPERSPEED:
 		params.param0.depcfg.max_packet_size = 512;
 		break;
+
 	case DWC3_DSTS_HIGHSPEED:
 	case DWC3_DSTS_FULLSPEED2:
 	case DWC3_DSTS_FULLSPEED1:
 		params.param0.depcfg.max_packet_size = 64;
 		break;
+
 	case DWC3_DSTS_LOWSPEED:
 		params.param0.depcfg.max_packet_size = 8;
 		break;
 	}
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, &params);
+	params.param1.depcfg.xfer_complete_enable = true;
+	params.param1.depcfg.xfer_in_progress_enable = true;
+	params.param1.depcfg.xfer_not_ready_enable = true;
+
+	/*
+	 * XXX
+	 * Should one of these commands ever fail we probably should start an
+	 * disconnect event or something like that.
+	 */
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return IRQ_NONE;
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_DEPSTARTCFG, &params);
+	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return IRQ_NONE;
+
+	/*
+	 * Configure PHY via GUSB3PIPECTLn if required.
+	 *
+	 * Update GTXFIFOSIZn
+	 *
+	 * In both cases reset values should be sufficient.
+	 */
 
 	return IRQ_HANDLED;
 }
