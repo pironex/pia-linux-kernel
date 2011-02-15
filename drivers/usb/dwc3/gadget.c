@@ -212,12 +212,6 @@ static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
 		return NULL;
 	}
 
-	/*
-	 * first list_head is for gadget driver usage, second one is
-	 * for our own housekeeping.
-	 */
-	INIT_LIST_HEAD(&req->request.list);
-	INIT_LIST_HEAD(&req->list);
 	req->epnum	= dep->number;
 	req->dep	= dep;
 
