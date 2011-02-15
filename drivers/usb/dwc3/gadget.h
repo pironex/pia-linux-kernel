@@ -49,7 +49,7 @@ struct dwc3;
  *	written back by the core.
  */
 struct dwc3_gadget_ep_depcfg_param1 {
-	unsigned	interrupt_number:4;
+	unsigned	interrupt_number:5;
 	unsigned	reserved7_5:3;		/* set to zero */
 	unsigned	xfer_complete_enable:1;
 	unsigned	xfer_in_progress_enable:1;
