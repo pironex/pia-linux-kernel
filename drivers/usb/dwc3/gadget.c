@@ -1020,10 +1020,11 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 	spin_lock_irqsave(&dwc->lock, flags);
 
 	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
+		irqreturn_t status;
 
-		ret = dwc3_process_event_buf(dwc, i);
-		if (ret == IRQ_NONE)
-			break;
+		status = dwc3_process_event_buf(dwc, i);
+		if (status == IRQ_HANDLED)
+			ret = status;
 	}
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
