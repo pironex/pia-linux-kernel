@@ -223,7 +223,6 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
 
-	list_del(&req->list);
 	kfree(req);
 }
 
