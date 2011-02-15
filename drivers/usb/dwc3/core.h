@@ -314,6 +314,7 @@ enum dwc3_link_state {
 	DWC3_LINK_STATE_HRESET		= 0x09,
 	DWC3_LINK_STATE_CMPLY		= 0x0a,
 	DWC3_LINK_STATE_LPBK		= 0x0b,
+	DWC3_LINK_STATE_MASK		= 0x0f,
 };
 
 /**

@@ -935,16 +935,13 @@ static irqreturn_t dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc)
+static irqreturn_t dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
+		unsigned int evtinfo)
 {
-	u32			reg;
-	u8			state;
-
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
-	reg = dwc3_readl(dwc->device, DWC3_DSTS);
-	state = DWC3_DSTS_USBLNKST(reg);
-	dwc->link_state = state;
+	/*  The fith bit says SuperSpeed yes or no. */
+	dwc->link_state = evtinfo & DWC3_LINK_STATE_MASK;
 
 	return IRQ_HANDLED;
 }
@@ -968,7 +965,8 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 		ret = dwc3_gadget_wakeup_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
-		ret = dwc3_gadget_linksts_change_interrupt(dwc);
+		ret = dwc3_gadget_linksts_change_interrupt(dwc,
+				event->event_info);
 		break;
 	case DWC3_DEVICE_EVENT_EOPF:
 		dev_vdbg(dwc->dev, "End of Periodic Frame\n");
