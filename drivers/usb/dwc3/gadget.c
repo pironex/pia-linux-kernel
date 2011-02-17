@@ -288,6 +288,8 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	case USB_ENDPOINT_XFER_INT:
 		trb_type = 1;
 		break;
+	default:
+		return -EINVAL;
 	}
 
 	trb = dwc3_alloc_trb(dep, trb_type, request->length, request->dma);
