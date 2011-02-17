@@ -116,36 +116,36 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
-static int dwc3_init_endpoint(struct dwc3_ep *ep,
+static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		const struct usb_endpoint_descriptor *desc)
 {
-	struct dwc3		*dwc = ep->dwc;
+	struct dwc3_trb		*trb;
+	struct dwc3		*dwc = dep->dwc;
 
 	/*
 	 * REVISIT here I should be sending the correct commands
 	 * to initialize the HW endpoint.
 	 */
-	ep->flags |= DWC3_EP_ENABLED;
-	ep->trb_pool = dma_pool_create(ep->name, dwc->dev,
-			sizeof(struct dwc3_trb), 128, PAGE_SIZE);
-	if (!ep->trb_pool) {
+	dep->flags |= DWC3_EP_ENABLED;
+	dep->trb_pool = kzalloc(sizeof(*trb) * DWC3_TRB_NUM, GFP_KERNEL);
+	if (!dep->trb_pool) {
 		dev_err(dwc->dev, "failed to allocate trb pool for %s\n",
-				ep->name);
+				dep->name);
 		return -ENOMEM;
 	}
 
 	return 0;
 }
 
-static int dwc3_disable_endpoint(struct dwc3_ep *ep)
+static int dwc3_disable_endpoint(struct dwc3_ep *dep)
 {
 	/*
 	 * REVISIT here I should be sending correct commands
 	 * to disable the HW endpoint.
 	 */
-	ep->flags &= ~DWC3_EP_ENABLED;
+	dep->flags &= ~DWC3_EP_ENABLED;
 
-	dma_pool_destroy(ep->trb_pool);
+	kfree(dep->trb_pool);
 
 	return 0;
 }
@@ -231,15 +231,16 @@ static struct dwc3_trb *dwc3_alloc_trb(struct dwc3_ep *dep,
 		unsigned type, unsigned length, dma_addr_t dma)
 {
 	struct dwc3_trb			*trb;
-	dma_addr_t			trb_dma;
 
-	trb = dma_pool_alloc(dep->trb_pool, GFP_KERNEL, &trb_dma);
+	trb = &dep->trb_pool[dep->current_trb];
 	if (!trb)
 		return NULL;
 
 	trb->trbctl	= type;
 	trb->length	= length;
-	trb->dma	= dma;
+	trb->bpl	= dma;
+
+	dep->current_trb += 1;
 
 	return trb;
 }
