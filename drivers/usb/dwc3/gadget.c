@@ -274,8 +274,6 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
 
-	dwc3_map_buffer_to_dma(req);
-
 	switch (usb_endpoint_type(dep->desc)) {
 	case USB_ENDPOINT_XFER_CONTROL:
 		trb_type = 2;
@@ -296,6 +294,8 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 		dev_err(dwc->dev, "can't allocate TRB\n");
 		return -ENOMEM;
 	}
+
+	dwc3_map_buffer_to_dma(req);
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
