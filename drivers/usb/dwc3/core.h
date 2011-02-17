@@ -386,7 +386,8 @@ struct dwc3 {
 
 /**
  * struct dwc3_trb - transfer request block
- * @dma: up to 64 bit addressing
+ * @bpl: lower 32bit of the buffer
+ * @bph: higher 32bit of the buffer
  * @length: buffer size (up to 16mb - 1)
  * @pcm1: packet count m1
  * @trbsts: trb status
@@ -412,7 +413,8 @@ struct dwc3 {
  * @sid_sofn: Stream ID / SOF Number
  */
 struct dwc3_trb {
-	dma_addr_t		dma;
+	dma_addr_t		bpl;
+	dma_addr_t		bph;
 	unsigned		length:24;
 	unsigned		pcm1:2;
 	unsigned		reserved27_26:2;
