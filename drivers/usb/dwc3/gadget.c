@@ -106,7 +106,7 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 
 	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
 	do {
-		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(0));
+		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(ep));
 		if (time_after(jiffies, timeout))
 			return -ETIMEDOUT;
 
