@@ -296,6 +296,7 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 		return -ENOMEM;
 	}
 
+	req->trb = trb;
 	dwc3_map_buffer_to_dma(req);
 
 	spin_lock_irqsave(&dwc->lock, flags);

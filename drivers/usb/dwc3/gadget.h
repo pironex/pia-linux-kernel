@@ -149,6 +149,7 @@ struct dwc3_request {
 	struct dwc3_ep		*dep;
 
 	u8			epnum;
+	struct dwc3_trb		*trb;
 
 	unsigned		direction:1;
 	unsigned		mapped:1;
