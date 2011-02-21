@@ -98,8 +98,6 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	unsigned long		timeout = jiffies + msecs_to_jiffies(500);
 	u32			reg;
 
-	params->param1.depcfg.ep_number = ep;
-
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR0(ep), params->param0.raw);
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR1(ep), params->param1.raw);
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR2(ep), params->param2.raw);
@@ -250,6 +248,42 @@ static void dwc3_free_trb(struct dwc3_ep *dep, struct dwc3_trb *trb)
 	/* TODO */
 }
 
+static void __dwc3_gadget_queue(struct dwc3_ep *dep, struct dwc3_request *req,
+		unsigned is_chained)
+{
+	struct dwc3		*dwc = dep->dwc;
+	struct dwc3_trb		*trb = req->trb;
+	struct dwc3_gadget_ep_cmd_params params;
+	u32 res_id;
+	int ret;
+
+	list_add_tail(&req->list, &dep->request_list);
+
+	if (!list_is_singular(&dep->request_list))
+		return;
+
+	trb->bpl = req->request.dma;
+	trb->length = req->request.length;
+	trb->hwo = 1;
+	trb->lst = 1;
+	trb->ioc = 1;
+	trb->isp_imi = 1;
+	trb->trbctl = DWC3_TRBCTL_NORMAL;
+
+	memset(&params, 0, sizeof(params));
+	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
+	params.param1.depstrtxfer.transfer_desc_addr_low = (unsigned long) trb;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_STARTTRANSFER, &params);
+	if (ret < 0)
+		/* XXX Start to worry but not too soon */
+		;
+	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
+	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
+	dep->res_trans_idx = res_id;
+}
+
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	gfp_t gfp_flags)
 {
@@ -304,19 +338,7 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
-	/* this request can be added to endpoint list of requests */
-	list_add_tail(&req->list, &dep->request_list);
-
-	/*
-	 * Now we need a way to start consuming the list. I'm interested
-	 * in something which doesn't look as ugly as MUSB's way of consuming
-	 * the list (if this is the first entry, consume) because that'll
-	 * prevent us from queueing several transfer requests to the device
-	 * and let DMA play its role.
-	 *
-	 * This is a new driver, so we have a chance to do it right. Let's
-	 * do so
-	 */
+	__dwc3_gadget_queue(dep, req, 0);
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
@@ -872,6 +894,7 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 
 	dwc3_update_ram_clk_sel(dwc, speed);
 
+	params.param1.depcfg.ep_number = 0;
 	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
 	params.param0.depcfg.ignore_sequence_number = true;
 
@@ -1127,6 +1150,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		return ret;
 
+	params.param1.depcfg.ep_number = 0;
 	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
 	params.param0.depcfg.burst_size = 0;
 	params.param0.depcfg.max_packet_size = 512;
@@ -1138,6 +1162,8 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return ret;
+
+	params.param1.depcfg.ep_number = 1;
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)

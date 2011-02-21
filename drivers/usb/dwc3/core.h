@@ -203,7 +203,9 @@
 #define DWC3_DGCMD_RUN_SOC_BUS_LOOPBACK	0x10
 
 /* Device Endpoint Command Register */
-#define DWC3_DEPCMD_PARAM(x)		(x << 16)
+#define DWC3_DEPCMD_PARAM(x)		(x << DWC3_DEPCMD_PARAM_SHIFT)
+#define DWC3_DEPCMD_PARAM_SHIFT		16
+#define DWC3_DEPCMD_GET_RSC_IDX(x)	((x >> DWC3_DEPCMD_PARAM_SHIFT) & 0x7)
 #define DWC3_DEPCMD_HIPRI_FORCERM	(1 << 11)
 #define DWC3_DEPCMD_CMDACT		(1 << 10)
 #define DWC3_DEPCMD_CMDIOC		(1 << 8)
@@ -286,6 +288,7 @@ struct dwc3_ep {
 
 	u8			number;
 	u8			type;
+	u8			res_trans_idx;
 
 	char			name[20];
 
