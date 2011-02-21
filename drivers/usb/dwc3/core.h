@@ -269,6 +269,7 @@ struct dwc3_event_buffer {
  * @current_trb: index of current used trb
  * @number: endpoint number (1 - 15)
  * @type: set to bmAttributes & USB_ENDPOINT_XFERTYPE_MASK
+ * @res_trans_idx: Resource transfer index
  * @name: a human readable name e.g. ep1out-bulk
  * @direction: true for TX, false for RX
  */
