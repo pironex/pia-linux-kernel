@@ -276,9 +276,11 @@ static void __dwc3_gadget_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
-	if (ret < 0)
-		/* XXX Start to worry but not too soon */
-		;
+	if (ret < 0) {
+		/* XXX Start to worry but not too soon, for now dev_dbg() */
+		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
+	}
+
 	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
 	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
 	dep->res_trans_idx = res_id;
