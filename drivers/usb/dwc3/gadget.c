@@ -384,7 +384,7 @@ static void dwc3_gadget_ep_fifo_flush(struct usb_ep *ep)
 	spin_lock_irqsave(&dwc->lock, flags);
 
 	reg = dep->number;
-	reg |= ((dep->number % 2) << 5);
+	reg |= ((dep->number & 1) << 5);
 
 	dwc3_writel(dwc->global, DWC3_DGCMDPAR, reg);
 
