@@ -757,7 +757,7 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 		 */
 		cmd |= DWC3_DEPCMD_CMDIOC;
 		cmd |= DWC3_DEPCMD_HIPRI_FORCERM;
-		/* cmd |= DWC3_DEPCMD_PARAM(dep->transfer_resource_index_of_the_TRB); */
+		cmd |= DWC3_DEPCMD_PARAM(dep->res_trans_idx);
 		memset(&params, 0, sizeof(params));
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 		WARN_ON_ONCE(ret);
