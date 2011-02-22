@@ -251,11 +251,13 @@ static void dwc3_free_trb(struct dwc3_ep *dep, struct dwc3_trb *trb)
 static void __dwc3_gadget_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		unsigned is_chained)
 {
+	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3		*dwc = dep->dwc;
 	struct dwc3_trb		*trb = req->trb;
-	struct dwc3_gadget_ep_cmd_params params;
-	u32 res_id;
-	int ret;
+
+	u32			res_id;
+
+	int			ret;
 
 	list_add_tail(&req->list, &dep->request_list);
 
@@ -865,6 +867,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 
 	if (speed != DWC3_DSTS_SUPERSPEED)
 		return;
+
 	/*
 	 * RAMClkSel is reset to 0 after USB reset, so it must be reprogrammed
 	 * each time on Connect Done.
