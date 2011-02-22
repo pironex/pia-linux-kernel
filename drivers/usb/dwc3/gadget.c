@@ -933,6 +933,7 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	if (ret)
 		return IRQ_NONE;
 
+	params.param1.depcfg.ep_number = 1;
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret)
 		return IRQ_NONE;
