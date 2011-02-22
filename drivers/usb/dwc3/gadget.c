@@ -1307,22 +1307,15 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
 	struct dwc3		*dwc = the_dwc;
 	unsigned long		flags;
-	int			ret;
 
-	if (!driver || !driver->unbind) {
-		ret = -EINVAL;
-		goto err0;
-	}
+	if (!driver || !driver->unbind)
+		return -EINVAL;
 
-	if (!dwc) {
-		ret = -ENODEV;
-		goto err0;
-	}
+	if (!dwc)
+		return -ENODEV;
 
-	if (dwc->gadget_driver != driver) {
-		ret = -EINVAL;
-		goto err0;
-	}
+	if (dwc->gadget_driver != driver)
+		return -EINVAL;
 
 	driver->unbind(&dwc->gadget);
 
@@ -1333,10 +1326,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
-
 	return 0;
-
-err0:
-	return ret;
 }
 EXPORT_SYMBOL_GPL(usb_gadget_unregister_driver);
