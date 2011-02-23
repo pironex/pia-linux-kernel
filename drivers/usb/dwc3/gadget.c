@@ -248,7 +248,7 @@ static void dwc3_free_trb(struct dwc3_ep *dep, struct dwc3_trb *trb)
 	/* TODO */
 }
 
-static void __dwc3_gadget_queue(struct dwc3_ep *dep, struct dwc3_request *req,
+static void __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		unsigned is_chained)
 {
 	struct dwc3_gadget_ep_cmd_params params;
@@ -343,7 +343,7 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 
 	spin_lock_irqsave(&dwc->lock, flags);
 
-	__dwc3_gadget_queue(dep, req, 0);
+	__dwc3_gadget_ep_queue(dep, req, 0);
 
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
