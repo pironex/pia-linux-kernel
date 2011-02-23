@@ -300,13 +300,13 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		return 0;
 	}
 
-	trb->bpl = req->request.dma;
-	trb->length = req->request.length;
-	trb->hwo = 1;
-	trb->chn = !!is_chained;
-	trb->lst = !is_chained;
-	trb->ioc = 1;
-	trb->isp_imi = 1;
+	trb->bpl	= req->request.dma;
+	trb->length	= req->request.length;
+	trb->hwo	= true;
+	trb->lst	= !is_chained;
+	trb->chn	= !!is_chained;
+	trb->isp_imi	= true;
+	trb->ioc	= !is_chained;
 
 	memset(&params, 0, sizeof(params));
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
