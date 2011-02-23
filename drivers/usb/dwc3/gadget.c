@@ -267,7 +267,8 @@ static void __dwc3_gadget_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	trb->bpl = req->request.dma;
 	trb->length = req->request.length;
 	trb->hwo = 1;
-	trb->lst = 1;
+	trb->chn = !!is_chained;
+	trb->lst = !is_chained;
 	trb->ioc = 1;
 	trb->isp_imi = 1;
 	trb->trbctl = DWC3_TRBCTL_NORMAL;
