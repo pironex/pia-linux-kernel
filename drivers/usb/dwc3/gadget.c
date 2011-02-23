@@ -309,7 +309,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	trb->lst = !is_chained;
 	trb->ioc = 1;
 	trb->isp_imi = 1;
-	trb->trbctl = DWC3_TRBCTL_NORMAL;
 
 	memset(&params, 0, sizeof(params));
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
