@@ -276,8 +276,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		trb_type = DWC3_TRBCTL_ISOCHRONOUS;
 		break;
 	case USB_ENDPOINT_XFER_BULK:
-		trb_type = DWC3_TRBCTL_NORMAL;
-		break;
 	case USB_ENDPOINT_XFER_INT:
 		trb_type = DWC3_TRBCTL_NORMAL;
 		break;
