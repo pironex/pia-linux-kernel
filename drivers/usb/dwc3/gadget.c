@@ -324,16 +324,16 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 
 	switch (usb_endpoint_type(dep->desc)) {
 	case USB_ENDPOINT_XFER_CONTROL:
-		trb_type = 2;
+		trb_type = DWC3_TRBCTL_CONTROL_SETUP;
 		break;
 	case USB_ENDPOINT_XFER_ISOC:
-		trb_type = 7;
+		trb_type = DWC3_TRBCTL_ISOCHRONOUS;
 		break;
 	case USB_ENDPOINT_XFER_BULK:
-		trb_type = 1;
+		trb_type = DWC3_TRBCTL_NORMAL;
 		break;
 	case USB_ENDPOINT_XFER_INT:
-		trb_type = 1;
+		trb_type = DWC3_TRBCTL_NORMAL;
 		break;
 	default:
 		return -EINVAL;
