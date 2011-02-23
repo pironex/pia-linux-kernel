@@ -352,6 +352,9 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	ret = __dwc3_gadget_ep_queue(dep, req, 0);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
+	if (ret < 0)
+		dwc3_free_trb(dep, trb);
+
 	return ret;
 }
 
