@@ -253,69 +253,15 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 {
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3		*dwc = dep->dwc;
-	struct dwc3_trb		*trb = req->trb;
+	struct dwc3_trb		*trb;
+
+	struct usb_request	*request = &req->request;
+
+	unsigned		trb_type;
 
 	u32			res_id;
 
 	int			ret;
-
-	list_add_tail(&req->list, &dep->request_list);
-
-	if (!list_is_singular(&dep->request_list)) {
-		dev_vdbg(dwc->dev, "%s's request_list isn't singular\n", dep->name);
-		return 0;
-	}
-
-	trb->bpl = req->request.dma;
-	trb->length = req->request.length;
-	trb->hwo = 1;
-	trb->chn = !!is_chained;
-	trb->lst = !is_chained;
-	trb->ioc = 1;
-	trb->isp_imi = 1;
-	trb->trbctl = DWC3_TRBCTL_NORMAL;
-
-	memset(&params, 0, sizeof(params));
-	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-	params.param1.depstrtxfer.transfer_desc_addr_low = (unsigned long) trb;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
-			DWC3_DEPCMD_STARTTRANSFER, &params);
-	if (ret < 0) {
-		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-		list_del(&req->list);
-		return ret;
-	}
-
-	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
-	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
-	dep->res_trans_idx = res_id;
-
-	return 0;
-}
-
-static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
-	gfp_t gfp_flags)
-{
-	struct dwc3_request		*req = to_dwc3_request(request);
-	struct dwc3_ep			*dep = to_dwc3_ep(ep);
-	struct dwc3			*dwc = dep->dwc;
-
-	struct dwc3_trb			*trb;
-
-	unsigned long			flags;
-
-	unsigned			trb_type;
-
-	int				ret;
-
-	if (!dep->desc) {
-		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
-				request, ep->name);
-		return -ESHUTDOWN;
-	}
-
-	dev_vdbg(dwc->dev, "queing request %p to %s\n", request, ep->name);
 
 	req->request.actual	= 0;
 	req->request.status	= -EINPROGRESS;
@@ -348,12 +294,65 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	req->trb = trb;
 	dwc3_map_buffer_to_dma(req);
 
+	list_add_tail(&req->list, &dep->request_list);
+
+	if (!list_is_singular(&dep->request_list)) {
+		dev_vdbg(dwc->dev, "%s's request_list isn't singular\n",
+				dep->name);
+		return 0;
+	}
+
+	trb->bpl = req->request.dma;
+	trb->length = req->request.length;
+	trb->hwo = 1;
+	trb->chn = !!is_chained;
+	trb->lst = !is_chained;
+	trb->ioc = 1;
+	trb->isp_imi = 1;
+	trb->trbctl = DWC3_TRBCTL_NORMAL;
+
+	memset(&params, 0, sizeof(params));
+	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
+	params.param1.depstrtxfer.transfer_desc_addr_low = (unsigned long) trb;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_STARTTRANSFER, &params);
+	if (ret < 0) {
+		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
+		dwc3_free_trb(dep, trb);
+		list_del(&req->list);
+		return ret;
+	}
+
+	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
+	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
+	dep->res_trans_idx = res_id;
+
+	return 0;
+}
+
+static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
+	gfp_t gfp_flags)
+{
+	struct dwc3_request		*req = to_dwc3_request(request);
+	struct dwc3_ep			*dep = to_dwc3_ep(ep);
+	struct dwc3			*dwc = dep->dwc;
+
+	unsigned long			flags;
+
+	int				ret;
+
+	if (!dep->desc) {
+		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
+				request, ep->name);
+		return -ESHUTDOWN;
+	}
+
+	dev_vdbg(dwc->dev, "queing request %p to %s\n", request, ep->name);
+
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_queue(dep, req, 0);
 	spin_unlock_irqrestore(&dwc->lock, flags);
-
-	if (ret < 0)
-		dwc3_free_trb(dep, trb);
 
 	return ret;
 }
