@@ -570,14 +570,15 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 		dep->number = epnum;
 		dwc->eps[epnum] = dep;
 
-		snprintf(dep->name, 20, "ep%d%s", epnum, !epnum ? "shared" :
-				(epnum % 2) ? "in" : "false");
+		snprintf(dep->name, sizeof(dep->name), "ep%d%s", epnum,
+				(epnum & 1) ? "in" : "out");
 		dep->endpoint.name = dep->name;
 
-		if (epnum == 0) {
+		if (epnum == 0 || epnum == 1) {
 			dep->endpoint.maxpacket = 64;
 			dep->endpoint.ops = &dwc3_gadget_ep0_ops;
-			dwc->gadget.ep0 = &dep->endpoint;
+			if (!epnum)
+				dwc->gadget.ep0 = &dep->endpoint;
 		} else {
 			dep->endpoint.maxpacket = 512;
 			dep->endpoint.ops = &dwc3_gadget_ep_ops;
@@ -705,7 +706,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 {
 	irqreturn_t			ret;
 
-	if (event->endpoint_number == 0)
+	if (event->endpoint_number == 0 || event->endpoint_number == 1)
 		return dwc3_ep0_interrupt(dwc, event);
 
 	/*
