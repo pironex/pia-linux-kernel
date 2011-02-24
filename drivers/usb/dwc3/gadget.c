@@ -308,7 +308,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	memset(&params, 0, sizeof(params));
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-	params.param1.depstrtxfer.transfer_desc_addr_low = (unsigned long) trb;
+	params.param1.depstrtxfer.transfer_desc_addr_low = virt_to_phys(trb);
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
