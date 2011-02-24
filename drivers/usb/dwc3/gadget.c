@@ -226,7 +226,7 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 }
 
 static struct dwc3_trb *dwc3_alloc_trb(struct dwc3_ep *dep,
-		unsigned type, unsigned length, dma_addr_t dma)
+		unsigned type, unsigned length)
 {
 	struct dwc3_trb			*trb;
 
@@ -236,7 +236,6 @@ static struct dwc3_trb *dwc3_alloc_trb(struct dwc3_ep *dep,
 
 	trb->trbctl	= type;
 	trb->length	= length;
-	trb->bpl	= dma;
 
 	dep->current_trb += 1;
 
@@ -283,7 +282,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		return -EINVAL;
 	}
 
-	trb = dwc3_alloc_trb(dep, trb_type, request->length, request->dma);
+	trb = dwc3_alloc_trb(dep, trb_type, request->length);
 	if (!trb) {
 		dev_err(dwc->dev, "can't allocate TRB\n");
 		return -ENOMEM;
@@ -301,7 +300,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	}
 
 	trb->bpl	= req->request.dma;
-	trb->length	= req->request.length;
 	trb->hwo	= true;
 	trb->lst	= !is_chained;
 	trb->chn	= !!is_chained;
@@ -316,6 +314,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
+		dwc3_unmap_buffer_from_dma(req);
 		dwc3_free_trb(dep, trb);
 		list_del(&req->list);
 		return ret;
