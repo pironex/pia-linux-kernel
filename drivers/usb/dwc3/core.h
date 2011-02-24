@@ -328,73 +328,6 @@ enum dwc3_link_state {
 };
 
 /**
- * struct dwc3 - representation of our controller
- * @lock: for synchronizing
- * @dev: pointer to our struct device
- * @event_buffer_list: a list of event buffers
- * @gadget: device side representation of the peripheral controller
- * @gadget_driver: pointer to the gadget driver
- * @xhci: xHCI memory base
- * @global: global registers
- * @device: device registers
- * @otg: OTG registers
- * @ram0: for debug purposes, access to internal RAM
- * @ram1: for debug purposes, access to internal RAM
- * @ram2: for debug purposes, access to internal RAM
- * @irq: IRQ number
- * @revision: revision register contents
- * @is_selfpowered: true when we are selfpowered
- * @ep0state: state of endpoint zero
- * @link_state: link state
- * @speed: device speed (super, high, full, low)
- */
-struct dwc3 {
-	/* device lock */
-	spinlock_t		lock;
-	struct device		*dev;
-
-	struct dwc3_event_buffer *ev_buffs[DWC3_EVENT_BUFFERS_NUM];
-	struct dwc3_ep		*eps[DWC3_ENDPOINTS_NUM];
-
-	struct usb_gadget	gadget;
-	struct usb_gadget_driver *gadget_driver;
-
-	void __iomem		*xhci;
-	void __iomem		*global;
-	void __iomem		*device;
-	void __iomem		*otg;
-	void __iomem		*ram0;
-	void __iomem		*ram1;
-	void __iomem		*ram2;
-
-	int			irq;
-
-	u32			revision;
-
-	unsigned		is_selfpowered:1;
-
-	enum dwc3_ep0_state	ep0state;
-	enum dwc3_link_state	link_state;
-
-	u8			speed;
-};
-
-/* -------------------------------------------------------------------------- */
-
-#define DWC3_TRBSTS_OK			0
-#define DWC3_TRBSTS_MISSED_ISOC		1
-#define DWC3_TRBSTS_SETUP_PENDING	2
-
-#define DWC3_TRBCTL_NORMAL		1
-#define DWC3_TRBCTL_CONTROL_SETUP	2
-#define DWC3_TRBCTL_CONTROL_STATUS2	3
-#define DWC3_TRBCTL_CONTROL_STATUS3	4
-#define DWC3_TRBCTL_CONTROL_DATA	5
-#define DWC3_TRBCTL_ISOCHRONOUS_FIRST	6
-#define DWC3_TRBCTL_ISOCHRONOUS		7
-#define DWC3_TRBCTL_LINK_TRB		8
-
-/**
  * struct dwc3_trb - transfer request block
  * @bpl: lower 32bit of the buffer
  * @bph: higher 32bit of the buffer
@@ -442,6 +375,79 @@ struct dwc3_trb {
 	unsigned		reserved31_30:2;
 
 } __packed;
+
+/**
+ * struct dwc3 - representation of our controller
+ * ctrl_req: usb control request which is used for ep0
+ * ep0_trb: trb which is used for the ctrl_req
+ * @lock: for synchronizing
+ * @dev: pointer to our struct device
+ * @event_buffer_list: a list of event buffers
+ * @gadget: device side representation of the peripheral controller
+ * @gadget_driver: pointer to the gadget driver
+ * @xhci: xHCI memory base
+ * @global: global registers
+ * @device: device registers
+ * @otg: OTG registers
+ * @ram0: for debug purposes, access to internal RAM
+ * @ram1: for debug purposes, access to internal RAM
+ * @ram2: for debug purposes, access to internal RAM
+ * @irq: IRQ number
+ * @revision: revision register contents
+ * @is_selfpowered: true when we are selfpowered
+ * @ep0state: state of endpoint zero
+ * @link_state: link state
+ * @speed: device speed (super, high, full, low)
+ * @mem: ponts to start of memory which is used for this struct.
+ */
+struct dwc3 {
+	struct usb_ctrlrequest	ctrl_req __aligned(16);
+	struct dwc3_trb		ep0_trb __aligned(16);
+	/* device lock */
+	spinlock_t		lock;
+	struct device		*dev;
+
+	struct dwc3_event_buffer *ev_buffs[DWC3_EVENT_BUFFERS_NUM];
+	struct dwc3_ep		*eps[DWC3_ENDPOINTS_NUM];
+
+	struct usb_gadget	gadget;
+	struct usb_gadget_driver *gadget_driver;
+
+	void __iomem		*xhci;
+	void __iomem		*global;
+	void __iomem		*device;
+	void __iomem		*otg;
+	void __iomem		*ram0;
+	void __iomem		*ram1;
+	void __iomem		*ram2;
+
+	int			irq;
+
+	u32			revision;
+
+	unsigned		is_selfpowered:1;
+
+	enum dwc3_ep0_state	ep0state;
+	enum dwc3_link_state	link_state;
+
+	u8			speed;
+	void			*mem;
+};
+
+/* -------------------------------------------------------------------------- */
+
+#define DWC3_TRBSTS_OK			0
+#define DWC3_TRBSTS_MISSED_ISOC		1
+#define DWC3_TRBSTS_SETUP_PENDING	2
+
+#define DWC3_TRBCTL_NORMAL		1
+#define DWC3_TRBCTL_CONTROL_SETUP	2
+#define DWC3_TRBCTL_CONTROL_STATUS2	3
+#define DWC3_TRBCTL_CONTROL_STATUS3	4
+#define DWC3_TRBCTL_CONTROL_DATA	5
+#define DWC3_TRBCTL_ISOCHRONOUS_FIRST	6
+#define DWC3_TRBCTL_ISOCHRONOUS		7
+#define DWC3_TRBCTL_LINK_TRB		8
 
 /* -------------------------------------------------------------------------- */
 

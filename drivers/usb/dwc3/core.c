@@ -251,6 +251,8 @@ static void dwc3_core_exit(struct dwc3 *dwc)
 	dwc3_free_event_buffers(dwc);
 }
 
+#define DWC3_ALIGN_MASK		(16 - 1)
+
 static int __devinit dwc3_probe(struct platform_device *pdev)
 {
 	struct resource		*res;
@@ -258,16 +260,19 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	void __iomem		*base;
 	int			ret = -ENOMEM;
 	int			irq;
+	void			*mem;
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get(&pdev->dev);
 	pm_runtime_forbid(&pdev->dev);
 
-	dwc = kzalloc(sizeof(*dwc), GFP_KERNEL);
-	if (!dwc) {
+	mem = kzalloc(sizeof(*dwc) + DWC3_ALIGN_MASK, GFP_KERNEL);
+	if (!mem) {
 		dev_err(&pdev->dev, "not enough memory\n");
 		goto err0;
 	}
+	dwc = PTR_ALIGN(mem, DWC3_ALIGN_MASK + 1);
+	dwc->mem = mem;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xhci");
 	if (!res) {
@@ -420,7 +425,7 @@ err2:
 	iounmap(dwc->xhci);
 
 err1:
-	kfree(dwc);
+	kfree(dwc->mem);
 
 err0:
 	return ret;
@@ -444,7 +449,7 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 	iounmap(dwc->global);
 	iounmap(dwc->xhci);
 
-	kfree(dwc);
+	kfree(dwc->mem);
 
 	return 0;
 }
