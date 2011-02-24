@@ -671,6 +671,90 @@ static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
 	return ret;
 }
 
+static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	struct dwc3_gadget_ep_cmd_params params;
+	struct dwc3_trb			*trb;
+	struct dwc3_ep			*dep;
+	u8				epnum;
+	int				ret;
+	u32				res_id;
+
+	epnum = event->endpoint_number;
+	dep = dwc->eps[epnum];
+
+	/* we probably should have a fix trb for this */
+	trb = dwc3_alloc_trb(dep, DWC3_TRBCTL_CONTROL_SETUP, 0);
+	if (!trb) {
+		dev_err(dwc->dev, "can't allocate TRB\n");
+		return;
+	}
+
+	trb->bpl = dma_map_single(dwc->dev, &dwc->ctrl_req,
+			sizeof(dwc->ctrl_req), epnum
+			? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+
+	trb->hwo	= 1;
+	trb->lst	= 1;
+	trb->chn	= 0;
+	trb->isp_imi	= 1;
+	trb->ioc	= 1;
+
+	memset(&params, 0, sizeof(params));
+	params.param1.depstrtxfer.transfer_desc_addr_low = virt_to_phys(trb);
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_STARTTRANSFER, &params);
+	if (ret < 0) {
+		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
+		dma_unmap_single(dwc->dev, trb->bpl,
+				sizeof(dwc->ctrl_req), epnum
+				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+		dwc3_free_trb(dep, trb);
+		return;
+	}
+
+	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
+	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
+	dep->res_trans_idx = res_id;
+
+	if (epnum)
+		dwc->ep0state = EP0_IN_DATA_PHASE;
+	else
+		dwc->ep0state = EP0_OUT_DATA_PHASE;
+}
+
+static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	switch (dwc->ep0state) {
+	case EP0_UNCONNECTED:
+		break;
+	case EP0_IDLE:
+		dwc3_ep0_start_dataphase(dwc, event);
+		break;
+	case EP0_IN_DATA_PHASE:
+		break;
+	case EP0_OUT_DATA_PHASE:
+		break;
+	case EP0_IN_WAIT_GADGET:
+		break;
+	case EP0_OUT_WAIT_GADGET:
+		break;
+	case EP0_IN_WAIT_NRDY:
+		break;
+	case EP0_OUT_WAIT_NRDY:
+		break;
+	case EP0_IN_STATUS_PHASE:
+		break;
+	case EP0_OUT_STATUS_PHASE:
+		break;
+	case EP0_STALL:
+		break;
+	}
+}
+
 static irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
@@ -686,6 +770,8 @@ static irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
 		break;
 	case DWC3_DEPEVT_XFERNOTREADY:
 		dev_dbg(dwc->dev, "ep%din Transfer Not Ready\n", epnum);
+		dwc3_ep0_xfernotready(dwc, event);
+		ret = IRQ_HANDLED;
 		break;
 	case DWC3_DEPEVT_RXTXFIFOEVT:
 		dev_dbg(dwc->dev, "ep%din FIFO Error\n", epnum);
@@ -855,7 +941,7 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 				& DWC3_DSTS_RXFIFOEMPTY))
 		cpu_relax();
 
-	/* FIXME Set EP0 state to ep0Idle */
+	dwc->ep0state = EP0_IDLE;
 
 	return IRQ_HANDLED;
 }

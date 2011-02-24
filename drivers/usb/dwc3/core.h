@@ -297,7 +297,7 @@ struct dwc3_ep {
 };
 
 enum dwc3_ep0_state {
-	EP0_UNCONNECTED,
+	EP0_UNCONNECTED		= 0,
 	EP0_IDLE,
 	EP0_IN_DATA_PHASE,
 	EP0_OUT_DATA_PHASE,
