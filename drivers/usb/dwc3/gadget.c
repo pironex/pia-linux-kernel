@@ -39,6 +39,22 @@
 
 #define	DMA_ADDR_INVALID	(~(dma_addr_t)0)
 
+/**
+ * dwc3_gadget_ep_get_transfer_index - Gets transfer index from HW
+ * @dwc: DesignWare USB3 Pointer
+ * @number: DWC endpoint number
+ *
+ * Caller should take care of locking
+ */
+static u32 dwc3_gadget_ep_get_transfer_index(struct dwc3 *dwc, u8 number)
+{
+	u32			res_id;
+
+	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(number));
+
+	return DWC3_DEPCMD_GET_RSC_IDX(res_id);
+}
+
 static void dwc3_map_buffer_to_dma(struct dwc3_request *req)
 {
 	struct dwc3			*dwc = req->dep->dwc;
@@ -258,8 +274,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	unsigned		trb_type;
 
-	u32			res_id;
-
 	int			ret;
 
 	req->request.actual	= 0;
@@ -320,9 +334,8 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		return ret;
 	}
 
-	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
-	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
-	dep->res_trans_idx = res_id;
+	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
+			dep->number);
 
 	return 0;
 }
@@ -679,7 +692,6 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 	struct dwc3_ep			*dep;
 	u8				epnum;
 	int				ret;
-	u32				res_id;
 
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
@@ -715,9 +727,8 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 		return;
 	}
 
-	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(dep->number));
-	res_id = DWC3_DEPCMD_GET_RSC_IDX(res_id);
-	dep->res_trans_idx = res_id;
+	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
+			dep->number);
 
 	if (epnum)
 		dwc->ep0state = EP0_IN_DATA_PHASE;
