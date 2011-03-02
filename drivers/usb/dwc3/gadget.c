@@ -696,10 +696,23 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
 
-	/* we probably should have a fix trb for this */
-	trb = dwc3_alloc_trb(dep, DWC3_TRBCTL_CONTROL_SETUP, 0);
-	if (!trb) {
-		dev_err(dwc->dev, "can't allocate TRB\n");
+	trb = &dwc->ep0_trb;
+	memset(trb, 0, sizeof(*trb));
+
+	switch (dwc->ep0state) {
+	case EP0_IDLE:
+		trb->trbctl = DWC3_TRBCTL_CONTROL_DATA;
+		break;
+
+	case EP0_IN_DATA_PHASE:
+	case EP0_OUT_DATA_PHASE:
+		/* XXX check for status3 */
+		trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS2;
+		break;
+
+	default:
+		dev_err(dwc->dev, "%s() can't in state %d\n", __func__,
+				dwc->ep0state);
 		return;
 	}
 
