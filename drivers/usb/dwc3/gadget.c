@@ -1707,20 +1707,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	/* first zero the whole thing */
 	memset(&params, 0x00, sizeof(params));
 
-#if 0
-	trb = dwc3_alloc_trb(dwc, 2, PAGE_SIZE);
-	if (!trb)
-		return -ENOMEM;
-
-	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-	params.param1.depstrtxfer.transfer_desc_addr_low = trb->dma;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
-			DWC3_DEPCMD_STARTTRANSFER, &params);
-	if (ret)
-		return ret;
-#endif
-
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
 	ret = request_irq(irq, dwc3_interrupt, 0, "dwc3", dwc);
