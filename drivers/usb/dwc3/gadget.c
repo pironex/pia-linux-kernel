@@ -457,7 +457,6 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 	trb->hwo	= 1;
 	trb->lst	= 1;
 	trb->chn	= 0;
-	trb->isp_imi	= 1;
 	trb->ioc	= 1;
 
 	dwc->ep0_trb_addr = dma_map_single(dwc->dev, trb, sizeof(*trb),
@@ -563,8 +562,10 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	trb->hwo	= true;
 	trb->lst	= !is_chained;
 	trb->chn	= !!is_chained;
-	trb->isp_imi	= true;
 	trb->ioc	= !is_chained;
+
+	if (usb_endpoint_xfer_isoc(dep->desc))
+		trb->isp_imi = true;
 
 	req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
 			DMA_BIDIRECTIONAL);
