@@ -596,7 +596,11 @@ out:
 
 static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 {
-	return 0;
+	struct dwc3_ep			*dep = to_dwc3_ep(ep);
+
+	dep->flags |= DWC3_EP_WEDGE;
+
+	return usb_ep_set_halt(ep);
 }
 
 static int dwc3_gadget_ep_fifo_status(struct usb_ep *ep)

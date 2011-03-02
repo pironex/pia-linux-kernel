@@ -284,6 +284,7 @@ struct dwc3_ep {
 	unsigned		flags;
 #define DWC3_EP_ENABLED		(1 << 0)
 #define DWC3_EP_STALL		(1 << 1)
+#define DWC3_EP_WEDGE		(1 << 2)
 
 	unsigned		current_trb;
 
