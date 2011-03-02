@@ -690,16 +690,14 @@ static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
 	return ret;
 }
 
-static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
+		u32 len)
 {
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3_trb			*trb;
 	struct dwc3_ep			*dep;
-	u8				epnum;
 	int				ret;
 
-	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
 
 	trb = &dwc->ep0_trb;
@@ -719,12 +717,11 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 	default:
 		dev_err(dwc->dev, "%s() can't in state %d\n", __func__,
 				dwc->ep0state);
-		return;
+		return -EINVAL;
 	}
 
-	trb->bpl = dma_map_single(dwc->dev, &dwc->ctrl_req,
-			sizeof(dwc->ctrl_req), epnum
-			? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+	trb->bpl = buf_dma;
+	trb->length = len;
 
 	trb->hwo	= 1;
 	trb->lst	= 1;
@@ -742,13 +739,34 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-		dma_unmap_single(dwc->dev, trb->bpl, sizeof(dwc->ctrl_req),
+		dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb),
 				DMA_BIDIRECTIONAL);
-		return;
+		return ret;
 	}
 
 	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
 			dep->number);
+	return 0;
+}
+
+static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	u8				epnum;
+	int				ret;
+
+	epnum = event->endpoint_number;
+
+	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->ctrl_req,
+			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
+
+	ret = dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr,
+			sizeof(dwc->ctrl_req));
+	if (ret < 0) {
+		dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
+				sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
+		return;
+	}
 
 	if (epnum)
 		dwc->ep0state = EP0_IN_DATA_PHASE;
