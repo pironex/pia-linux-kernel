@@ -133,25 +133,98 @@ static int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
+/**
+ * dwc3_init_endpoint - Initializes a HW endpoint
+ * @dep: endpoint to be initialized
+ * @desc: USB Endpoint Descriptor
+ *
+ * Caller should take care of locking
+ */
 static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		const struct usb_endpoint_descriptor *desc)
 {
+	struct dwc3_gadget_ep_cmd_params params;
+
 	struct dwc3_trb		*trb;
 	struct dwc3		*dwc = dep->dwc;
 
-	/*
-	 * REVISIT here I should be sending the correct commands
-	 * to initialize the HW endpoint.
-	 */
-	dep->flags |= DWC3_EP_ENABLED;
+	u32			reg;
+
+	int			ret = -ENOMEM;
+
 	dep->trb_pool = kzalloc(sizeof(*trb) * DWC3_TRB_NUM, GFP_KERNEL);
 	if (!dep->trb_pool) {
 		dev_err(dwc->dev, "failed to allocate trb pool for %s\n",
 				dep->name);
-		return -ENOMEM;
+		goto err0;
 	}
 
+	memset(&params, 0x00, sizeof(params));
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_DEPSTARTCFG, &params);
+	if (ret) {
+		dev_err(dwc->dev, "failed to start new configuration for %s\n",
+				dep->name);
+		goto err1;
+	}
+
+
+	params.param1.depcfg.ep_number = 0;
+
+	params.param0.depcfg.ep_type = desc->bmAttributes &
+		USB_ENDPOINT_XFERTYPE_MASK;
+
+	params.param0.depcfg.ignore_sequence_number = true;
+
+	switch (dwc->speed) {
+	case DWC3_DSTS_SUPERSPEED:
+		params.param0.depcfg.max_packet_size = 512;
+		break;
+
+	case DWC3_DSTS_HIGHSPEED:
+	case DWC3_DSTS_FULLSPEED2:
+	case DWC3_DSTS_FULLSPEED1:
+		params.param0.depcfg.max_packet_size = 64;
+		break;
+
+	case DWC3_DSTS_LOWSPEED:
+		params.param0.depcfg.max_packet_size = 8;
+		break;
+	}
+
+	params.param1.depcfg.xfer_complete_enable = true;
+	params.param1.depcfg.xfer_in_progress_enable = true;
+	params.param1.depcfg.xfer_not_ready_enable = true;
+	params.param1.depcfg.ep_number = dep->number;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_SETEPCONFIG, &params);
+	if (ret) {
+		dev_err(dwc->dev, "failed to configure %s\n", dep->name);
+		goto err1;
+	}
+
+	dep->desc = desc;
+	dep->type = usb_endpoint_type(desc);
+	dep->flags |= DWC3_EP_ENABLED;
+
+	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+
+	if (usb_endpoint_dir_in(dep->desc))
+		reg |= DWC3_DALEPENA_EPIN(dep->number);
+	else
+		reg |= DWC3_DALEPENA_EPOUT(dep->number);
+
+	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+
 	return 0;
+
+err1:
+	kfree(dep->trb_pool);
+
+err0:
+	return ret;
 }
 
 static int dwc3_disable_endpoint(struct dwc3_ep *dep)
@@ -185,7 +258,10 @@ static int dwc3_gadget_ep0_disable(struct usb_ep *ep)
 static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		const struct usb_endpoint_descriptor *desc)
 {
-	struct dwc3_ep		*dep;
+	struct dwc3_ep			*dep;
+	struct dwc3			*dwc;
+	unsigned long			flags;
+	int				ret;
 
 	if (!ep || !desc || desc->bDescriptorType != USB_DT_ENDPOINT) {
 		pr_debug("dwc3: invalid parameters\n");
@@ -198,8 +274,13 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	}
 
 	dep = to_dwc3_ep(ep);
+	dwc = dep->dwc;
 
-	return dwc3_init_endpoint(dep, desc);
+	spin_lock_irqsave(&dwc->lock, flags);
+	ret = dwc3_init_endpoint(dep, desc);
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	return ret;
 }
 
 static int dwc3_gadget_ep_disable(struct usb_ep *ep)

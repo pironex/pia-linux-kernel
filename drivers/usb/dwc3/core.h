@@ -278,7 +278,7 @@ struct dwc3_ep {
 	struct list_head	request_list;
 
 	struct dwc3_trb		*trb_pool;
-	struct usb_endpoint_descriptor *desc;
+	const struct usb_endpoint_descriptor *desc;
 	struct dwc3		*dwc;
 
 	unsigned		flags;
