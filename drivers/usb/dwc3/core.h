@@ -381,6 +381,8 @@ struct dwc3_trb {
  * struct dwc3 - representation of our controller
  * ctrl_req: usb control request which is used for ep0
  * ep0_trb: trb which is used for the ctrl_req
+ * ctrl_req_addr: dma address of ctrl_req
+ * ep0_trb: dma address of ep0_trb
  * @lock: for synchronizing
  * @dev: pointer to our struct device
  * @event_buffer_list: a list of event buffers
@@ -396,6 +398,7 @@ struct dwc3_trb {
  * @irq: IRQ number
  * @revision: revision register contents
  * @is_selfpowered: true when we are selfpowered
+ * @three_stage_setup: set if we perform a three phase setup
  * @ep0state: state of endpoint zero
  * @link_state: link state
  * @speed: device speed (super, high, full, low)
@@ -429,6 +432,7 @@ struct dwc3 {
 	u32			revision;
 
 	unsigned		is_selfpowered:1;
+	unsigned		three_stage_setup:1;
 
 	enum dwc3_ep0_state	ep0state;
 	enum dwc3_link_state	link_state;
