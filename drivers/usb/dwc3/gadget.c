@@ -227,12 +227,58 @@ err0:
 	return ret;
 }
 
+/**
+ * dwc3_disable_endpoint - Disables a HW endpoint
+ * @dep: the endpoint to disable
+ *
+ * Caller should take care of locking
+ */
 static int dwc3_disable_endpoint(struct dwc3_ep *dep)
 {
-	/*
-	 * REVISIT here I should be sending correct commands
-	 * to disable the HW endpoint.
-	 */
+	struct dwc3_gadget_ep_cmd_params params;
+
+	struct dwc3		*dwc = dep->dwc;
+
+	u32			reg;
+
+	int			ret = -ENOMEM;
+
+	memset(&params, 0x00, sizeof(params));
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_DEPSTARTCFG, &params);
+	if (ret) {
+		dev_err(dwc->dev, "failed to start new configuration for %s\n",
+				dep->name);
+		return ret;
+	}
+
+	params.param0.depcfg.ep_type = 0;
+	params.param0.depcfg.ignore_sequence_number = false;
+	params.param0.depcfg.max_packet_size = 0;
+	params.param1.depcfg.xfer_complete_enable = false;
+	params.param1.depcfg.xfer_in_progress_enable = false;
+	params.param1.depcfg.xfer_not_ready_enable = false;
+	params.param1.depcfg.ep_number = dep->number;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_SETEPCONFIG, &params);
+	if (ret) {
+		dev_err(dwc->dev, "failed to configure %s\n", dep->name);
+		return ret;
+	}
+
+	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+
+	if (usb_endpoint_dir_in(dep->desc))
+		reg &= ~DWC3_DALEPENA_EPIN(dep->number);
+	else
+		reg &= ~DWC3_DALEPENA_EPOUT(dep->number);
+
+	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+
+	dep->desc = NULL;
+	dep->type = 0;
 	dep->flags &= ~DWC3_EP_ENABLED;
 
 	kfree(dep->trb_pool);
