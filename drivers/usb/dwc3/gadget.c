@@ -527,6 +527,14 @@ static void dwc3_gadget_ep_fifo_flush(struct usb_ep *ep)
 
 /* -------------------------------------------------------------------------- */
 
+static const struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
+	.bLength	= USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0,
+	.bmAttributes	= USB_ENDPOINT_XFER_CONTROL,
+	.bInterval	= 1, /* What value to put here ? */
+};
+
 static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
 	.enable		= dwc3_gadget_ep0_enable,
 	.disable	= dwc3_gadget_ep0_disable,
@@ -1104,6 +1112,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params params;
+	struct dwc3_ep		*dep;
 
 	u32			reg;
 	int			ret;
@@ -1121,43 +1130,19 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 
 	dwc3_update_ram_clk_sel(dwc, speed);
 
-	params.param1.depcfg.ep_number = 0;
-	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
-	params.param0.depcfg.ignore_sequence_number = true;
-
-	switch (speed) {
-	case DWC3_DSTS_SUPERSPEED:
-		params.param0.depcfg.max_packet_size = 512;
-		break;
-
-	case DWC3_DSTS_HIGHSPEED:
-	case DWC3_DSTS_FULLSPEED2:
-	case DWC3_DSTS_FULLSPEED1:
-		params.param0.depcfg.max_packet_size = 64;
-		break;
-
-	case DWC3_DSTS_LOWSPEED:
-		params.param0.depcfg.max_packet_size = 8;
-		break;
+	dep = dwc->eps[0];
+	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
+		return IRQ_NONE;
 	}
 
-	params.param1.depcfg.xfer_complete_enable = true;
-	params.param1.depcfg.xfer_in_progress_enable = true;
-	params.param1.depcfg.xfer_not_ready_enable = true;
-
-	/*
-	 * XXX
-	 * Should one of these commands ever fail we probably should start an
-	 * disconnect event or something like that.
-	 */
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, &params);
-	if (ret)
+	dep = dwc->eps[1];
+	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return IRQ_NONE;
-
-	params.param1.depcfg.ep_number = 1;
-	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
-	if (ret)
-		return IRQ_NONE;
+	}
 
 	/*
 	 * Configure PHY via GUSB3PIPECTLn if required.
@@ -1330,6 +1315,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params	params;
+	struct dwc3_ep				*dep;
 
 	u32					reg;
 	int					ret;
@@ -1374,28 +1360,23 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	reg &= ~(DWC3_DEVTEN_SOFEN | DWC3_DEVTEN_EOPFEN);
 	dwc3_writel(dwc->device, DWC3_DEVTEN, reg);
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_DEPSTARTCFG, &params);
+	ret = dwc3_gadget_init_endpoints(dwc);
 	if (ret)
 		return ret;
 
-	params.param1.depcfg.ep_number = 0;
-	params.param0.depcfg.ep_type = DWC3_DEPCMD_TYPE_CONTROL;
-	params.param0.depcfg.burst_size = 0;
-	params.param0.depcfg.max_packet_size = 512;
-	params.param0.depcfg.fifo_number = 0;
-
-	params.param1.depcfg.xfer_not_ready_enable = true;
-	params.param1.depcfg.xfer_complete_enable = true;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0, DWC3_DEPCMD_SETEPCONFIG, &params);
-	if (ret)
+	dep = dwc->eps[0];
+	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return ret;
+	}
 
-	params.param1.depcfg.ep_number = 1;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
-	if (ret)
+	dep = dwc->eps[1];
+	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return ret;
+	}
 
 	/* first zero the whole thing */
 	memset(&params, 0x00, sizeof(params));
@@ -1428,14 +1409,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		return ret;
 #endif
-
-	/* Enable physical EPs 0 & 1 */
-	dwc3_writel(dwc->device, DWC3_DALEPENA, DWC3_DALEPENA_EPOUT(0)
-			| DWC3_DALEPENA_EPIN(0));
-
-	ret = dwc3_gadget_init_endpoints(dwc);
-	if (ret)
-		return ret;
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
