@@ -86,6 +86,9 @@ static void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 				req->request.length, req->direction
 				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 	}
+
+	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
+			DMA_BIDIRECTIONAL);
 }
 
 static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
@@ -320,9 +323,12 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	trb->isp_imi	= true;
 	trb->ioc	= !is_chained;
 
+	req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
+			DMA_BIDIRECTIONAL);
+
 	memset(&params, 0, sizeof(params));
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-	params.param1.depstrtxfer.transfer_desc_addr_low = virt_to_phys(trb);
+	params.param1.depstrtxfer.transfer_desc_addr_low = req->trb_dma;
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
@@ -726,17 +732,18 @@ static void dwc3_ep0_start_dataphase(struct dwc3 *dwc,
 	trb->isp_imi	= 1;
 	trb->ioc	= 1;
 
+	dwc->ep0_trb_addr = dma_map_single(dwc->dev, trb, sizeof(*trb),
+			DMA_BIDIRECTIONAL);
+
 	memset(&params, 0, sizeof(params));
-	params.param1.depstrtxfer.transfer_desc_addr_low = virt_to_phys(trb);
+	params.param1.depstrtxfer.transfer_desc_addr_low = dwc->ep0_trb_addr;
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-		dma_unmap_single(dwc->dev, trb->bpl,
-				sizeof(dwc->ctrl_req), epnum
-				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
-		dwc3_free_trb(dep, trb);
+		dma_unmap_single(dwc->dev, trb->bpl, sizeof(dwc->ctrl_req),
+				DMA_BIDIRECTIONAL);
 		return;
 	}
 

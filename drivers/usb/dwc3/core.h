@@ -403,6 +403,7 @@ struct dwc3_trb {
 struct dwc3 {
 	struct usb_ctrlrequest	ctrl_req __aligned(16);
 	struct dwc3_trb		ep0_trb __aligned(16);
+	dma_addr_t		ep0_trb_addr;
 	/* device lock */
 	spinlock_t		lock;
 	struct device		*dev;
