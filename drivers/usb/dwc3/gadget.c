@@ -1471,10 +1471,15 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
 {
 	int			irq;
+	int			i;
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
 	free_irq(irq, dwc);
+
+	for (i = 0; i < ARRAY_SIZE(dwc->eps); i++)
+		dwc3_disable_endpoint(dwc->eps[i]);
+
 	dwc3_gadget_free_endpoints(dwc);
 }
 
