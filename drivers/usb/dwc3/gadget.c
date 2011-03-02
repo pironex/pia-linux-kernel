@@ -174,9 +174,6 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		goto err1;
 	}
 
-
-	params.param1.depcfg.ep_number = 0;
-
 	params.param0.depcfg.ep_type = desc->bmAttributes &
 		USB_ENDPOINT_XFERTYPE_MASK;
 
@@ -603,11 +600,6 @@ static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 	return usb_ep_set_halt(ep);
 }
 
-static int dwc3_gadget_ep_fifo_status(struct usb_ep *ep)
-{
-	return 0;
-}
-
 static void dwc3_gadget_ep_fifo_flush(struct usb_ep *ep)
 {
 	struct dwc3_ep			*dep = to_dwc3_ep(ep);
@@ -649,7 +641,6 @@ static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
 	.dequeue	= dwc3_gadget_ep_dequeue,
 	.set_halt	= dwc3_gadget_ep_set_halt,
 	.set_wedge	= dwc3_gadget_ep_set_wedge,
-	.fifo_status	= dwc3_gadget_ep_fifo_status,
 	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
 
@@ -662,7 +653,6 @@ static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 	.dequeue	= dwc3_gadget_ep_dequeue,
 	.set_halt	= dwc3_gadget_ep_set_halt,
 	.set_wedge	= dwc3_gadget_ep_set_wedge,
-	.fifo_status	= dwc3_gadget_ep_fifo_status,
 	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
 
