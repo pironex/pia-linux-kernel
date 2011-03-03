@@ -476,6 +476,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
 			dep->number);
+
 	return 0;
 }
 
@@ -496,6 +497,7 @@ static int dwc3_gadget_ep0_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 
 		WARN_ON(len % dep->endpoint.maxpacket);
 	}
+
 	list_add_tail(&req->list, &dep->request_list);
 	dwc3_map_buffer_to_dma(req);
 
@@ -505,6 +507,7 @@ static int dwc3_gadget_ep0_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 		list_del(&req->list);
 		dwc3_unmap_buffer_from_dma(req);
 	}
+
 	return ret;
 }
 
@@ -610,10 +613,12 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 	dev_vdbg(dwc->dev, "queing request %p to %s\n", request, ep->name);
 
 	spin_lock_irqsave(&dwc->lock, flags);
+
 	if (dep->number == 0 || dep->number == 1)
 		ret = dwc3_gadget_ep0_queue(dep, req);
 	else
 		ret = __dwc3_gadget_ep_queue(dep, req, 0);
+
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
