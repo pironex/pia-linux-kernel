@@ -18,6 +18,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
@@ -791,7 +792,83 @@ static int dwc3_gadget_get_frame(struct usb_gadget *g)
 
 static int dwc3_gadget_wakeup(struct usb_gadget *g)
 {
-	return 0;
+	struct dwc3		*dwc = gadget_to_dwc(g);
+
+	unsigned long		timeout;
+	unsigned long		flags;
+
+	u32			reg;
+
+	int			ret = 0;
+
+	u8			link_state;
+	u8			speed;
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
+	/*
+	 * According to the Databook Remote wakeup request should
+	 * be issued only when the device is in early suspend state.
+	 *
+	 * We can check that via USB Link State bits in DSTS register.
+	 */
+	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+
+	speed = reg & DWC3_DSTS_CONNECTSPD;
+	if (speed == DWC3_DSTS_SUPERSPEED) {
+		dev_dbg(dwc->dev, "no wakeup on SuperSpeed\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	link_state = DWC3_DSTS_USBLNKST(reg);
+
+	switch (link_state) {
+	case DWC3_LINK_STATE_RX_DET:	/* in HS, means Early Suspend */
+	case DWC3_LINK_STATE_U3:	/* in HS, means SUSPEND */
+		break;
+	default:
+		dev_dbg(dwc->dev, "can't wakeup from link state %d\n",
+				link_state);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+
+	/*
+	 * Switch link state to Recovery. In HS/FS/LS this means
+	 * RemoteWakeup Request
+	 * */
+	reg |= DCW3_DCTL_ULSTCHNG_RECOVERY;
+	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+
+	/* wait for at least 2000us */
+	usleep_range(2000, 2500);
+
+	/* write zeroes to Link Change Request */
+	reg &= ~DWC3_DCTL_ULSTCHNGREQ_MASK;
+
+	/* pool until Link State change to ON */
+	timeout = jiffies + msecs_to_jiffies(100);
+
+	while (!(time_after(jiffies, timeout))) {
+		reg = dwc3_readl(dwc->device, DWC3_DSTS);
+
+		/* in HS, means ON */
+		if (DWC3_DSTS_USBLNKST(reg) == DWC3_LINK_STATE_U0)
+			break;
+	}
+
+	if (DWC3_DSTS_USBLNKST(reg) != DWC3_LINK_STATE_U0) {
+		dev_err(dwc->dev, "failed to send remote wakeup\n");
+		ret = -EINVAL;
+	}
+
+out:
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	return ret;
 }
 
 static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
