@@ -21,10 +21,12 @@
 #define __DRIVERS_USB_DWC3_GADGET_H
 
 #include <linux/list.h>
-
 #include <linux/usb/gadget.h>
+#include "io.h"
 
 struct dwc3;
+#define to_dwc3_ep(ep)		(container_of(ep, struct dwc3_ep, endpoint))
+#define gadget_to_dwc(g)	(container_of(g, struct dwc3, gadget))
 
 /**
  * struct dwc3_gadget_ep_depcfg_param1 - DEPCMDPAR0 for DEPCFG command
@@ -159,5 +161,31 @@ struct dwc3_request {
 
 int dwc3_gadget_init(struct dwc3 *dwc);
 void dwc3_gadget_exit(struct dwc3 *dwc);
+
+irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event);
+void dwc3_ep0_out_start(struct dwc3 *dwc, u32 epnum);
+int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
+		gfp_t gfp_flags);
+int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
+		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params);
+void dwc3_map_buffer_to_dma(struct dwc3_request *req);
+void dwc3_unmap_buffer_from_dma(struct dwc3_request *req);
+
+/**
+ * dwc3_gadget_ep_get_transfer_index - Gets transfer index from HW
+ * @dwc: DesignWare USB3 Pointer
+ * @number: DWC endpoint number
+ *
+ * Caller should take care of locking
+ */
+static inline u32 dwc3_gadget_ep_get_transfer_index(struct dwc3 *dwc, u8 number)
+{
+	u32			res_id;
+
+	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(number));
+
+	return DWC3_DEPCMD_GET_RSC_IDX(res_id);
+}
 
 #endif /* __DRIVERS_USB_DWC3_GADGET_H */
