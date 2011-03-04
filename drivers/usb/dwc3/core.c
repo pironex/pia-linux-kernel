@@ -468,7 +468,11 @@ static int __init dwc3_init(void)
 {
 	return platform_driver_register(&dwc3_driver);
 }
-module_init(dwc3_init);
+/*
+ * We have to initialize after usbcore and I2C but still
+ * before usb gadget drivers and usb host drivers.
+ */
+fs_initcall(dwc3_init);
 
 static void __exit dwc3_exit(void)
 {
