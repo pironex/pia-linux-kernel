@@ -116,6 +116,29 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
+static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
+{
+	if (dep->trb_pool)
+		return 0;
+	if (dep->number == 0 || dep->number == 1)
+		return 0;
+
+	dep->trb_pool = kzalloc(sizeof(struct dwc3_trb) * DWC3_TRB_NUM,
+			GFP_KERNEL);
+	if (!dep->trb_pool) {
+		dev_err(dep->dwc->dev, "failed to allocate trb pool for %s\n",
+				dep->name);
+		return -ENOMEM;
+	}
+	return 0;
+}
+
+static void dwc_free_trb_pool(struct dwc3_ep *dep)
+{
+	kfree(dep->trb_pool);
+	dep->trb_pool = NULL;
+}
+
 /**
  * dwc3_init_endpoint - Initializes a HW endpoint
  * @dep: endpoint to be initialized
@@ -128,7 +151,6 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 {
 	struct dwc3_gadget_ep_cmd_params params;
 
-	struct dwc3_trb		*trb;
 	struct dwc3		*dwc = dep->dwc;
 
 	u32			reg;
@@ -140,12 +162,8 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		return 0;
 	}
 
-	dep->trb_pool = kzalloc(sizeof(*trb) * DWC3_TRB_NUM, GFP_KERNEL);
-	if (!dep->trb_pool) {
-		dev_err(dwc->dev, "failed to allocate trb pool for %s\n",
-				dep->name);
+	if (dwc_alloc_trb_pool(dep))
 		goto err0;
-	}
 
 	memset(&params, 0x00, sizeof(params));
 
@@ -213,7 +231,7 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 	return 0;
 
 err1:
-	kfree(dep->trb_pool);
+	dwc_free_trb_pool(dep);
 
 err0:
 	return ret;
@@ -278,7 +296,7 @@ static int dwc3_disable_endpoint(struct dwc3_ep *dep)
 	dep->type = 0;
 	dep->flags &= ~DWC3_EP_ENABLED;
 
-	kfree(dep->trb_pool);
+	dwc_free_trb_pool(dep);
 
 	return 0;
 }
@@ -1464,7 +1482,6 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
  */
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
-	struct dwc3_ep				*dep;
 	u32					reg;
 	int					ret;
 	int					irq;
@@ -1508,21 +1525,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	ret = dwc3_gadget_init_endpoints(dwc);
 	if (ret)
-		return ret;
-
-	dep = dwc->eps[0];
-	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
-	if (ret) {
-		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return ret;
-	}
-
-	dep = dwc->eps[1];
-	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
-	if (ret) {
-		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return ret;
-	}
+		goto err1;
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
@@ -1530,12 +1533,20 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret) {
 		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
 				irq, ret);
-		return ret;
+		goto err2;
 	}
 	/* begin to receive SETUP packets */
 	dwc3_ep0_out_start(dwc, 0);
 
 	return 0;
+
+err2:
+	dwc3_gadget_free_endpoints(dwc);
+
+err1:
+	the_dwc = NULL;
+
+	return ret;
 }
 
 void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
@@ -1551,6 +1562,8 @@ void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
 		dwc3_disable_endpoint(dwc->eps[i]);
 
 	dwc3_gadget_free_endpoints(dwc);
+
+	the_dwc = NULL;
 }
 
 /* -------------------------------------------------------------------------- */
