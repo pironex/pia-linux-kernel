@@ -78,9 +78,8 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 {
 	struct dwc3			*dwc = dep->dwc;
 
-	dep->request_count--;
+	dwc3_gadget_del_request(req);
 
-	list_del(&req->list);
 	if (req->request.status == -EINPROGRESS)
 		req->request.status = status;
 
@@ -504,8 +503,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	req->trb = trb;
 	dwc3_map_buffer_to_dma(req);
 
-	list_add_tail(&req->list, &dep->request_list);
-	dep->request_count++;
+	dwc3_gadget_add_request(dep, req);
 
 	if (dep->request_count == 1) {
 		dev_vdbg(dwc->dev, "%s's request_list isn't singular\n",

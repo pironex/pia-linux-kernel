@@ -169,6 +169,21 @@ static inline struct dwc3_request *next_request(struct dwc3_ep *dep)
 	return list_first_entry(list, struct dwc3_request, list);
 }
 
+static inline void dwc3_gadget_add_request(struct dwc3_ep *dep,
+		struct dwc3_request *req)
+{
+	list_add_tail(&req->list, &dep->request_list);
+	dep->request_count++;
+}
+
+static inline void dwc3_gadget_del_request(struct dwc3_request *req)
+{
+	struct dwc3_ep		*dep = req->dep;
+
+	dep->request_count--;
+	list_del(&req->list);
+}
+
 int dwc3_gadget_init(struct dwc3 *dwc);
 void dwc3_gadget_exit(struct dwc3 *dwc);
 
