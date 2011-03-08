@@ -61,6 +61,16 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 			trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS2;
 		break;
 
+	case EP0_IN_WAIT_GADGET:
+		dwc->ep0state = EP0_IN_WAIT_NRDY;
+		/*
+		 * Not sure what this is about. The reference code does nothing
+		 * (except the sate change) and returns with 0
+		 */
+		WARN_ON(1);
+		return -EINVAL;
+		break;
+
 	case EP0_IN_WAIT_NRDY:
 		dwc->ep0state = EP0_IN_STATUS_PHASE;
 		/* fall */
@@ -222,7 +232,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 	case EP0_OUT_DATA_PHASE:
 		break;
 	case EP0_IN_WAIT_GADGET:
-		/* holla */
+		dwc->ep0state = EP0_IN_WAIT_NRDY;
 		break;
 	case EP0_OUT_WAIT_GADGET:
 		break;
