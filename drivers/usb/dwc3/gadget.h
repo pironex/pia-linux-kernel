@@ -159,6 +159,16 @@ struct dwc3_request {
 };
 #define to_dwc3_request(r)	(container_of(r, struct dwc3_request, request))
 
+static inline struct dwc3_request *next_request(struct dwc3_ep *dep)
+{
+	struct list_head	*list = &dep->request_list;
+
+	if (list_empty(list))
+		return NULL;
+
+	return list_first_entry(list, struct dwc3_request, list);
+}
+
 int dwc3_gadget_init(struct dwc3 *dwc);
 void dwc3_gadget_exit(struct dwc3 *dwc);
 
