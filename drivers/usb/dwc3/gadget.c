@@ -190,6 +190,13 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		goto err1;
 	}
 
+	memset(&params, 0x00, sizeof(params));
+	params.param0.depxfercfg.number_xfer_resources = 1;
+	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
+			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
+	if (ret)
+		goto err1;
+
 	dep->desc = desc;
 	dep->type = usb_endpoint_type(desc);
 	dep->flags |= DWC3_EP_ENABLED;
@@ -1457,9 +1464,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
  */
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
-	struct dwc3_gadget_ep_cmd_params	params;
 	struct dwc3_ep				*dep;
-
 	u32					reg;
 	int					ret;
 	int					irq;
@@ -1475,8 +1480,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc->gadget.name		= "dwc3-gadget";
 
 	the_dwc				= dwc;
-
-	memset(&params, 0x00, sizeof(params));
 
 	/* flush all fifos */
 	reg = DWC3_DGCMD_ALL_FIFO_FLUSH;
@@ -1520,24 +1523,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return ret;
 	}
-
-	/* first zero the whole thing */
-	memset(&params, 0x00, sizeof(params));
-
-	params.param0.depxfercfg.number_xfer_resources = 1;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
-			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
-	if (ret)
-		return ret;
-
-	ret = dwc3_send_gadget_ep_cmd(dwc, 1,
-			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
-	if (ret)
-		return ret;
-
-	/* first zero the whole thing */
-	memset(&params, 0x00, sizeof(params));
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
