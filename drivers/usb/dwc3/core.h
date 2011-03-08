@@ -496,9 +496,9 @@ struct dwc3_event_type {
  *	0x06	- StreamEvt
  *	0x07	- EPCmdCmplt
  * @reserved11_10: Reserved, don't use.
- * @event_status: Indicates the status of the event. Refer to databook for
+ * @status: Indicates the status of the event. Refer to databook for
  *	more information.
- * @event_parameters: Parameters of the current event. Refer to databook for
+ * @parameters: Parameters of the current event. Refer to databook for
  *	more information.
  */
 struct dwc3_event_depevt {
@@ -506,8 +506,8 @@ struct dwc3_event_depevt {
 	unsigned	endpoint_number:5;
 	unsigned	endpoint_event:4;
 	unsigned	reserved11_10:2;
-	unsigned	event_status:4;
-	u16		event_parameters;
+	unsigned	status:4;
+	u16		parameters;
 } __packed;
 
 /**
