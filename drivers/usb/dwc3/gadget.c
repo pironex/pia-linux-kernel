@@ -874,15 +874,73 @@ static void dwc3_gadget_release(struct device *dev)
 	dev_dbg(dev, "%s\n", __func__);
 }
 
+/* -------------------------------------------------------------------------- */
+
+static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
+		struct dwc3_ep *dep, const unsigned count)
+{
+	struct dwc3_request	*req;
+	unsigned		status = 0;
+
+	req = next_request(dep);
+
+	if (!req) {
+		dev_err(dwc->dev, "no transfer to complete on %s ?\n",
+				dep->name);
+		return IRQ_NONE;
+	}
+
+	if (req->trb->hwo) {
+		dev_err(dwc->dev, "%s's TRB (%p) still owned by HW\n",
+				dep->name, req->trb);
+		return IRQ_NONE;
+	}
+
+	if (dep->direction) {
+		if (count) {
+			dev_err(dwc->dev, "incomplete TX/IN transfer on %s\n",
+					dep->name);
+			status = -ECONNRESET;
+		}
+	}
+
+	/*
+	 * We assume here we will always receive the entire data block
+	 * which we should receive. Meaning, if we program RX to receive
+	 * 4K but we receive only 2K, we assume that's all we should receive
+	 * and we simply bounce the request back to the gadget driver for
+	 * further processing.
+	 */
+	req->request.actual += count;
+
+	/*
+	 * Giveback the request. If we couldn't transfer everything,
+	 * giveback anyway but change status to -ECONNRESET
+	 */
+	dwc3_gadget_giveback(dep, req, status);
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
+	struct dwc3_ep		*dep;
 	irqreturn_t		ret = IRQ_NONE;
 	u8			epnum = event->endpoint_number;
 
+	dep = dwc->eps[epnum];
+
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
-		dev_vdbg(dwc->dev, "ep%din Transfer Complete\n", epnum);
+		if (usb_endpoint_xfer_isoc(dep->desc)) {
+			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
+					dep->name);
+			return IRQ_NONE;
+		}
+
+		ret = dwc3_endpoint_transfer_complete(dwc, dep,
+				(event->parameters & 0x00ffffff));
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
@@ -907,12 +965,22 @@ static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
 static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
+	struct dwc3_ep		*dep;
 	irqreturn_t		ret = IRQ_NONE;
 	u8			epnum = event->endpoint_number;
 
+	dep = dwc->eps[epnum];
+
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
-		dev_vdbg(dwc->dev, "ep%din Transfer Complete\n", epnum);
+		if (usb_endpoint_xfer_isoc(dep->desc)) {
+			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
+					dep->name);
+			return IRQ_NONE;
+		}
+
+		ret = dwc3_endpoint_transfer_complete(dwc, dep,
+				(event->parameters & 0x00ffffff));
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
