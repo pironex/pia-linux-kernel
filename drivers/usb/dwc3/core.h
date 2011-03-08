@@ -273,6 +273,7 @@ struct dwc3_event_buffer {
  * struct dwc3_ep - device side endpoint representation
  * @endpoint: usb endpoint
  * @request_list: list of requests for this endpoint
+ * @request_count: number of requests in our list
  * @trb_pool: array of transaction buffers
  * @desc: usb_endpoint_descriptor pointer
  * @dwc: pointer to DWC controller
@@ -287,6 +288,7 @@ struct dwc3_event_buffer {
 struct dwc3_ep {
 	struct usb_ep		endpoint;
 	struct list_head	request_list;
+	unsigned		request_count;
 
 	struct dwc3_trb		*trb_pool;
 	const struct usb_endpoint_descriptor *desc;

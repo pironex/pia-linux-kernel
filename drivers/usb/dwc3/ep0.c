@@ -123,6 +123,8 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep, struct dwc3_request *req
 	}
 
 	list_add_tail(&req->list, &dep->request_list);
+	dep->request_count++;
+
 	dwc3_map_buffer_to_dma(req);
 
 	ret = dwc3_ep0_start_trans(dwc, dep->number, req->request.dma,
