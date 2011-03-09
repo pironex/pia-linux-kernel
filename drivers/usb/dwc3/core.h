@@ -341,6 +341,12 @@ enum dwc3_link_state {
 	DWC3_LINK_STATE_MASK		= 0x0f,
 };
 
+enum dwc3_trb_status {
+	DWC3_TRB_STATUS_OK		= 0,
+	DWC3_TRB_STATUS_MISSED_ISOC	= 1,
+	DWC3_TRB_STATUS_SETUP_PENDING	= 2,
+};
+
 /**
  * struct dwc3_trb - transfer request block
  * @bpl: lower 32bit of the buffer
