@@ -25,6 +25,7 @@
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
+#include <linux/completion.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -400,6 +401,7 @@ struct dwc3_trb {
  * struct dwc3 - representation of our controller
  * ctrl_req: usb control request which is used for ep0
  * ep0_trb: trb which is used for the ctrl_req
+ * @ep_cmd_complete: completion for EP CMD Complete IRQ
  * ctrl_req_addr: dma address of ctrl_req
  * ep0_trb: dma address of ep0_trb
  * @lock: for synchronizing
@@ -426,6 +428,9 @@ struct dwc3_trb {
 struct dwc3 {
 	struct usb_ctrlrequest	ctrl_req __aligned(16);
 	struct dwc3_trb		ep0_trb __aligned(16);
+
+	struct completion	ep_cmd_complete;
+
 	dma_addr_t		ctrl_req_addr;
 	dma_addr_t		ep0_trb_addr;
 	/* device lock */
