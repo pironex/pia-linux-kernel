@@ -1037,10 +1037,20 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 				(event->parameters & 0x00ffffff));
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
-		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
+		if (!usb_endpoint_xfer_isoc(dep->desc)) {
+			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
+					dep->name);
+			return IRQ_NONE;
+		}
+
 		break;
 	case DWC3_DEPEVT_XFERNOTREADY:
-		dev_dbg(dwc->dev, "%s Transfer Not Ready\n", dep->name);
+		if (!usb_endpoint_xfer_isoc(dep->desc)) {
+			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
+					dep->name);
+			return IRQ_NONE;
+		}
+
 		break;
 	case DWC3_DEPEVT_RXTXFIFOEVT:
 		dev_dbg(dwc->dev, "%s FIFO Overrun\n", dep->name);
