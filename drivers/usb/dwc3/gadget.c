@@ -1013,103 +1013,45 @@ out:
 	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_in_endpoint_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
-{
-	struct dwc3_ep		*dep;
-	irqreturn_t		ret = IRQ_NONE;
-	u8			epnum = event->endpoint_number;
-
-	dep = dwc->eps[epnum];
-
-	switch (event->endpoint_event) {
-	case DWC3_DEPEVT_XFERCOMPLETE:
-		if (usb_endpoint_xfer_isoc(dep->desc)) {
-			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
-					dep->name);
-			return IRQ_NONE;
-		}
-
-		ret = dwc3_endpoint_transfer_complete(dwc, dep,
-				(event->parameters & 0x00ffffff));
-		break;
-	case DWC3_DEPEVT_XFERINPROGRESS:
-		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
-		break;
-	case DWC3_DEPEVT_XFERNOTREADY:
-		dev_dbg(dwc->dev, "ep%din Transfer Not Ready\n", epnum);
-		break;
-	case DWC3_DEPEVT_RXTXFIFOEVT:
-		dev_dbg(dwc->dev, "ep%din FIFO Underrun\n", epnum);
-		break;
-	case DWC3_DEPEVT_STREAMEVT:
-		dev_dbg(dwc->dev, "ep%din Stream Event\n", epnum);
-		break;
-	case DWC3_DEPEVT_EPCMDCMPLT:
-		dev_dbg(dwc->dev, "ep%din Command Complete\n", epnum);
-		break;
-	}
-
-	return ret;
-}
-
-static irqreturn_t dwc3_out_endpoint_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
-{
-	struct dwc3_ep		*dep;
-	irqreturn_t		ret = IRQ_NONE;
-	u8			epnum = event->endpoint_number;
-
-	dep = dwc->eps[epnum];
-
-	switch (event->endpoint_event) {
-	case DWC3_DEPEVT_XFERCOMPLETE:
-		if (usb_endpoint_xfer_isoc(dep->desc)) {
-			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
-					dep->name);
-			return IRQ_NONE;
-		}
-
-		ret = dwc3_endpoint_transfer_complete(dwc, dep,
-				(event->parameters & 0x00ffffff));
-		break;
-	case DWC3_DEPEVT_XFERINPROGRESS:
-		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
-		break;
-	case DWC3_DEPEVT_XFERNOTREADY:
-		dev_dbg(dwc->dev, "ep%din Transfer Not Ready\n", epnum);
-		break;
-	case DWC3_DEPEVT_RXTXFIFOEVT:
-		dev_dbg(dwc->dev, "ep%din FIFO Overrun\n", epnum);
-		break;
-	case DWC3_DEPEVT_STREAMEVT:
-		dev_dbg(dwc->dev, "ep%din Stream Event\n", epnum);
-		break;
-	case DWC3_DEPEVT_EPCMDCMPLT:
-		dev_dbg(dwc->dev, "ep%din Command Complete\n", epnum);
-		break;
-	}
-
-	return ret;
-}
-
 static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
-	irqreturn_t			ret;
+	struct dwc3_ep		*dep;
+	irqreturn_t		ret = IRQ_NONE;
+	u8			epnum = event->endpoint_number;
 
-	if (event->endpoint_number == 0 || event->endpoint_number == 1)
+	dep = dwc->eps[epnum];
+
+	if (epnum == 0 || epnum == 1)
 		return dwc3_ep0_interrupt(dwc, event);
 
-	/*
-	 * The way endpoints are managed at the hardware level
-	 * is so that OUT endpoints will always have even numbers
-	 * while IN endpoints will always have odd numbers.
-	 */
-	if (event->endpoint_number & 1)
-		ret = dwc3_in_endpoint_interrupt(dwc, event);
-	else
-		ret = dwc3_out_endpoint_interrupt(dwc, event);
+	switch (event->endpoint_event) {
+	case DWC3_DEPEVT_XFERCOMPLETE:
+		if (usb_endpoint_xfer_isoc(dep->desc)) {
+			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
+					dep->name);
+			return IRQ_NONE;
+		}
+
+		ret = dwc3_endpoint_transfer_complete(dwc, dep,
+				(event->parameters & 0x00ffffff));
+		break;
+	case DWC3_DEPEVT_XFERINPROGRESS:
+		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
+		break;
+	case DWC3_DEPEVT_XFERNOTREADY:
+		dev_dbg(dwc->dev, "%s Transfer Not Ready\n", dep->name);
+		break;
+	case DWC3_DEPEVT_RXTXFIFOEVT:
+		dev_dbg(dwc->dev, "%s FIFO Overrun\n", dep->name);
+		break;
+	case DWC3_DEPEVT_STREAMEVT:
+		dev_dbg(dwc->dev, "%s Stream Event\n", dep->name);
+		break;
+	case DWC3_DEPEVT_EPCMDCMPLT:
+		dev_dbg(dwc->dev, "%s Command Complete\n", dep->name);
+		break;
+	}
 
 	return ret;
 }
