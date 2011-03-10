@@ -1014,7 +1014,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	struct dwc3_ep		*dep;
-	irqreturn_t		ret = IRQ_NONE;
+	irqreturn_t		ret = IRQ_HANDLED;
 	u8			epnum = event->endpoint_number;
 
 	dep = dwc->eps[epnum];
@@ -1027,7 +1027,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		if (usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
 					dep->name);
-			return IRQ_NONE;
+			return ret;
 		}
 
 		ret = dwc3_endpoint_transfer_complete(dwc, dep,
@@ -1037,7 +1037,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
-			return IRQ_NONE;
+			return ret;
 		}
 
 		break;
@@ -1045,7 +1045,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
-			return IRQ_NONE;
+			return ret;
 		}
 
 		break;
@@ -1058,7 +1058,6 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 	case DWC3_DEPEVT_EPCMDCMPLT:
 		dev_dbg(dwc->dev, "%s Command Complete\n", dep->name);
 		complete(&dwc->ep_cmd_complete);
-		ret = IRQ_HANDLED;
 		break;
 	}
 
