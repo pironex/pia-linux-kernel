@@ -28,5 +28,9 @@ config USB_DWC3_OMAP
 	tristate "OMAP"
 	depends on ARCH_OMAP
 
+config USB_DWC3_HAPS
+	tristate "HAPS"
+	depends on  PCI
+
 endchoice
 endif
