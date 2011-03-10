@@ -56,18 +56,17 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	pci->current_state = PCI_D0;
 	pci_set_master(pci);
 
-	/*
-	 * FIXME we need to build the struct resource for the
-	 * child dwc3-core platform_device.
-	 *
-	 * Without it, dwc3's probe() will fail due to missing
-	 * resources.
-	 */
-
 	dwc3 = platform_device_alloc("dwc3", -1);
 	if (!dwc3) {
 		dev_err(&pci->dev, "couldn't allocate dwc3 device\n");
 		goto err2;
+	}
+
+	ret = platform_device_add_resources(dwc3, pci->resource,
+			PCI_NUM_RESOURCES);
+	if (ret) {
+		dev_err(&pci->dev, "couldn't add resources to dwc3 device\n");
+		goto err3;
 	}
 
 	spin_lock_init(&haps->lock);

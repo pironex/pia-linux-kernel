@@ -81,6 +81,13 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
+	ret = platform_device_add_resources(dwc3, pdev->resource,
+			pdev->num_resources);
+	if (ret) {
+		dev_err(&pdev->dev, "couldn't add resources to dwc3 device\n");
+		goto err2;
+	}
+
 	spin_lock_init(&omap->lock);
 	platform_set_drvdata(pdev, omap);
 
