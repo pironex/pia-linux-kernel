@@ -97,20 +97,23 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params)
 {
-	struct dwc3_ep		*dep = dwc->eps[ep];
-	int			ret;
+	unsigned long		timeout = jiffies + msecs_to_jiffies(500);
+	u32			reg;
 
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR0(ep), params->param0.raw);
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR1(ep), params->param1.raw);
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR2(ep), params->param2.raw);
+
 	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
+	do {
+		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(ep));
+		if (time_after(jiffies, timeout))
+			return -ETIMEDOUT;
 
-	ret = wait_for_completion_interruptible_timeout(&dwc->ep_cmd_complete,
-			jiffies + msecs_to_jiffies(500));
+		cpu_relax();
+	} while (!(reg & DWC3_DEPCMD_CMDACT));
 
-	WARN(ret, "%s EP CMD Complete IRQ timed out\n", dep->name);
-
-	return ret;
+	return 0;
 }
 
 static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
@@ -1057,7 +1060,6 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		break;
 	case DWC3_DEPEVT_EPCMDCMPLT:
 		dev_dbg(dwc->dev, "%s Command Complete\n", dep->name);
-		complete(&dwc->ep_cmd_complete);
 		break;
 	}
 
@@ -1445,8 +1447,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc->gadget.dev.dma_mask	= dwc->dev->dma_mask;
 	dwc->gadget.dev.release		= dwc3_gadget_release;
 	dwc->gadget.name		= "dwc3-gadget";
-
-	init_completion(&dwc->ep_cmd_complete);
 
 	the_dwc				= dwc;
 
