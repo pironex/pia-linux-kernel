@@ -475,7 +475,6 @@ static int __dwc3_gadget_kick_transfers(struct dwc3_ep *dep)
 	int			ret = 0;
 
 	list_for_each_entry(req, &dep->request_list, list) {
-		i++;
 		ret = __dwc3_gadget_kick_transfer(dep, req,
 				(i == count - 1) ? false : true);
 		if (ret) {
@@ -483,6 +482,7 @@ static int __dwc3_gadget_kick_transfers(struct dwc3_ep *dep)
 					dep->name, req);
 			break;
 		}
+		i++;
 	}
 
 	return ret;
