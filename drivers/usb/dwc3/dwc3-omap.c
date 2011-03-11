@@ -146,7 +146,7 @@ static int __init dwc3_omap_init(void)
 {
 	return platform_driver_register(&dwc3_omap_driver);
 }
-fs_initcall(dwc3_omap_init);
+module_init(dwc3_omap_init);
 
 static void __exit dwc3_omap_exit(void)
 {

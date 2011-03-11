@@ -135,7 +135,7 @@ static int __init dwc3_haps_init(void)
 {
 	return pci_register_driver(&dwc3_haps_driver);
 }
-fs_initcall(dwc3_haps_init);
+module_init(dwc3_haps_init);
 
 static void __exit dwc3_haps_exit(void)
 {
