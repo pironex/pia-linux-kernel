@@ -412,8 +412,10 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 		trb->chn = !last_one;
 		trb->ioc = last_one;
 
-		if (usb_endpoint_xfer_isoc(dep->desc))
+		if (usb_endpoint_xfer_isoc(dep->desc)) {
 			trb->isp_imi = true;
+			trb->csp = true;
+		}
 
 		switch (usb_endpoint_type(dep->desc)) {
 		case USB_ENDPOINT_XFER_CONTROL:
