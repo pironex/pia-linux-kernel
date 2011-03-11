@@ -176,22 +176,7 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		USB_ENDPOINT_XFERTYPE_MASK;
 
 	params.param0.depcfg.ignore_sequence_number = true;
-
-	switch (dwc->speed) {
-	case DWC3_DSTS_SUPERSPEED:
-		params.param0.depcfg.max_packet_size = 512;
-		break;
-
-	case DWC3_DSTS_HIGHSPEED:
-	case DWC3_DSTS_FULLSPEED2:
-	case DWC3_DSTS_FULLSPEED1:
-		params.param0.depcfg.max_packet_size = 64;
-		break;
-
-	case DWC3_DSTS_LOWSPEED:
-		params.param0.depcfg.max_packet_size = 8;
-		break;
-	}
+	params.param0.depcfg.max_packet_size = desc->wMaxPacketSize;
 
 	params.param1.depcfg.xfer_complete_enable = true;
 	params.param1.depcfg.xfer_in_progress_enable = true;
