@@ -183,6 +183,21 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 	params.param1.depcfg.xfer_not_ready_enable = true;
 	params.param1.depcfg.ep_number = dep->number;
 
+	/*
+	 * REVISIT for some reason, databook says in case we're
+	 * working in FullSpeed binterval_m1 field from DEPCFG
+	 * parameter 1, _MUST_ be set to zero. Gadget drivers use
+	 * those at least on interrupt endpoints both on high and
+	 * full speed.
+	 *
+	 * Maybe we just don't need to let the hardware know about
+	 * it. Anyway, if we're not working on FULLSPEED we have
+	 * to set binterval_m1 field to desc->bInterval - 1
+	 */
+	if (dwc->speed != DWC3_DSTS_FULLSPEED2 &&
+			dwc->speed != DWC3_DSTS_FULLSPEED1)
+		params.param1.depcfg.binterval_m1 = desc->bInterval - 1;
+
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret) {
