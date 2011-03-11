@@ -383,7 +383,7 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 	kfree(req);
 }
 
-static void prepare_trbs(struct dwc3_ep *dep)
+static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 {
 	struct dwc3_request	*req;
 	struct dwc3_trb		*trb;
@@ -452,7 +452,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
 	struct dwc3			*dwc = dep->dwc;
 	int				ret;
 
-	prepare_trbs(dep);
+	dwc3_prepare_trbs(dep);
 	req = next_request(dep);
 
 	memset(&params, 0, sizeof(params));
