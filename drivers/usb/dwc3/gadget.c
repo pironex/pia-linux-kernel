@@ -397,6 +397,7 @@ static void prepare_trbs(struct dwc3_ep *dep)
 		unsigned int last_one = 0;
 
 		trb = &dep->trb_pool[num];
+		memset(trb, 0, sizeof(*trb));
 		num++;
 
 		/* Is our TRB pool empty? */
