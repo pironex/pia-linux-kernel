@@ -447,25 +447,14 @@ static void prepare_trbs(struct dwc3_ep *dep)
 	}
 }
 
-static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep,
-		struct dwc3_request *req, unsigned is_chained)
+static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
 {
 	struct dwc3_gadget_ep_cmd_params params;
+	struct dwc3_request		*req;
 	struct dwc3			*dwc = dep->dwc;
 	int				ret;
 
-	if (is_chained)
-		return 0;
-
 	prepare_trbs(dep);
-	/*
-	 * We change the pointer here. This is needed in case we
-	 * are handling chained TRBs.
-	 *
-	 * On that scenario, we need to prepare all TRBs (map
-	 * the TRB buffer to DMA) but kick the transfer with
-	 * the first one on the list.
-	 */
 	req = next_request(dep);
 
 	memset(&params, 0, sizeof(params));
@@ -521,7 +510,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		return 0;
 	}
 
-	return __dwc3_gadget_kick_transfer(dep, req, is_chained);
+	return __dwc3_gadget_kick_transfer(dep);
 }
 
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
@@ -983,7 +972,7 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (!dep->request_count)
 		goto out;
 
-	ret = __dwc3_gadget_kick_transfer(dep, NULL, false);
+	ret = __dwc3_gadget_kick_transfer(dep);
 	if (ret) {
 		dev_err(dwc->dev, "%s failed to start next request\n",
 				dep->name);
