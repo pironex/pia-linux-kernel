@@ -115,7 +115,8 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 	return 0;
 }
 
-static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep, struct dwc3_request *req)
+static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep,
+		struct dwc3_request *req)
 {
 	struct dwc3		*dwc = dep->dwc;
 	int			ret;
@@ -146,7 +147,7 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep, struct dwc3_request *req
 }
 
 int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
-	gfp_t gfp_flags)
+		gfp_t gfp_flags)
 {
 	struct dwc3_request		*req = to_dwc3_request(request);
 	struct dwc3_ep			*dep = to_dwc3_ep(ep);

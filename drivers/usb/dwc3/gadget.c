@@ -117,6 +117,7 @@ static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
 {
 	if (dep->trb_pool)
 		return 0;
+
 	if (dep->number == 0 || dep->number == 1)
 		return 0;
 
@@ -127,6 +128,7 @@ static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
 				dep->name);
 		return -ENOMEM;
 	}
+
 	return 0;
 }
 
