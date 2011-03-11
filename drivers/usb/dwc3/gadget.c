@@ -68,9 +68,6 @@ void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 				req->request.length, req->direction
 				? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 	}
-
-	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
-			DMA_BIDIRECTIONAL);
 }
 
 static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
@@ -941,6 +938,9 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 				dep->name);
 		return IRQ_NONE;
 	}
+
+	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
+			DMA_BIDIRECTIONAL);
 
 	if (req->trb->hwo) {
 		dev_err(dwc->dev, "%s's TRB (%p) still owned by HW\n",
