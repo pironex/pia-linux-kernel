@@ -450,46 +450,45 @@ static void prepare_trbs(struct dwc3_ep *dep)
 static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep,
 		struct dwc3_request *req, unsigned is_chained)
 {
-	struct dwc3		*dwc = dep->dwc;
-	int			ret;
+	struct dwc3_gadget_ep_cmd_params params;
+	struct dwc3			*dwc = dep->dwc;
+	int				ret;
 
-	if (!is_chained) {
-		struct dwc3_gadget_ep_cmd_params params;
+	if (is_chained)
+		return 0;
 
-		prepare_trbs(dep);
+	prepare_trbs(dep);
+	/*
+	 * We change the pointer here. This is needed in case we
+	 * are handling chained TRBs.
+	 *
+	 * On that scenario, we need to prepare all TRBs (map
+	 * the TRB buffer to DMA) but kick the transfer with
+	 * the first one on the list.
+	 */
+	req = next_request(dep);
+
+	memset(&params, 0, sizeof(params));
+	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
+	params.param1.depstrtxfer.transfer_desc_addr_low = req->trb_dma;
+
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
+			DWC3_DEPCMD_STARTTRANSFER, &params);
+	if (ret < 0) {
+		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
+
 		/*
-		 * We change the pointer here. This is needed in case we
-		 * are handling chained TRBs.
-		 *
-		 * On that scenario, we need to prepare all TRBs (map
-		 * the TRB buffer to DMA) but kick the transfer with
-		 * the first one on the list.
+		 * FIXME we need to iterate over the list of requests
+		 * here and stop, unmap, free and del each of the linked
+		 * requests instead of we do now.
 		 */
-		req = next_request(dep);
-
-		memset(&params, 0, sizeof(params));
-		params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-		params.param1.depstrtxfer.transfer_desc_addr_low = req->trb_dma;
-
-		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
-				DWC3_DEPCMD_STARTTRANSFER, &params);
-		if (ret < 0) {
-			dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-
-			/*
-			 * FIXME we need to iterate over the list of requests
-			 * here and stop, unmap, free and del each of the linked
-			 * requests instead of we do now.
-			 */
-			dwc3_unmap_buffer_from_dma(req);
-			list_del(&req->list);
-			return ret;
-		}
-
-		dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
-				dep->number);
+		dwc3_unmap_buffer_from_dma(req);
+		list_del(&req->list);
+		return ret;
 	}
 
+	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
+			dep->number);
 	return 0;
 }
 
