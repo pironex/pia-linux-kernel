@@ -492,30 +492,6 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep,
 	return 0;
 }
 
-static int __dwc3_gadget_kick_transfers(struct dwc3_ep *dep)
-{
-	struct dwc3		*dwc = dep->dwc;
-	struct dwc3_request	*req;
-
-	unsigned		count = dep->request_count;
-	unsigned		i = 0;
-
-	int			ret = 0;
-
-	list_for_each_entry(req, &dep->request_list, list) {
-		ret = __dwc3_gadget_kick_transfer(dep, req,
-				(i == count - 1) ? false : true);
-		if (ret) {
-			dev_err(dwc->dev, "%s failed to start request %p\n",
-					dep->name, req);
-			break;
-		}
-		i++;
-	}
-
-	return ret;
-}
-
 static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		unsigned is_chained)
 {
@@ -1007,7 +983,7 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (!dep->request_count)
 		goto out;
 
-	ret = __dwc3_gadget_kick_transfers(dep);
+	ret = __dwc3_gadget_kick_transfer(dep, NULL, false);
 	if (ret) {
 		dev_err(dwc->dev, "%s failed to start next request\n",
 				dep->name);
