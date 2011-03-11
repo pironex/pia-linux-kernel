@@ -530,7 +530,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	dwc3_gadget_add_request(dep, req);
 
-	if (dep->request_count == 1) {
+	if (!(dep->request_count == 1)) {
 		dev_vdbg(dwc->dev, "%s's request_list isn't singular\n",
 				dep->name);
 		return 0;
