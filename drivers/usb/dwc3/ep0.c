@@ -383,17 +383,15 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 	}
 }
 
-irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
+void dwc3_ep0_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
-	irqreturn_t		ret = IRQ_NONE;
 	u8			epnum = event->endpoint_number;
 
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
 		dev_vdbg(dwc->dev, "ep%din Transfer Complete\n", epnum);
 		dwc3_ep0_xfer_complete(dwc, event);
-		ret = IRQ_HANDLED;
 		break;
 
 	case DWC3_DEPEVT_XFERINPROGRESS:
@@ -403,7 +401,6 @@ irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
 	case DWC3_DEPEVT_XFERNOTREADY:
 		dev_dbg(dwc->dev, "ep%din Transfer Not Ready\n", epnum);
 		dwc3_ep0_xfernotready(dwc, event);
-		ret = IRQ_HANDLED;
 		break;
 
 	case DWC3_DEPEVT_RXTXFIFOEVT:
@@ -418,6 +415,4 @@ irqreturn_t dwc3_ep0_interrupt(struct dwc3 *dwc,
 		dev_dbg(dwc->dev, "ep%din Command Complete\n", epnum);
 		break;
 	}
-
-	return ret;
 }

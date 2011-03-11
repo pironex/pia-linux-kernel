@@ -923,7 +923,7 @@ static void dwc3_gadget_release(struct device *dev)
 
 /* -------------------------------------------------------------------------- */
 
-static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
+static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 		struct dwc3_ep *dep, const unsigned int event_status)
 {
 	struct dwc3_request	*req;
@@ -936,7 +936,7 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (!req) {
 		dev_err(dwc->dev, "no transfer to complete on %s ?\n",
 				dep->name);
-		return IRQ_NONE;
+		return;
 	}
 
 	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
@@ -945,7 +945,7 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (req->trb->hwo) {
 		dev_err(dwc->dev, "%s's TRB (%p) still owned by HW\n",
 				dep->name, req->trb);
-		return IRQ_NONE;
+		return;
 	}
 
 	count = req->trb->length;
@@ -996,37 +996,37 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	}
 
 out:
-	return IRQ_HANDLED;
+	return;
 }
 
-static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
+static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	struct dwc3_ep		*dep;
-	irqreturn_t		ret = IRQ_HANDLED;
 	u8			epnum = event->endpoint_number;
 
 	dep = dwc->eps[epnum];
 
-	if (epnum == 0 || epnum == 1)
-		return dwc3_ep0_interrupt(dwc, event);
+	if (epnum == 0 || epnum == 1) {
+		dwc3_ep0_interrupt(dwc, event);
+		return;
+	}
 
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
 		if (usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
 					dep->name);
-			return ret;
+			return;
 		}
 
-		ret = dwc3_endpoint_transfer_complete(dwc, dep,
-				event->parameters);
+		dwc3_endpoint_transfer_complete(dwc, dep, event->parameters);
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
-			return ret;
+			return;
 		}
 
 		break;
@@ -1034,7 +1034,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
 			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
-			return ret;
+			return;
 		}
 
 		break;
@@ -1048,8 +1048,6 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		dev_dbg(dwc->dev, "%s Command Complete\n", dep->name);
 		break;
 	}
-
-	return ret;
 }
 
 static void dwc3_disconnect_gadget(struct dwc3 *dwc)
@@ -1122,7 +1120,7 @@ static void dwc3_clear_stall_all_ep(struct dwc3 *dwc)
 	}
 }
 
-static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
+static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 {
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 #if 0
@@ -1141,11 +1139,9 @@ static irqreturn_t dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 	dwc3_stop_active_transfers(dwc);
 
 	dwc3_gadget_run_stop(dwc, 0);
-
-	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
+static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 {
 	u32			reg;
 
@@ -1186,8 +1182,6 @@ static irqreturn_t dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 		cpu_relax();
 
 	dwc->ep0state = EP0_IDLE;
-
-	return IRQ_HANDLED;
 }
 
 static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
@@ -1215,7 +1209,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 	dwc3_writel(dwc->global, DWC3_GCTL, reg);
 }
 
-static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
+static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3_ep		*dep;
@@ -1240,14 +1234,14 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return IRQ_NONE;
+		return;
 	}
 
 	dep = dwc->eps[1];
 	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return IRQ_NONE;
+		return;
 	}
 
 	/*
@@ -1257,11 +1251,9 @@ static irqreturn_t dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	 *
 	 * In both cases reset values should be sufficient.
 	 */
-
-	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
+static void dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
 {
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
@@ -1271,42 +1263,35 @@ static irqreturn_t dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc)
 	 */
 
 	dwc->gadget_driver->resume(&dwc->gadget);
-
-	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
+static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 		unsigned int evtinfo)
 {
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
 	/*  The fith bit says SuperSpeed yes or no. */
 	dwc->link_state = evtinfo & DWC3_LINK_STATE_MASK;
-
-	return IRQ_HANDLED;
 }
 
-static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
+static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 		struct dwc3_event_devt *event)
 {
-	irqreturn_t		ret = IRQ_NONE;
-
 	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
-		ret = dwc3_gadget_disconnect_interrupt(dwc);
+		dwc3_gadget_disconnect_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_RESET:
-		ret = dwc3_gadget_reset_interrupt(dwc);
+		dwc3_gadget_reset_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_CONNECT_DONE:
-		ret = dwc3_gadget_conndone_interrupt(dwc);
+		dwc3_gadget_conndone_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_WAKEUP:
-		ret = dwc3_gadget_wakeup_interrupt(dwc);
+		dwc3_gadget_wakeup_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_LINK_STATUS_CHANGE:
-		ret = dwc3_gadget_linksts_change_interrupt(dwc,
-				event->event_info);
+		dwc3_gadget_linksts_change_interrupt(dwc, event->event_info);
 		break;
 	case DWC3_DEVICE_EVENT_EOPF:
 		dev_vdbg(dwc->dev, "End of Periodic Frame\n");
@@ -1326,15 +1311,11 @@ static irqreturn_t dwc3_gadget_interrupt(struct dwc3 *dwc,
 	default:
 		dev_dbg(dwc->dev, "UNKNOWN IRQ %d\n", event->type);
 	}
-
-	return ret;
 }
 
-static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
+static void dwc3_process_event_entry(struct dwc3 *dwc,
 		union dwc3_event *event)
 {
-	irqreturn_t ret;
-
 	/* Endpoint IRQ, handle it and return early */
 	if (event->type.is_devspec == 0) {
 		/* depevt */
@@ -1343,15 +1324,12 @@ static irqreturn_t dwc3_process_event_entry(struct dwc3 *dwc,
 
 	switch (event->type.type) {
 	case DWC3_EVENT_TYPE_DEV:
-		ret = dwc3_gadget_interrupt(dwc, &event->devt);
+		dwc3_gadget_interrupt(dwc, &event->devt);
 		break;
 	/* REVISIT what to do with Carkit and I2C events ? */
 	default:
-		ret = -EINVAL;
 		dev_err(dwc->dev, "UNKNOWN IRQ type %d\n", event->raw);
 	}
-
-	return ret;
 }
 
 static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
@@ -1373,7 +1351,6 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 
 		memcpy(&event.raw, (evt->buf + evt->lpos), sizeof(event.raw));
 		dwc3_process_event_entry(dwc, &event);
-		/* what with the ret? */
 		/*
 		 * XXX we wrap around correctly to the next entry as almost all
 		 * entries are 4 bytes in size. There is one entry which has 12
