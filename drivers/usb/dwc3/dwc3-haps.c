@@ -108,7 +108,7 @@ static void __devexit dwc3_haps_remove(struct pci_dev *pci)
 	kfree(haps);
 }
 
-static const struct pci_device_id dwc3_haps_id_table[] = {
+static DEFINE_PCI_DEVICE_TABLE(dwc3_haps_id_table) = {
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_SYNOPSYS,
 				PCI_DEVICE_ID_SYNOPSYS_HAPSUSB3),
