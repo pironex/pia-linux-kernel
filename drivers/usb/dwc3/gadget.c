@@ -927,11 +927,12 @@ static void dwc3_gadget_release(struct device *dev)
 /* -------------------------------------------------------------------------- */
 
 static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
-		struct dwc3_ep *dep, const unsigned count)
+		struct dwc3_ep *dep, const unsigned int event_status)
 {
 	struct dwc3_request	*req;
 	unsigned		status = 0;
 	int			ret;
+	unsigned int		count;
 
 	req = next_request(dep);
 
@@ -946,6 +947,8 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 				dep->name, req->trb);
 		return IRQ_NONE;
 	}
+
+	count = req->trb->length;
 
 	if (dep->direction) {
 		if (count) {
@@ -962,7 +965,7 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	 * and we simply bounce the request back to the gadget driver for
 	 * further processing.
 	 */
-	req->request.actual += count;
+	req->request.actual += req->request.length - count;
 
 	/*
 	 * Giveback the request. If we couldn't transfer everything,
@@ -1009,7 +1012,7 @@ static irqreturn_t dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		}
 
 		ret = dwc3_endpoint_transfer_complete(dwc, dep,
-				(event->parameters & 0x00ffffff));
+				event->parameters);
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
