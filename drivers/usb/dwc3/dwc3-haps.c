@@ -53,7 +53,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		goto err1;
 	}
 
-	pci->current_state = PCI_D0;
+	pci_set_power_state(pci, PCI_D0);
 	pci_set_master(pci);
 
 	dwc3 = platform_device_alloc("dwc3", -1);
@@ -85,6 +85,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	return 0;
 
 err3:
+	pci_set_drvdata(pci, NULL);
 	platform_device_put(dwc3);
 
 err2:
@@ -102,6 +103,7 @@ static void __devexit dwc3_haps_remove(struct pci_dev *pci)
 	struct dwc3_haps	*haps = pci_get_drvdata(pci);
 
 	platform_device_unregister(haps->dwc3);
+	pci_set_drvdata(pci, NULL);
 	pci_disable_device(pci);
 	kfree(haps);
 }
