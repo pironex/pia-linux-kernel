@@ -793,16 +793,6 @@ static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
 	return 0;
 }
 
-static int dwc3_gadget_vbus_session(struct usb_gadget *g, int is_active)
-{
-	return 0;
-}
-
-static int dwc3_gadget_vbus_draw(struct usb_gadget *g, unsigned mA)
-{
-	return 0;
-}
-
 static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 {
 	u32			reg;
@@ -854,8 +844,6 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
 	.get_frame		= dwc3_gadget_get_frame,
 	.wakeup			= dwc3_gadget_wakeup,
 	.set_selfpowered	= dwc3_gadget_set_selfpowered,
-	.vbus_session		= dwc3_gadget_vbus_session,
-	.vbus_draw		= dwc3_gadget_vbus_draw,
 	.pullup			= dwc3_gadget_pullup,
 };
 
