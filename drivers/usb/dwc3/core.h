@@ -515,6 +515,7 @@ struct dwc3_event_depevt {
 	unsigned	endpoint_event:4;
 	unsigned	reserved11_10:2;
 	unsigned	status:4;
+#define DEPEVT_STATUS_LST	(1 << 3)
 	u16		parameters;
 } __packed;
 

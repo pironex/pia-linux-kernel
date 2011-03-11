@@ -973,6 +973,14 @@ static irqreturn_t dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	 */
 	dwc3_gadget_giveback(dep, req, status);
 
+	/*
+	 * The LST bit says that this is the last XterComplete event i.e. the
+	 * request with the TRB bit set. We wait for it before we enqueue new
+	 * requests
+	 */
+	if (!(event_status & DEPEVT_STATUS_LST))
+		goto out;
+
 	if (!dep->request_count)
 		goto out;
 
