@@ -386,50 +386,77 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 	kfree(req);
 }
 
-static struct dwc3_trb *dwc3_alloc_trb(struct dwc3_ep *dep,
-		unsigned type, unsigned length)
+static void prepare_trbs(struct dwc3_ep *dep)
 {
-	struct dwc3_trb			*trb;
+	struct dwc3_request	*req;
+	struct dwc3_trb		*trb;
+	struct dwc3		*dwc	= dep->dwc;
+	int			num	= 0;
 
-	trb = &dep->trb_pool[dep->current_trb];
-	if (!trb)
-		return NULL;
+	list_for_each_entry(req, &dep->request_list, list) {
+		unsigned int last_one = 0;
 
-	trb->trbctl	= type;
-	trb->length	= length;
+		trb = &dep->trb_pool[num];
+		num++;
 
-	dep->current_trb += 1;
+		/* Is our TRB pool empty? */
+		if (num == DWC3_TRB_NUM)
+			last_one = 1;
+		/* Is this the last request? */
+		if (num == dep->request_count)
+			last_one = 1;
 
-	return trb;
-}
+		req->trb = trb;
 
-static void dwc3_free_trb(struct dwc3_ep *dep, struct dwc3_trb *trb)
-{
-	/* TODO */
+		trb->bpl = req->request.dma;
+		trb->hwo = true;
+		trb->lst = last_one;
+		trb->chn = !last_one;
+		trb->ioc = last_one;
+
+		if (usb_endpoint_xfer_isoc(dep->desc))
+			trb->isp_imi = true;
+
+		switch (usb_endpoint_type(dep->desc)) {
+		case USB_ENDPOINT_XFER_CONTROL:
+			trb->trbctl = DWC3_TRBCTL_CONTROL_SETUP;
+			break;
+
+		case USB_ENDPOINT_XFER_ISOC:
+			trb->trbctl = DWC3_TRBCTL_ISOCHRONOUS;
+			break;
+
+		case USB_ENDPOINT_XFER_BULK:
+		case USB_ENDPOINT_XFER_INT:
+			trb->trbctl = DWC3_TRBCTL_NORMAL;
+			break;
+		default:
+			/*
+			 * This is only possible with faulty memor because we
+			 * checked it allready :)
+			 */
+			BUG();
+		}
+
+		trb->length	= req->request.length;
+
+		req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
+				DMA_BIDIRECTIONAL);
+		if (last_one)
+			break;
+	}
 }
 
 static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep,
 		struct dwc3_request *req, unsigned is_chained)
 {
 	struct dwc3		*dwc = dep->dwc;
-	struct dwc3_trb		*trb = req->trb;
 	int			ret;
-
-	trb->bpl	= req->request.dma;
-	trb->hwo	= true;
-	trb->lst	= !is_chained;
-	trb->chn	= !!is_chained;
-	trb->ioc	= !is_chained;
-
-	if (usb_endpoint_xfer_isoc(dep->desc))
-		trb->isp_imi = true;
-
-	req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
-			DMA_BIDIRECTIONAL);
 
 	if (!is_chained) {
 		struct dwc3_gadget_ep_cmd_params params;
 
+		prepare_trbs(dep);
 		/*
 		 * We change the pointer here. This is needed in case we
 		 * are handling chained TRBs.
@@ -448,15 +475,14 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep,
 				DWC3_DEPCMD_STARTTRANSFER, &params);
 		if (ret < 0) {
 			dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-			dwc3_unmap_buffer_from_dma(req);
-			dwc3_free_trb(dep, trb);
-			list_del(&req->list);
 
 			/*
 			 * FIXME we need to iterate over the list of requests
 			 * here and stop, unmap, free and del each of the linked
-			 * requests.
+			 * requests instead of we do now.
 			 */
+			dwc3_unmap_buffer_from_dma(req);
+			list_del(&req->list);
 			return ret;
 		}
 
@@ -495,9 +521,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		unsigned is_chained)
 {
 	struct dwc3		*dwc = dep->dwc;
-	struct dwc3_trb		*trb;
-
-	unsigned		trb_type;
 
 	req->request.actual	= 0;
 	req->request.status	= -EINPROGRESS;
@@ -506,28 +529,15 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	switch (usb_endpoint_type(dep->desc)) {
 	case USB_ENDPOINT_XFER_CONTROL:
-		trb_type = DWC3_TRBCTL_CONTROL_SETUP;
-		break;
 	case USB_ENDPOINT_XFER_ISOC:
-		trb_type = DWC3_TRBCTL_ISOCHRONOUS;
-		break;
 	case USB_ENDPOINT_XFER_BULK:
 	case USB_ENDPOINT_XFER_INT:
-		trb_type = DWC3_TRBCTL_NORMAL;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	trb = dwc3_alloc_trb(dep, trb_type, req->request.length);
-	if (!trb) {
-		dev_err(dwc->dev, "can't allocate TRB\n");
-		return -ENOMEM;
-	}
-
-	req->trb = trb;
 	dwc3_map_buffer_to_dma(req);
-
 	dwc3_gadget_add_request(dep, req);
 
 	if (!(dep->request_count == 1)) {
