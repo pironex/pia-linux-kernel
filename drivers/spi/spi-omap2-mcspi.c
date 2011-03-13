@@ -36,6 +36,7 @@
 #include <linux/pm_runtime.h>
 
 #include <linux/spi/spi.h>
+#include <linux/gpio.h>
 
 #include <plat/dma.h>
 #include <plat/clock.h>
@@ -121,6 +122,7 @@ struct omap2_mcspi {
 	/* SPI1 has 4 channels, while SPI2 has 2 */
 	struct omap2_mcspi_dma	*dma_channels;
 	struct  device		*dev;
+        int                     *cs_gpios;
 };
 
 struct omap2_mcspi_cs {
@@ -226,9 +228,14 @@ static void omap2_mcspi_set_enable(const struct spi_device *spi, int enable)
 
 static void omap2_mcspi_force_cs(struct spi_device *spi, int cs_active)
 {
-	u32 l;
+	struct omap2_mcspi* mcspi = spi_master_get_devdata(spi->master);
+	if (mcspi->cs_gpios) {
+		int gpio = mcspi->cs_gpios[spi->chip_select];
+		gpio_set_value(gpio, cs_active);
+	}
 
-	l = mcspi_cached_chconf0(spi);
+	// TXS times out unless we force the CHCONF reg as well
+	u32 l = mcspi_cached_chconf0(spi);
 	MOD_REG_BIT(l, OMAP2_MCSPI_CHCONF_FORCE, cs_active);
 	mcspi_write_chconf0(spi, l);
 }
@@ -1088,6 +1095,7 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 	struct omap2_mcspi	*mcspi;
 	struct resource		*r;
 	int			status = 0, i;
+	struct omap2_mcspi_platform_config* pconfig = pdev->dev.platform_data;
 
 	master = spi_alloc_master(&pdev->dev, sizeof *mcspi);
 	if (master == NULL) {
@@ -1110,6 +1118,10 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 
 	mcspi = spi_master_get_devdata(master);
 	mcspi->master = master;
+	if (pconfig && pconfig->cs_gpios)
+		mcspi->cs_gpios = pconfig->cs_gpios;
+	else
+		mcspi->cs_gpios = NULL;
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (r == NULL) {
