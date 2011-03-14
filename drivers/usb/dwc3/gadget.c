@@ -756,7 +756,7 @@ static int dwc3_gadget_wakeup(struct usb_gadget *g)
 	 * Switch link state to Recovery. In HS/FS/LS this means
 	 * RemoteWakeup Request
 	 */
-	reg |= DCW3_DCTL_ULSTCHNG_RECOVERY;
+	reg |= DWC3_DCTL_ULSTCHNG_RECOVERY;
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
 
 	/* wait for at least 2000us */
