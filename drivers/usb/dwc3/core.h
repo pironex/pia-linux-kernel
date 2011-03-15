@@ -275,6 +275,8 @@ struct dwc3_event_buffer {
  * @request_list: list of requests for this endpoint
  * @request_count: number of requests in our list
  * @trb_pool: array of transaction buffers
+ * @free_slot: next slot which is going to be used
+ * @busy_slot: first slot which is owned by HW
  * @desc: usb_endpoint_descriptor pointer
  * @dwc: pointer to DWC controller
  * @flags: endpoint flags (wedged, stalled, ...)
@@ -292,6 +294,8 @@ struct dwc3_ep {
 	unsigned		request_count;
 
 	struct dwc3_trb		*trb_pool;
+	u32			free_slot;
+	u32			busy_slot;
 	const struct usb_endpoint_descriptor *desc;
 	struct dwc3		*dwc;
 

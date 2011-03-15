@@ -75,6 +75,9 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 {
 	struct dwc3			*dwc = dep->dwc;
 
+	if (req->queued)
+		dep->busy_slot++;
+
 	dwc3_gadget_del_request(req);
 
 	if (req->request.status == -EINPROGRESS)
@@ -392,23 +395,40 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 	struct dwc3_request	*req;
 	struct dwc3_trb		*trb;
 	struct dwc3		*dwc	= dep->dwc;
-	int			num	= 0;
+	u32			trbs_left;
+	u32			req_left;
+
+	BUILD_BUG_ON_NOT_POWER_OF_2(DWC3_TRB_NUM);
+
+	/* the first request must not be queued */
+	req_left = dep->request_count;
+	trbs_left = (dep->busy_slot - dep->free_slot) & (DWC3_TRB_NUM - 1);
+	/*
+	 * if busy & slot are equal than it is either full or empty. Currently
+	 * we assume that it is empty as we are only called on IOC or on first
+	 * request.
+	 */
+	if (!trbs_left)
+		trbs_left = DWC3_TRB_NUM;
 
 	list_for_each_entry(req, &dep->request_list, list) {
 		unsigned int last_one = 0;
 
-		trb = &dep->trb_pool[num];
+		trb = &dep->trb_pool[dep->free_slot & (DWC3_TRB_NUM - 1)];
+		dep->free_slot++;
 		memset(trb, 0, sizeof(*trb));
-		num++;
+		trbs_left--;
+		req_left--;
 
 		/* Is our TRB pool empty? */
-		if (num == DWC3_TRB_NUM)
+		if (!trbs_left)
 			last_one = 1;
 		/* Is this the last request? */
-		if (num == dep->request_count)
+		if (!req_left)
 			last_one = 1;
 
 		req->trb = trb;
+		req->queued = 1;
 
 		trb->bpl = req->request.dma;
 		trb->hwo = true;
