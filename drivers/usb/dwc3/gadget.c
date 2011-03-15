@@ -197,8 +197,10 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 	 * to set binterval_m1 field to desc->bInterval - 1
 	 */
 	if (dwc->speed != DWC3_DSTS_FULLSPEED2 &&
-			dwc->speed != DWC3_DSTS_FULLSPEED1)
+			dwc->speed != DWC3_DSTS_FULLSPEED1) {
 		params.param1.depcfg.binterval_m1 = desc->bInterval - 1;
+		dep->interval = 1 << (desc->bInterval - 1);
+	}
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETEPCONFIG, &params);
@@ -449,12 +451,13 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 	}
 }
 
-static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
+static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 {
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3_request		*req;
 	struct dwc3			*dwc = dep->dwc;
 	int				ret;
+	u32				cmd;
 
 	dwc3_prepare_trbs(dep);
 	req = next_request(dep);
@@ -463,8 +466,8 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
 	params.param1.depstrtxfer.transfer_desc_addr_low = req->trb_dma;
 
-	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
-			DWC3_DEPCMD_STARTTRANSFER, &params);
+	cmd = DWC3_DEPCMD_STARTTRANSFER | DWC3_DEPCMD_PARAM(cmd_param);
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
 
@@ -480,6 +483,12 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep)
 
 	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
 			dep->number);
+	return 0;
+}
+
+static int __dwc3_gadget_update_transfer(struct dwc3_ep *dep)
+{
+	/* TODO */
 	return 0;
 }
 
@@ -512,7 +521,14 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 		return 0;
 	}
 
-	return __dwc3_gadget_kick_transfer(dep);
+	if (!usb_endpoint_xfer_isoc(dep->desc))
+		return __dwc3_gadget_kick_transfer(dep, 0);
+
+	/* ISOC transfers are initiated via Xfer Not Ready interrupt. */
+	if (!(dep->flags & DWC3_EP_ISOC_RUNNING))
+		return 0;
+
+	return __dwc3_gadget_update_transfer(dep);
 }
 
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
@@ -977,7 +993,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (!dep->request_count)
 		goto out;
 
-	ret = __dwc3_gadget_kick_transfer(dep);
+	ret = __dwc3_gadget_kick_transfer(dep, 0);
 	if (ret) {
 		dev_err(dwc->dev, "%s failed to start next request\n",
 				dep->name);
@@ -990,6 +1006,26 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 
 out:
 	return;
+}
+
+static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
+		struct dwc3_ep *dep, const unsigned int event_status)
+{
+	u32 uf;
+
+	if (event_status) {
+		u32 mask;
+
+		mask = ~(dep->interval - 1);
+		uf = event_status & mask;
+		/* 4 micro frames in the future */
+		uf += dep->interval * 4;
+	} else {
+		uf = 0;
+	}
+
+	__dwc3_gadget_kick_transfer(dep, uf);
+	dep->flags |= DWC3_EP_ISOC_RUNNING;
 }
 
 static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
@@ -1029,6 +1065,8 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 					dep->name);
 			return;
 		}
+		WARN_ON(dep->flags & DWC3_EP_ISOC_RUNNING);
+		dwc3_gadget_start_isoc(dwc, dep, event->parameters);
 
 		break;
 	case DWC3_DEPEVT_RXTXFIFOEVT:
