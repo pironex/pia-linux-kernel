@@ -53,13 +53,19 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		trb->trbctl = DWC3_TRBCTL_CONTROL_SETUP;
 		break;
 
+	case EP0_IN_WAIT_NRDY:
+	case EP0_OUT_WAIT_NRDY:
 	case EP0_IN_STATUS_PHASE:
 	case EP0_OUT_STATUS_PHASE:
 		if (dwc->three_stage_setup)
 			trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS3;
 		else
 			trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS2;
-		break;
+
+		if (dwc->ep0state == EP0_IN_WAIT_NRDY)
+			dwc->ep0state = EP0_IN_STATUS_PHASE;
+		else if (dwc->ep0state == EP0_OUT_WAIT_NRDY)
+			dwc->ep0state = EP0_OUT_STATUS_PHASE;
 
 	case EP0_IN_WAIT_GADGET:
 		dwc->ep0state = EP0_IN_WAIT_NRDY;
@@ -71,9 +77,6 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		return -EINVAL;
 		break;
 
-	case EP0_IN_WAIT_NRDY:
-		dwc->ep0state = EP0_IN_STATUS_PHASE;
-		/* fall */
 
 	case EP0_IN_DATA_PHASE:
 	case EP0_OUT_DATA_PHASE:
