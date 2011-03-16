@@ -178,20 +178,20 @@ static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
 	__dwc3_gadget_ep_set_halt(dwc->eps[0], 1);
 	dwc->eps[0]->flags &= ~DWC3_EP_STALL;
 	dwc->ep0state = EP0_IDLE;
-	dwc3_ep0_out_start(dwc, 0);
+	dwc3_ep0_out_start(dwc);
 }
 
-void dwc3_ep0_out_start(struct dwc3 *dwc, u32 epnum)
+void dwc3_ep0_out_start(struct dwc3 *dwc)
 {
 	struct dwc3_ep			*dep;
 	int				ret;
 
-	dep = dwc->eps[epnum];
+	dep = dwc->eps[0];
 
 	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->ctrl_req,
 			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
 
-	ret = dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr,
+	ret = dwc3_ep0_start_trans(dwc, 0, dwc->ctrl_req_addr,
 			dep->endpoint.maxpacket);
 	if (ret < 0) {
 		dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
@@ -361,7 +361,7 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 	r->request.complete(&dep->endpoint, &r->request);
 
 	dwc->ep0state = EP0_IDLE;
-	dwc3_ep0_out_start(dwc, 0);
+	dwc3_ep0_out_start(dwc);
 }
 
 static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,

@@ -1509,7 +1509,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 		goto err2;
 	}
 	/* begin to receive SETUP packets */
-	dwc3_ep0_out_start(dwc, 0);
+	dwc3_ep0_out_start(dwc);
 
 	return 0;
 
