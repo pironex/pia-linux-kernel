@@ -612,26 +612,13 @@ out0:
 	return ret;
 }
 
-static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
+int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value)
 {
-	struct dwc3_gadget_ep_cmd_params params;
-
-	struct dwc3_ep			*dep = to_dwc3_ep(ep);
-	struct dwc3			*dwc = dep->dwc;
-
-	unsigned long			flags;
-
-	int				ret = 0;
+	struct dwc3_gadget_ep_cmd_params	params;
+	struct dwc3				*dwc = dep->dwc;
+	int					ret;
 
 	memset(&params, 0x00, sizeof(params));
-
-	spin_lock_irqsave(&dwc->lock, flags);
-
-	if (usb_endpoint_xfer_isoc(dep->desc)) {
-		dev_err(dwc->dev, "%s is of Isochronous type\n", dep->name);
-		ret = -EINVAL;
-		goto out;
-	}
 
 	if (value) {
 		if (dep->number == 0 || dep->number == 1)
@@ -655,7 +642,27 @@ static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
 		else
 			dep->flags &= ~DWC3_EP_STALL;
 	}
+	return ret;
+}
 
+static int dwc3_gadget_ep_set_halt(struct usb_ep *ep, int value)
+{
+	struct dwc3_ep			*dep = to_dwc3_ep(ep);
+	struct dwc3			*dwc = dep->dwc;
+
+	unsigned long			flags;
+
+	int				ret;
+
+	spin_lock_irqsave(&dwc->lock, flags);
+
+	if (usb_endpoint_xfer_isoc(dep->desc)) {
+		dev_err(dwc->dev, "%s is of Isochronous type\n", dep->name);
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = __dwc3_gadget_ep_set_halt(dep, value);
 out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
