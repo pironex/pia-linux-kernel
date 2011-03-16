@@ -172,6 +172,15 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 	return ret;
 }
 
+static void dwc3_ep0_stall_and_restart(struct dwc3 *dwc)
+{
+	/* stall is always issued on EP0 */
+	__dwc3_gadget_ep_set_halt(dwc->eps[0], 1);
+	dwc->eps[0]->flags &= ~DWC3_EP_STALL;
+	dwc->ep0state = EP0_IDLE;
+	dwc3_ep0_out_start(dwc, 0);
+}
+
 void dwc3_ep0_out_start(struct dwc3 *dwc, u32 epnum)
 {
 	struct dwc3_ep			*dep;
@@ -184,10 +193,11 @@ void dwc3_ep0_out_start(struct dwc3 *dwc, u32 epnum)
 
 	ret = dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr,
 			dep->endpoint.maxpacket);
-	if (ret < 0)
+	if (ret < 0) {
 		dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
 				sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
-	/* STALL on error? */
+		WARN_ON(1);
+	}
 }
 
 /*
@@ -215,9 +225,10 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->ctrl_req,
 			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
 
-	/* no dma mapping because it should write at all */
+	/* no dma mapping because it should not write at all */
 	ret = dwc3_ep0_start_trans(dwc, epnum, virt_to_phys(&dwc->ctrl_req), 0);
-	/* STALL on error? */
+	if (ret)
+		dwc3_ep0_stall_and_restart(dwc);
 }
 
 static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
@@ -284,7 +295,7 @@ static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 		return;
 
 err:
-	/* XXX stall ep0 */
+	dwc3_ep0_stall_and_restart(dwc);
 	return;
 }
 
@@ -311,8 +322,10 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 	r->request.actual += transfered;
 
 	if ((epnum & 1) && r->request.actual < r->request.length) {
-		/* STALL */
 		/* for some reason we did not get everything out */
+
+		dwc3_ep0_stall_and_restart(dwc);
+
 	} else {
 		/*
 		 * handle the case where we have to send a zero packet. This
