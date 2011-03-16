@@ -74,9 +74,15 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		 * (except the sate change) and returns with 0
 		 */
 		WARN_ON(1);
-		return -EINVAL;
+		return 0;
 		break;
 
+	case EP0_OUT_WAIT_GADGET:
+		dwc->ep0state = EP0_OUT_WAIT_NRDY;
+		WARN_ON(1);
+		return 0;
+
+		break;
 
 	case EP0_IN_DATA_PHASE:
 	case EP0_OUT_DATA_PHASE:
