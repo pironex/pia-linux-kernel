@@ -236,6 +236,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		dwc->ep0state = EP0_IN_WAIT_NRDY;
 		break;
 	case EP0_OUT_WAIT_GADGET:
+		dwc->ep0state = EP0_OUT_WAIT_NRDY;
 		break;
 	case EP0_IN_WAIT_NRDY:
 	case EP0_OUT_WAIT_NRDY:
