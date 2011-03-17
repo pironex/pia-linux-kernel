@@ -142,13 +142,13 @@ static void dwc3_free_trb_pool(struct dwc3_ep *dep)
 }
 
 /**
- * dwc3_init_endpoint - Initializes a HW endpoint
+ * __dwc3_gadget_ep_enable - Initializes a HW endpoint
  * @dep: endpoint to be initialized
  * @desc: USB Endpoint Descriptor
  *
  * Caller should take care of locking
  */
-static int dwc3_init_endpoint(struct dwc3_ep *dep,
+static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 		const struct usb_endpoint_descriptor *desc)
 {
 	struct dwc3_gadget_ep_cmd_params params;
@@ -243,12 +243,12 @@ err0:
 }
 
 /**
- * dwc3_disable_endpoint - Disables a HW endpoint
+ * __dwc3_gadget_ep_disable - Disables a HW endpoint
  * @dep: the endpoint to disable
  *
  * Caller should take care of locking
  */
-static int dwc3_disable_endpoint(struct dwc3_ep *dep)
+static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 {
 	struct dwc3_gadget_ep_cmd_params params;
 
@@ -344,7 +344,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	dwc = dep->dwc;
 
 	spin_lock_irqsave(&dwc->lock, flags);
-	ret = dwc3_init_endpoint(dep, desc);
+	ret = __dwc3_gadget_ep_enable(dep, desc);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
@@ -361,7 +361,7 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 
 	dep = to_dwc3_ep(ep);
 
-	return dwc3_disable_endpoint(dep);
+	return __dwc3_gadget_ep_disable(dep);
 }
 
 static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
@@ -1281,14 +1281,14 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	dwc3_update_ram_clk_sel(dwc, speed);
 
 	dep = dwc->eps[0];
-	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return;
 	}
 
 	dep = dwc->eps[1];
-	ret = dwc3_init_endpoint(dep, &dwc3_gadget_ep0_desc);
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
 		return;
@@ -1524,7 +1524,7 @@ void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
 	free_irq(irq, dwc);
 
 	for (i = 0; i < ARRAY_SIZE(dwc->eps); i++)
-		dwc3_disable_endpoint(dwc->eps[i]);
+		__dwc3_gadget_ep_disable(dwc->eps[i]);
 
 	dwc3_gadget_free_endpoints(dwc);
 
