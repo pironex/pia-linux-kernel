@@ -603,6 +603,13 @@ config USB_GADGET_DUALSPEED
 	  Means that gadget drivers should include extra descriptors
 	  and code to handle dual-speed controllers.
 
+config USB_GADGET_SUPERSPEED
+	bool
+	depends on USB_GADGET
+	help
+	  Means the gadget drivers should include extra descriptors
+	  and code to handle SuperSpeed Peripheral Controllers.
+
 #
 # USB Gadget Drivers
 #
