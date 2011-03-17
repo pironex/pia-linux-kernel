@@ -1,7 +1,7 @@
 /**
  * core.c - DesignWare USB3 DRD Controller Core file
  *
- * Copyright (C) 2010 Texas Instruments Incorporated - http://www.ti.com
+ * Copyright (C) 2010-2011 Texas Instruments Incorporated - http://www.ti.com
  * Author: Felipe Balbi <balbi@ti.com>
  *
  * This program is free software: you can redistribute it and/or modify
