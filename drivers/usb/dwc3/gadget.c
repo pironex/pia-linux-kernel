@@ -160,7 +160,8 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 	int			ret = -ENOMEM;
 
 	if (dep->flags & DWC3_EP_ENABLED) {
-		WARN_ONCE(true, "%s is already enabled\n", dep->name);
+		dev_WARN_ONCE(dwc->dev, true, "%s is already enabled\n",
+				dep->name);
 		return 0;
 	}
 
@@ -258,7 +259,8 @@ static int dwc3_disable_endpoint(struct dwc3_ep *dep)
 	int			ret = -ENOMEM;
 
 	if (!(dep->flags & DWC3_EP_ENABLED)) {
-		WARN_ONCE(true, "%s is already disabled\n", dep->name);
+		dev_WARN_ONCE(dwc->dev, true, "%s is already disabled\n",
+				dep->name);
 		return 0;
 	}
 
