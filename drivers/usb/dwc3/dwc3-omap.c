@@ -131,7 +131,7 @@ static int __devexit dwc3_omap_remove(struct platform_device *pdev)
 
 static struct platform_driver dwc3_omap_driver = {
 	.probe		= dwc3_omap_probe,
-	.remove		= __exit_p(dwc3_omap_remove),
+	.remove		= __devexit_p(dwc3_omap_remove),
 	.driver		= {
 		.name	= "dwc3-omap",
 		.pm	= DEV_PM_OPS,
