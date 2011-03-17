@@ -116,7 +116,7 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	return 0;
 }
 
-static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
+static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 {
 	if (dep->trb_pool)
 		return 0;
@@ -135,7 +135,7 @@ static int dwc_alloc_trb_pool(struct dwc3_ep *dep)
 	return 0;
 }
 
-static void dwc_free_trb_pool(struct dwc3_ep *dep)
+static void dwc3_free_trb_pool(struct dwc3_ep *dep)
 {
 	kfree(dep->trb_pool);
 	dep->trb_pool = NULL;
@@ -165,7 +165,7 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 		return 0;
 	}
 
-	if (dwc_alloc_trb_pool(dep))
+	if (dwc3_alloc_trb_pool(dep))
 		goto err0;
 
 	memset(&params, 0x00, sizeof(params));
@@ -236,7 +236,7 @@ static int dwc3_init_endpoint(struct dwc3_ep *dep,
 	return 0;
 
 err1:
-	dwc_free_trb_pool(dep);
+	dwc3_free_trb_pool(dep);
 
 err0:
 	return ret;
@@ -302,7 +302,7 @@ static int dwc3_disable_endpoint(struct dwc3_ep *dep)
 	dep->type = 0;
 	dep->flags &= ~DWC3_EP_ENABLED;
 
-	dwc_free_trb_pool(dep);
+	dwc3_free_trb_pool(dep);
 
 	return 0;
 }
