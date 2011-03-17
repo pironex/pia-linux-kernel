@@ -16,11 +16,6 @@ config USB_DWC3_DEBUG
 	help
 	  Say Y here to enable debugging messages on DWC3 Driver.
 
-config USB_DWC3_PIO
-	bool "Disable DMA Support"
-	help
-	  Say Y here to disable DMA support on DWC3 Driver.
-
 choice
 	prompt "Platform Glue Layer"
 
