@@ -524,16 +524,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
 
-	switch (usb_endpoint_type(dep->desc)) {
-	case USB_ENDPOINT_XFER_CONTROL:
-	case USB_ENDPOINT_XFER_ISOC:
-	case USB_ENDPOINT_XFER_BULK:
-	case USB_ENDPOINT_XFER_INT:
-		break;
-	default:
-		return -EINVAL;
-	}
-
 	dwc3_map_buffer_to_dma(req);
 	dwc3_gadget_add_request(dep, req);
 
