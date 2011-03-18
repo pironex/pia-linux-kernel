@@ -312,6 +312,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	struct dwc3_request	*r;
+	struct usb_request	*ur;
 	struct dwc3_trb		*trb;
 	struct dwc3_ep		*dep;
 	u32			transfered;
@@ -319,18 +320,20 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
+
 	r = list_first_entry(&dep->request_list, struct dwc3_request, list);
+	ur = &r->request;
 	trb = &dwc->ep0_trb;
 
-	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr, sizeof(dwc->ctrl_req),
-			DMA_FROM_DEVICE);
+	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
+			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
 	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb),
 			DMA_BIDIRECTIONAL);
 
-	transfered = r->request.length - trb->length;
-	r->request.actual += transfered;
+	transfered = ur->length - trb->length;
+	ur->actual += transfered;
 
-	if ((epnum & 1) && r->request.actual < r->request.length) {
+	if ((epnum & 1) && ur->actual < ur->length) {
 		/* for some reason we did not get everything out */
 
 		dwc3_ep0_stall_and_restart(dwc);
