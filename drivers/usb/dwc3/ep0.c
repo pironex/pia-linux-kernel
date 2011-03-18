@@ -270,6 +270,109 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 	}
 }
 
+static struct dwc3_ep *dwc3_wIndex_to_dep(struct dwc3 *dwc, __le16 wIndex_le)
+{
+	struct dwc3_ep		*dep;
+	u32			windex = le16_to_cpu(wIndex_le);
+	u32			epnum;
+
+	epnum = (windex & USB_ENDPOINT_NUMBER_MASK) << 1;
+	if ((windex & USB_ENDPOINT_DIR_MASK) == USB_DIR_IN)
+		epnum |= 1;
+
+	dep = dwc->eps[epnum];
+	if (dep->flags & DWC3_EP_ENABLED)
+		return dep;
+	return NULL;
+}
+
+static void dwc3_ep0_send_status_response(struct dwc3 *dwc)
+{
+	u32 epnum;
+
+	if (dwc->ep0state == EP0_IN_DATA_PHASE)
+		epnum = 1;
+	else
+		epnum = 0;
+
+	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->setup_buf,
+			dwc->ep0_usb_req.length, DMA_BIDIRECTIONAL);
+	dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr,
+			dwc->ep0_usb_req.length);
+	dwc->ep0_status_pending = 1;
+}
+
+/*
+ * ch 9.4.5
+ */
+static int dwc3_ep0_handle_status(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	struct dwc3_ep		*dep;
+	u32			recip;
+	u16			usb_status = 0;
+	__le16			*response_pkt;
+
+	recip = ctrl->bRequestType & USB_RECIP_MASK;
+	switch (recip) {
+	case USB_RECIP_DEVICE:
+		/*
+		 * We are self-powered. U1/U2/LTM will be set later
+		 * once we handle this states. RemoteWakeup is 0 on SS
+		 */
+		usb_status |= dwc->is_selfpowered << USB_DEVICE_SELF_POWERED;
+		break;
+
+	case USB_RECIP_INTERFACE:
+		/*
+		 * Function Remote Wake Capable	D0
+		 * Function Remote Wakeup	D1
+		 */
+		break;
+
+	case USB_RECIP_ENDPOINT:
+		dep = dwc3_wIndex_to_dep(dwc, ctrl->wIndex);
+		if (!dep)
+		       return -EINVAL;
+
+		if (dep->flags & DWC3_EP_STALL)
+			usb_status = 1 << USB_ENDPOINT_HALT;
+		break;
+	default:
+		return -EINVAL;
+	};
+	response_pkt = (__le16*)&dwc->setup_buf;
+	*response_pkt = cpu_to_le16(usb_status);
+	dwc->ep0_usb_req.length = sizeof(*response_pkt);
+	dwc3_ep0_send_status_response(dwc);
+	return 0;
+}
+
+static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	int ret;
+
+	switch (ctrl->bRequest) {
+	case USB_REQ_GET_STATUS:
+		ret = dwc3_ep0_handle_status(dwc, ctrl);
+		break;
+	case USB_REQ_CLEAR_FEATURE:
+	case USB_REQ_SET_FEATURE:
+	case USB_REQ_SET_ADDRESS:
+	case USB_REQ_GET_DESCRIPTOR:
+	case USB_REQ_SET_DESCRIPTOR:
+	case USB_REQ_GET_CONFIGURATION:
+	case USB_REQ_SET_CONFIGURATION:
+	case USB_REQ_GET_INTERFACE:
+	case USB_REQ_SET_INTERFACE:
+	case USB_REQ_SYNCH_FRAME:
+	default:
+		ret = -EINVAL;
+		break;
+	};
+
+	return ret;
+}
+
 static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
@@ -297,9 +400,15 @@ static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 			dwc->ep0state = EP0_OUT_DATA_PHASE;
 	}
 
-	spin_unlock(&dwc->lock);
-	ret = dwc->gadget_driver->setup(&dwc->gadget, ctrl);
-	spin_lock(&dwc->lock);
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD) {
+		ret = dwc3_ep0_std_request(dwc, ctrl);
+
+	} else {
+
+		spin_unlock(&dwc->lock);
+		ret = dwc->gadget_driver->setup(&dwc->gadget, ctrl);
+		spin_lock(&dwc->lock);
+	}
 	if (ret >= 0)
 		return;
 
@@ -321,12 +430,17 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
 
-	r = list_first_entry(&dep->request_list, struct dwc3_request, list);
-	ur = &r->request;
-	trb = &dwc->ep0_trb;
+	if (!dwc->ep0_status_pending) {
+		r = list_first_entry(&dep->request_list, struct dwc3_request, list);
+		ur = &r->request;
+	} else {
+		ur = &dwc->ep0_usb_req;
+		dwc->ep0_status_pending = 0;
+	}
 
+	trb = &dwc->ep0_trb;
 	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
-			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
+			sizeof(dwc->ctrl_req), DMA_BIDIRECTIONAL);
 	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb),
 			DMA_BIDIRECTIONAL);
 

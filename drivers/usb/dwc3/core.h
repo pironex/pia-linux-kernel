@@ -389,6 +389,9 @@ struct dwc3_trb {
 	unsigned		pcm1:2;
 	unsigned		reserved27_26:2;
 	unsigned		trbsts:4;
+#define DWC3_TRB_STS_OKAY			0
+#define DWC3_TRB_STS_MISSED_ISOC		1
+#define DWC3_TRB_STS_SETUP_PENDING		2
 
 	unsigned		hwo:1;
 	unsigned		lst:1;
@@ -407,8 +410,11 @@ struct dwc3_trb {
  * struct dwc3 - representation of our controller
  * ctrl_req: usb control request which is used for ep0
  * ep0_trb: trb which is used for the ctrl_req
+ * setup_buf: used while precessing STD USB requests
  * ctrl_req_addr: dma address of ctrl_req
  * ep0_trb: dma address of ep0_trb
+ * ep0_usb_req: dummy req used while handling STD USB requests
+ * setup_buf_addr: dma address of setup_buf
  * @lock: for synchronizing
  * @dev: pointer to our struct device
  * @event_buffer_list: a list of event buffers
@@ -425,6 +431,7 @@ struct dwc3_trb {
  * @revision: revision register contents
  * @is_selfpowered: true when we are selfpowered
  * @three_stage_setup: set if we perform a three phase setup
+ * @ep0_status_pending: ep0 status response without a req is pending
  * @ep0state: state of endpoint zero
  * @link_state: link state
  * @speed: device speed (super, high, full, low)
@@ -433,8 +440,11 @@ struct dwc3_trb {
 struct dwc3 {
 	struct usb_ctrlrequest	ctrl_req __aligned(16);
 	struct dwc3_trb		ep0_trb __aligned(16);
+	u8			setup_buf[2] __aligned(16);
 	dma_addr_t		ctrl_req_addr;
 	dma_addr_t		ep0_trb_addr;
+	dma_addr_t		setup_buf_addr;;
+	struct usb_request	ep0_usb_req;
 	/* device lock */
 	spinlock_t		lock;
 	struct device		*dev;
@@ -459,6 +469,7 @@ struct dwc3 {
 
 	unsigned		is_selfpowered:1;
 	unsigned		three_stage_setup:1;
+	unsigned		ep0_status_pending:1;
 
 	enum dwc3_ep0_state	ep0state;
 	enum dwc3_link_state	link_state;
