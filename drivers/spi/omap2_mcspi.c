@@ -552,7 +552,7 @@ omap2_mcspi_txrx_pio(struct spi_device *spi, struct spi_transfer *xfer)
 				dev_vdbg(&spi->dev, "read-%d %02x\n",
 						word_len, *(rx - 1));
 			}
-		} while (c > (word_len>>3));
+		} while (c);
 	} else if (word_len <= 16) {
 		u16		*rx;
 		const u16	*tx;
@@ -599,7 +599,7 @@ omap2_mcspi_txrx_pio(struct spi_device *spi, struct spi_transfer *xfer)
 				dev_vdbg(&spi->dev, "read-%d %04x\n",
 						word_len, *(rx - 1));
 			}
-		} while (c > (word_len>>3));
+		} while (c >= 2);
 	} else if (word_len <= 32) {
 		u32		*rx;
 		const u32	*tx;
@@ -646,7 +646,7 @@ omap2_mcspi_txrx_pio(struct spi_device *spi, struct spi_transfer *xfer)
 				dev_vdbg(&spi->dev, "read-%d %08x\n",
 						word_len, *(rx - 1));
 			}
-		} while (c > (word_len>>3));
+		} while (c >= 4);
 	}
 
 	/* for TX_ONLY mode, be sure all words have shifted out */
