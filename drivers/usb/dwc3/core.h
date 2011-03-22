@@ -359,7 +359,7 @@ enum dwc3_link_state {
  *	1 = missed isoc
  *	2 = setup pending
  * @hwo: hardware owner of descriptor
- * @lst: last trm
+ * @lst: last trb
  * @chn: chain buffers
  * @csp: continue on short packets (only supported on isoc eps)
  * @trbctl: trb control
