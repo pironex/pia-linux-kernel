@@ -700,6 +700,7 @@ static const struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
 	.bEndpointAddress = 0,
 	.bmAttributes	= USB_ENDPOINT_XFER_CONTROL,
 	.bInterval	= 1, /* What value to put here ? */
+	.wMaxPacketSize	= 512,	/* using SuperSpeed as default */
 };
 
 static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
