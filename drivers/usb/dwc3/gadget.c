@@ -234,7 +234,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 
 	memset(&params, 0x00, sizeof(params));
 	params.param0.depxfercfg.number_xfer_resources = 1;
-	ret = dwc3_send_gadget_ep_cmd(dwc, 0,
+	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
 		goto err1;
