@@ -353,6 +353,7 @@ config USB_PXA_U2O
 
 config USB_GADGET_DWC3
 	boolean "DesignWare USB3.0 (DRD) Controller"
+	depends on USB_DWC3
 	select USB_GADGET_DUALSPEED
 	select USB_GADGET_SUPERSPEED
 	help
@@ -362,10 +363,10 @@ config USB_GADGET_DWC3
 	  the OMAP5 series of processors. More information about the OMAP5
 	  version of this controller, refer to http://www.ti.com/omap5.
 
-config USB_DWC3
+config USB_DWC3_GADGET
 	tristate
 	depends on USB_GADGET_DWC3
-	default y if USB_DWC3
+	default USB_GADGET
 	select USB_GADGET_SELECTED
 
 #
