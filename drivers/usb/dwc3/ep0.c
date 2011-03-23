@@ -366,6 +366,48 @@ static int dwc3_ep0_handle_status(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl
 	return 0;
 }
 
+static int dwc3_ep0_set_address(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	int ret = 0;
+	u32 addr;
+	u32 reg;
+
+	addr = le16_to_cpu(ctrl->wValue);
+	if (addr > 127)
+		return -EINVAL;
+
+	switch (dwc->dev_state) {
+	case DWC3_DEFAULT_STATE:
+		/*
+		 * Not sure if we should program DevAddr now or later
+		 */
+		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg &= ~(DWC3_DCFG_DEVADDR(DWC3_DCFG_DAVADDR_MASK));
+		reg |= addr;
+		dwc3_writel(dwc->device, DWC3_DCTL, reg);
+		if (addr)
+			dwc->dev_state = DWC3_ADDRESS_STATE;
+		break;
+
+	case DWC3_ADDRESS_STATE:
+		if (!addr) {
+			dwc->dev_state = DWC3_DEFAULT_STATE;
+		} else {
+			reg = dwc3_readl(dwc->device, DWC3_DCTL);
+			reg &= ~(DWC3_DCFG_DEVADDR(DWC3_DCFG_DAVADDR_MASK));
+			reg |= addr;
+			dwc3_writel(dwc->device, DWC3_DCTL, reg);
+		}
+		break;
+
+	case DWC3_CONFIGURED_STATE:
+		ret = -EINVAL;
+		break;
+	}
+	dwc->ep0state = EP0_IN_WAIT_NRDY;
+	return ret;
+}
+
 static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 {
 	int ret;
@@ -377,6 +419,8 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	case USB_REQ_CLEAR_FEATURE:
 	case USB_REQ_SET_FEATURE:
 	case USB_REQ_SET_ADDRESS:
+		ret = dwc3_ep0_set_address(dwc, ctrl);
+		break;
 	case USB_REQ_GET_DESCRIPTOR:
 	case USB_REQ_SET_DESCRIPTOR:
 	case USB_REQ_GET_CONFIGURATION:

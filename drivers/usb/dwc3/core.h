@@ -368,6 +368,12 @@ enum dwc3_link_state {
 	DWC3_LINK_STATE_MASK		= 0x0f,
 };
 
+enum dwc3_device_state {
+	DWC3_DEFAULT_STATE,
+	DWC3_ADDRESS_STATE,
+	DWC3_CONFIGURED_STATE,
+};
+
 /**
  * struct dwc3_trb - transfer request block
  * @bpl: lower 32bit of the buffer
@@ -487,6 +493,7 @@ struct dwc3 {
 
 	enum dwc3_ep0_state	ep0state;
 	enum dwc3_link_state	link_state;
+	enum dwc3_device_state	dev_state;
 
 	u8			speed;
 	void			*mem;
