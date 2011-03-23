@@ -155,6 +155,7 @@
 
 /* Device Configuration Register */
 #define DWC3_DCFG_DEVADDR(addr)	((addr) << 3)
+#define DWC3_DCFG_DAVADDR_MASK	DWC3_DCFG_DEVADDR(((1 << 7) - 1))
 
 #define DWC3_DCFG_SUPERSPEED	(4 << 0)
 #define DWC3_DCFG_HIGHSPEED	(0 << 0)
