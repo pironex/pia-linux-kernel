@@ -366,89 +366,8 @@ static int dwc3_ep0_handle_status(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl
 	return 0;
 }
 
-static int dwc3_ep0_clear_feature(struct dwc3 *dwc,
-		struct usb_ctrlrequest *ctrl)
-{
-	struct dwc3_ep		*dep;
-	u32			recip;
-	u32			wValue;
-	u32			wIndex;
-	int			ret;
-
-	wValue = le16_to_cpu(ctrl->wValue);
-	recip = ctrl->bRequestType & USB_RECIP_MASK;
-	switch (recip) {
-	case USB_RECIP_DEVICE:
-
-		/*
-		 * 9.4.1 says only only for SS, in AddressState only for
-		 * default control pipe
-		 */
-		switch (wValue) {
-		case USB_DEVICE_U1_ENABLE:
-		case USB_DEVICE_U2_ENABLE:
-		case USB_DEVICE_LTM_ENABLE:
-			if (dwc->dev_state != DWC3_CONFIGURED_STATE)
-				return -EINVAL;
-			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
-				return -EINVAL;
-		}
-
-		/* XXX add U[12] & LTM */
-		switch (wValue) {
-		case USB_DEVICE_REMOTE_WAKEUP:
-			break;
-		case USB_DEVICE_U1_ENABLE:
-			break;
-		case USB_DEVICE_U2_ENABLE:
-			break;
-		case USB_DEVICE_LTM_ENABLE:
-			break;
-		default:
-			return -EINVAL;
-		}
-		break;
-
-	case USB_RECIP_INTERFACE:
-		switch (wValue) {
-		case USB_INTRF_FUNC_SUSPEND:
-			wIndex = le16_to_cpu(ctrl->wIndex);
-			if (wIndex & USB_INTRF_FUNC_SUSPEND_LP)
-				/* XXX disable Low power suspend */
-				;
-			if (wIndex & USB_INTRF_FUNC_SUSPEND_RW)
-				/* XXX disable remote wakeup */
-				;
-			break;
-		default:
-			return -EINVAL;
-		}
-		break;
-
-	case USB_RECIP_ENDPOINT:
-		switch (wValue) {
-		case USB_ENDPOINT_HALT:
-
-			dep =  dwc3_wIndex_to_dep(dwc, ctrl->wIndex);
-			if (!dep)
-				return -EINVAL;
-			ret = __dwc3_gadget_ep_set_halt(dep, 0);
-			if (ret)
-				return -EINVAL;
-			break;
-		default:
-			return -EINVAL;
-		}
-		break;
-
-	default:
-		return -EINVAL;
-	};
-	dwc->ep0state = EP0_IN_WAIT_NRDY;
-	return 0;
-}
-
-static int dwc3_ep0_set_feature(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
+		struct usb_ctrlrequest *ctrl, int set)
 {
 	struct dwc3_ep		*dep;
 	u32			recip;
@@ -513,7 +432,7 @@ static int dwc3_ep0_set_feature(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 			dep =  dwc3_wIndex_to_dep(dwc, ctrl->wIndex);
 			if (!dep)
 				return -EINVAL;
-			ret = __dwc3_gadget_ep_set_halt(dep, 1);
+			ret = __dwc3_gadget_ep_set_halt(dep, set);
 			if (ret)
 				return -EINVAL;
 			break;
@@ -619,10 +538,10 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		ret = dwc3_ep0_handle_status(dwc, ctrl);
 		break;
 	case USB_REQ_CLEAR_FEATURE:
-		ret = dwc3_ep0_clear_feature(dwc, ctrl);
+		ret = dwc3_ep0_handle_feature(dwc, ctrl, 0);
 		break;
 	case USB_REQ_SET_FEATURE:
-		ret = dwc3_ep0_set_feature(dwc, ctrl);
+		ret = dwc3_ep0_handle_feature(dwc, ctrl, 1);
 		break;
 	case USB_REQ_SET_ADDRESS:
 		ret = dwc3_ep0_set_address(dwc, ctrl);
