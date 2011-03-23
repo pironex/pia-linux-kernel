@@ -459,17 +459,11 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_ADDRESS:
 		ret = dwc3_ep0_set_address(dwc, ctrl);
 		break;
-	case USB_REQ_GET_DESCRIPTOR:
-	case USB_REQ_SET_DESCRIPTOR:
-	case USB_REQ_GET_CONFIGURATION:
 	case USB_REQ_SET_CONFIGURATION:
 		ret = dwc3_ep0_set_config(dwc, ctrl);
 		break;
-	case USB_REQ_GET_INTERFACE:
-	case USB_REQ_SET_INTERFACE:
-	case USB_REQ_SYNCH_FRAME:
 	default:
-		ret = -EINVAL;
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
 		break;
 	};
 
