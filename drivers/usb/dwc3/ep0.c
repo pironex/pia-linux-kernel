@@ -408,6 +408,44 @@ static int dwc3_ep0_set_address(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	return ret;
 }
 
+static int dwc3_ep0_delegate_req(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	int ret;
+
+	spin_unlock(&dwc->lock);
+	ret = dwc->gadget_driver->setup(&dwc->gadget, ctrl);
+	spin_lock(&dwc->lock);
+	return ret;
+}
+
+static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	u32 cfg;
+	int ret;
+
+	cfg = le16_to_cpu(ctrl->wValue);
+
+	switch (dwc->dev_state) {
+	case DWC3_DEFAULT_STATE:
+		return -EINVAL;
+		break;
+
+	case DWC3_ADDRESS_STATE:
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
+		/* if the cfg matches and the cfg is non zero */
+		if (!ret && cfg)
+			dwc->dev_state = DWC3_CONFIGURED_STATE;
+		break;
+
+	case DWC3_CONFIGURED_STATE:
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
+		if (!cfg)
+			dwc->dev_state = DWC3_ADDRESS_STATE;
+		break;
+	}
+	return 0;
+}
+
 static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 {
 	int ret;
@@ -425,6 +463,8 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_DESCRIPTOR:
 	case USB_REQ_GET_CONFIGURATION:
 	case USB_REQ_SET_CONFIGURATION:
+		ret = dwc3_ep0_set_config(dwc, ctrl);
+		break;
 	case USB_REQ_GET_INTERFACE:
 	case USB_REQ_SET_INTERFACE:
 	case USB_REQ_SYNCH_FRAME:
@@ -463,15 +503,11 @@ static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 			dwc->ep0state = EP0_OUT_DATA_PHASE;
 	}
 
-	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD) {
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
 		ret = dwc3_ep0_std_request(dwc, ctrl);
+	else
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
 
-	} else {
-
-		spin_unlock(&dwc->lock);
-		ret = dwc->gadget_driver->setup(&dwc->gadget, ctrl);
-		spin_lock(&dwc->lock);
-	}
 	if (ret >= 0)
 		return;
 
