@@ -147,7 +147,7 @@ static struct pci_driver dwc3_haps_driver = {
 };
 
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("Dual BSD/GPL");
 MODULE_DESCRIPTION("DesignWare USB3 HAPS Glue Layer");
 
 static int __init dwc3_haps_init(void)
