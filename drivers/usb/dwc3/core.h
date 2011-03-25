@@ -444,9 +444,6 @@ struct dwc3_trb {
  * @global: global registers
  * @device: device registers
  * @otg: OTG registers
- * @ram0: for debug purposes, access to internal RAM
- * @ram1: for debug purposes, access to internal RAM
- * @ram2: for debug purposes, access to internal RAM
  * @irq: IRQ number
  * @revision: revision register contents
  * @is_selfpowered: true when we are selfpowered
@@ -479,9 +476,6 @@ struct dwc3 {
 	void __iomem		*global;
 	void __iomem		*device;
 	void __iomem		*otg;
-	void __iomem		*ram0;
-	void __iomem		*ram1;
-	void __iomem		*ram2;
 
 	int			irq;
 
