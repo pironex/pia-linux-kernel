@@ -302,6 +302,7 @@ static struct dwc3_ep *dwc3_wIndex_to_dep(struct dwc3 *dwc, __le16 wIndex_le)
 	dep = dwc->eps[epnum];
 	if (dep->flags & DWC3_EP_ENABLED)
 		return dep;
+
 	return NULL;
 }
 
@@ -359,10 +360,12 @@ static int dwc3_ep0_handle_status(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl
 	default:
 		return -EINVAL;
 	};
+
 	response_pkt = (__le16*)&dwc->setup_buf;
 	*response_pkt = cpu_to_le16(usb_status);
 	dwc->ep0_usb_req.length = sizeof(*response_pkt);
 	dwc3_ep0_send_status_response(dwc);
+
 	return 0;
 }
 
@@ -446,6 +449,7 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 	};
 
 	dwc->ep0state = EP0_IN_WAIT_NRDY;
+
 	return 0;
 }
 
@@ -594,7 +598,6 @@ static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 
 err:
 	dwc3_ep0_stall_and_restart(dwc);
-	return;
 }
 
 static void dwc3_ep0_complete_data(struct dwc3 *dwc,
