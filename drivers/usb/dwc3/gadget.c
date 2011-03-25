@@ -355,7 +355,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	}
 
 	if (!desc->wMaxPacketSize) {
-		pr_debug("dwc3: missing bMaxPacketSize\n");
+		pr_debug("dwc3: missing wMaxPacketSize\n");
 		return -EINVAL;
 	}
 
