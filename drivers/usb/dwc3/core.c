@@ -290,23 +290,23 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	dwc = PTR_ALIGN(mem, DWC3_ALIGN_MASK + 1);
 	dwc->mem = mem;
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xhci");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'xhci' resource\n");
-		goto err1;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err1;
-	}
-
-	dwc->xhci	= base;
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "global");
 	if (!res) {
 		dev_err(&pdev->dev, "missing 'global' resource\n");
+		goto err1;
+	}
+
+	base = ioremap(res->start, resource_size(res));
+	if (!base) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		goto err1;
+	}
+
+	dwc->global	= base;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xhci");
+	if (!res) {
+		dev_err(&pdev->dev, "missing 'xhci' resource\n");
 		goto err2;
 	}
 
@@ -316,7 +316,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		goto err2;
 	}
 
-	dwc->global	= base;
+	dwc->xhci	= base;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "device");
 	if (!res) {
@@ -381,10 +381,10 @@ err4:
 	iounmap(dwc->device);
 
 err3:
-	iounmap(dwc->global);
+	iounmap(dwc->xhci);
 
 err2:
-	iounmap(dwc->xhci);
+	iounmap(dwc->global);
 
 err1:
 	kfree(dwc->mem);
