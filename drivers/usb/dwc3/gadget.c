@@ -477,8 +477,8 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 			break;
 		default:
 			/*
-			 * This is only possible with faulty memor because we
-			 * checked it allready :)
+			 * This is only possible with faulty memory because we
+			 * checked it already :)
 			 */
 			BUG();
 		}
