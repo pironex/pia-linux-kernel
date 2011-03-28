@@ -1065,6 +1065,12 @@ static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
 {
 	u32 uf;
 
+	if (!dep->request_count) {
+		dev_vdbg(dwc->dev, "ISOC ep %s run out for requests.\n",
+			dep->name);
+		return;
+	}
+
 	if (event_status) {
 		u32 mask;
 
