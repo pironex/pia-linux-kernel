@@ -204,6 +204,14 @@ static inline void dwc3_gadget_del_request(struct dwc3_request *req)
 	list_del(&req->list);
 }
 
+static inline void dwc3_gadget_move_request_queued(struct dwc3_request *req)
+{
+	struct dwc3_ep		*dep = req->dep;
+
+	dep->request_count--;
+	list_move_tail(&req->list, &dep->req_queued);
+}
+
 #ifdef CONFIG_USB_GADGET_DWC3
 int dwc3_gadget_init(struct dwc3 *dwc);
 void dwc3_gadget_exit(struct dwc3 *dwc);

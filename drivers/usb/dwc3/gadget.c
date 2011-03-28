@@ -94,10 +94,12 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 {
 	struct dwc3			*dwc = dep->dwc;
 
-	if (req->queued)
+	if (req->queued) {
 		dep->busy_slot++;
-
-	dwc3_gadget_del_request(req);
+		list_del(&req->list);
+	} else {
+		 dwc3_gadget_del_request(req);
+	}
 
 	if (req->request.status == -EINPROGRESS)
 		req->request.status = status;
@@ -422,7 +424,7 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
  */
 static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 {
-	struct dwc3_request	*req;
+	struct dwc3_request	*req, *n;
 	struct dwc3_trb		*trb;
 	struct dwc3		*dwc	= dep->dwc;
 	u32			trbs_left;
@@ -444,7 +446,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		trbs_left = DWC3_TRB_NUM;
 	}
 
-	list_for_each_entry(req, &dep->request_list, list) {
+	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned int last_one = 0;
 
 		trb = &dep->trb_pool[dep->free_slot & (DWC3_TRB_NUM - 1)];
@@ -499,6 +501,8 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
 				DMA_BIDIRECTIONAL);
 		trb->hwo = true;
+
+		dwc3_gadget_move_request_queued(req);
 
 		if (last_one)
 			break;
@@ -953,6 +957,7 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 					&dwc->gadget.ep_list);
 		}
 		INIT_LIST_HEAD(&dep->request_list);
+		INIT_LIST_HEAD(&dep->req_queued);
 	}
 
 	return 0;
@@ -988,13 +993,12 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	int			ret;
 	unsigned int		count;
 
-	req = next_request(dep);
-
-	if (!req) {
+	if (list_empty(&dep->req_queued)) {
 		dev_err(dwc->dev, "no transfer to complete on %s ?\n",
 				dep->name);
 		return;
 	}
+	req = list_first_entry(&dep->req_queued, struct dwc3_request, list);
 
 	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
 			DMA_BIDIRECTIONAL);
