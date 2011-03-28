@@ -411,7 +411,16 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 	kfree(req);
 }
 
-static void dwc3_prepare_trbs(struct dwc3_ep *dep)
+/*
+ * dwc3_prepare_trbs - setup TRBs from requests
+ * @dep: endpoint for which requests are being prepared
+ * @starting: true if the endpoint is idle and no requests are queued.
+ *
+ * The functions goes through the requests list and setups TRBs for the
+ * transfers. The functions returns once there are not more TRBs available or
+ * it run out of requests.
+ */
+static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 {
 	struct dwc3_request	*req;
 	struct dwc3_trb		*trb;
@@ -425,12 +434,15 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep)
 	req_left = dep->request_count;
 	trbs_left = (dep->busy_slot - dep->free_slot) & (DWC3_TRB_NUM - 1);
 	/*
-	 * if busy & slot are equal than it is either full or empty. Currently
-	 * we assume that it is empty as we are only called on IOC or on first
-	 * request.
+	 * if busy & slot are equal than it is either full or empty. If we are
+	 * starting to proceed requests then we are empty. Otherwise we ar
+	 * full and don't do anything
 	 */
-	if (!trbs_left)
+	if (!trbs_left) {
+		if (!starting)
+			return;
 		trbs_left = DWC3_TRB_NUM;
+	}
 
 	list_for_each_entry(req, &dep->request_list, list) {
 		unsigned int last_one = 0;
@@ -500,7 +512,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 	int				ret;
 	u32				cmd;
 
-	dwc3_prepare_trbs(dep);
+	dwc3_prepare_trbs(dep, true);
 	req = next_request(dep);
 
 	memset(&params, 0, sizeof(params));
@@ -524,12 +536,6 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 
 	dep->res_trans_idx = dwc3_gadget_ep_get_transfer_index(dwc,
 			dep->number);
-	return 0;
-}
-
-static int __dwc3_gadget_update_transfer(struct dwc3_ep *dep)
-{
-	/* TODO */
 	return 0;
 }
 
@@ -559,7 +565,8 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req,
 	if (!(dep->flags & DWC3_EP_ISOC_RUNNING))
 		return 0;
 
-	return __dwc3_gadget_update_transfer(dep);
+	dwc3_prepare_trbs(dep, false);
+	return 0;
 }
 
 static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
