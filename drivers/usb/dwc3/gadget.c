@@ -464,7 +464,6 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		req->queued = 1;
 
 		trb->bpl = req->request.dma;
-		trb->hwo = true;
 		trb->lst = last_one;
 		trb->chn = !last_one;
 		trb->ioc = last_one;
@@ -499,6 +498,8 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 
 		req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
 				DMA_BIDIRECTIONAL);
+		trb->hwo = true;
+
 		if (last_one)
 			break;
 	}
