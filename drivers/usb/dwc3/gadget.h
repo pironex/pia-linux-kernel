@@ -190,6 +190,16 @@ static inline struct dwc3_request *next_request(struct dwc3_ep *dep)
 	return list_first_entry(list, struct dwc3_request, list);
 }
 
+static inline struct dwc3_request *next_queued_request(struct dwc3_ep *dep)
+{
+	struct list_head	*list = &dep->req_queued;
+
+	if (list_empty(list))
+		return NULL;
+
+	return list_first_entry(list, struct dwc3_request, list);
+}
+
 static inline void dwc3_gadget_add_request(struct dwc3_ep *dep,
 		struct dwc3_request *req)
 {
