@@ -4,7 +4,8 @@
  * Copyright (C) 2010-2011 Texas Instruments Incorporated - http://www.ti.com
  * All rights reserved.
  *
- * Author: Felipe Balbi <balbi@ti.com>
+ * Authors: Felipe Balbi <balbi@ti.com>,
+ *	    Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
