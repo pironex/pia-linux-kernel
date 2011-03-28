@@ -519,7 +519,7 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 	u32				cmd;
 
 	dwc3_prepare_trbs(dep, true);
-	req = next_request(dep);
+	req = next_request(&dep->request_list);
 
 	memset(&params, 0, sizeof(params));
 	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
@@ -994,7 +994,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	int			ret;
 	unsigned int		count;
 
-	req = next_queued_request(dep);
+	req = next_request(&dep->req_queued);
 	if (!req) {
 		dev_err(dwc->dev, "no transfer to complete on %s ?\n",
 				dep->name);
