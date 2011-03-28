@@ -380,7 +380,10 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 
 static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 {
-	struct dwc3_ep		*dep;
+	struct dwc3_ep			*dep;
+	struct dwc3			*dwc;
+	unsigned long			flags;
+	int				ret;
 
 	if (!ep) {
 		pr_debug("dwc3: invalid parameters\n");
@@ -389,7 +392,11 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 
 	dep = to_dwc3_ep(ep);
 
-	return __dwc3_gadget_ep_disable(dep);
+	spin_lock_irqsave(&dwc->lock, flags);
+	ret = __dwc3_gadget_ep_disable(dep);
+	spin_unlock_irqrestore(&dwc->lock, flags);
+
+	return ret;
 }
 
 static struct usb_request *dwc3_gadget_ep_alloc_request(struct usb_ep *ep,
