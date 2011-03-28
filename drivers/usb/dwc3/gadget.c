@@ -952,6 +952,7 @@ static int __init dwc3_gadget_init_endpoints(struct dwc3 *dwc)
 			list_add_tail(&dep->endpoint.ep_list,
 					&dwc->gadget.ep_list);
 		}
+		INIT_LIST_HEAD(&dep->request_list);
 	}
 
 	return 0;
