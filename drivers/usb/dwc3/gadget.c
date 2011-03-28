@@ -371,6 +371,23 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	dep = to_dwc3_ep(ep);
 	dwc = dep->dwc;
 
+	switch (desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) {
+	case USB_ENDPOINT_XFER_CONTROL:
+		strncat(dep->name, "-control", 8);
+		break;
+	case USB_ENDPOINT_XFER_ISOC:
+		strncat(dep->name, "-isoc", 5);
+		break;
+	case USB_ENDPOINT_XFER_BULK:
+		strncat(dep->name, "-bulk", 5);
+		break;
+	case USB_ENDPOINT_XFER_INT:
+		strncat(dep->name, "-int", 4);
+		break;
+	default:
+		dev_err(dwc->dev, "invalid endpoint transfer type\n");
+	}
+
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_enable(dep, desc);
 	spin_unlock_irqrestore(&dwc->lock, flags);
