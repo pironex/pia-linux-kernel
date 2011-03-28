@@ -1104,7 +1104,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 					dep->name);
 			return;
 		}
-		WARN_ON(dep->flags & DWC3_EP_ISOC_RUNNING);
+		dep->flags &= ~DWC3_EP_ISOC_RUNNING;
 		dwc3_gadget_start_isoc(dwc, dep, event->parameters);
 
 		break;
