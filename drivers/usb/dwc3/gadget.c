@@ -965,7 +965,7 @@ static void __devexit dwc3_gadget_free_endpoints(struct dwc3 *dwc)
 
 	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
 		dep = dwc->eps[epnum];
-		if (epnum != 0)
+		if (epnum != 0 && epnum != 1)
 			list_del(&dep->endpoint.ep_list);
 		kfree(dep);
 	}
