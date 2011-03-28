@@ -994,12 +994,12 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	int			ret;
 	unsigned int		count;
 
-	if (list_empty(&dep->req_queued)) {
+	req = next_queued_request(dep);
+	if (!req) {
 		dev_err(dwc->dev, "no transfer to complete on %s ?\n",
 				dep->name);
 		return;
 	}
-	req = list_first_entry(&dep->req_queued, struct dwc3_request, list);
 
 	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
 			DMA_BIDIRECTIONAL);
