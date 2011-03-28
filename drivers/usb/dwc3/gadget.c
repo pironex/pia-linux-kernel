@@ -140,11 +140,17 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 
 static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 {
-	if (dep->trb_pool)
+	if (dep->trb_pool) {
+		dev_WARN_ONCE(dep->dwc->dev, true,
+				"%s already has a TRB pool\n", dep->name);
 		return 0;
+	}
 
-	if (dep->number == 0 || dep->number == 1)
+	if (dep->number == 0 || dep->number == 1) {
+		dev_WARN_ONCE(dep->dwc->dev, true,
+				"%s doesn't need TRB pool\n", dep->name);
 		return 0;
+	}
 
 	dep->trb_pool = kzalloc(sizeof(struct dwc3_trb) * DWC3_TRB_NUM,
 			GFP_KERNEL);
