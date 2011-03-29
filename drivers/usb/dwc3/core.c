@@ -43,13 +43,13 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/interrupt.h>
-#include <linux/io.h>
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 
+#include "platform_data.h"
 #include "core.h"
 #include "gadget.h"
 #include "io.h"
@@ -272,12 +272,10 @@ static void dwc3_core_exit(struct dwc3 *dwc)
 
 static int __devinit dwc3_probe(struct platform_device *pdev)
 {
-	struct resource		*res;
-	struct dwc3		*dwc;
-	void __iomem		*base;
-	int			ret = -ENOMEM;
-	int			irq;
-	void			*mem;
+	struct dwc3_core_platform_data	*pdata = pdev->dev.platform_data;
+	struct dwc3			*dwc;
+	int				ret = -ENOMEM;
+	void				*mem;
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get(&pdev->dev);
@@ -288,104 +286,37 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "not enough memory\n");
 		goto err0;
 	}
+
 	dwc = PTR_ALIGN(mem, DWC3_ALIGN_MASK + 1);
 	dwc->mem = mem;
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "global");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'global' resource\n");
-		goto err1;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err1;
-	}
-
-	dwc->global	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xhci");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'xhci' resource\n");
-		goto err2;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err2;
-	}
-
-	dwc->xhci	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "device");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'device' resource\n");
-		goto err3;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err3;
-	}
-
-	dwc->device	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "otg");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'otg' resource\n");
-		goto err4;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err4;
-	}
-
-	dwc->otg	= base;
-
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		dev_err(&pdev->dev, "missing IRQ\n");
-		goto err4;
-	}
-
-	spin_lock_init(&dwc->lock);
-	platform_set_drvdata(pdev, dwc);
+	dwc->xhci	= pdata->xhci;
+	dwc->global	= pdata->global;
+	dwc->device	= pdata->device;
+	dwc->otg	= pdata->otg;
+	dwc->irq	= pdata->irq;
 
 	dwc->dev	= &pdev->dev;
-	dwc->irq	= irq;
 
 	ret = dwc3_core_init(dwc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core\n");
-		goto err4;
+		goto err1;
 	}
 
 	ret = dwc3_gadget_init(dwc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialized gadget\n");
-		goto err5;
+		goto err2;
 	}
 
 	pm_runtime_allow(&pdev->dev);
 
 	return 0;
 
-err5:
-	dwc3_core_exit(dwc);
-
-err4:
-	iounmap(dwc->device);
-
-err3:
-	iounmap(dwc->xhci);
 
 err2:
-	iounmap(dwc->global);
+	dwc3_core_exit(dwc);
 
 err1:
 	kfree(dwc->mem);
@@ -403,11 +334,6 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 
 	dwc3_gadget_exit(dwc);
 	dwc3_core_exit(dwc);
-
-	iounmap(dwc->otg);
-	iounmap(dwc->device);
-	iounmap(dwc->global);
-	iounmap(dwc->xhci);
 
 	kfree(dwc->mem);
 

@@ -42,12 +42,22 @@
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/io.h>
+
+#include "platform_data.h"
 
 struct dwc3_omap {
 	/* device lock */
 	spinlock_t		lock;
 	struct device		*dev;
 	struct platform_device	*dwc3;
+
+	/*
+	 * hold memory base pointers here
+	 * so we can iounmap on exit
+	 */
+	void __iomem		*global;
+	void __iomem		*device;
 };
 
 #ifdef CONFIG_PM
@@ -81,9 +91,17 @@ static const struct dev_pm_ops dwc3_omap_pm_ops = {
 
 static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 {
-	struct platform_device	*dwc3;
-	struct dwc3_omap	*omap;
-	int			ret = -ENOMEM;
+	struct dwc3_core_platform_data	pdata;
+	struct platform_device		*dwc3;
+	struct dwc3_omap		*omap;
+	struct resource			*res;
+
+	unsigned int			irq;
+	int				ret = -ENOMEM;
+
+	void __iomem			*base;
+
+	memset(&pdata, 0x00, sizeof(pdata));
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get(&pdev->dev);
@@ -101,11 +119,48 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	ret = platform_device_add_resources(dwc3, pdev->resource,
-			pdev->num_resources);
-	if (ret) {
-		dev_err(&pdev->dev, "couldn't add resources to dwc3 device\n");
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "global");
+	if (!res) {
+		dev_err(&pdev->dev, "missing 'global' resource\n");
 		goto err2;
+	}
+
+	base = ioremap(res->start, resource_size(res));
+	if (!base) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		goto err2;
+	}
+
+	pdata.global = base;
+	omap->global = base;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "device");
+	if (!res) {
+		dev_err(&pdev->dev, "missing 'device' resource\n");
+		goto err3;
+	}
+
+	base = ioremap(res->start, resource_size(res));
+	if (!base) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		goto err3;
+	}
+
+	pdata.device = base;
+	omap->device = base;
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq == 0) {
+		dev_err(&pdev->dev, "missing IRQ\n");
+		goto err4;
+	}
+
+	pdata.irq = irq;
+
+	ret = platform_device_add_data(dwc3, &pdata, sizeof(pdata));
+	if (ret) {
+		dev_err(&pdev->dev, "couldn't add platform_data to dwc3 device\n");
+		goto err4;
 	}
 
 	spin_lock_init(&omap->lock);
@@ -125,6 +180,12 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 
 	return 0;
 
+err4:
+	iounmap(omap->device);
+
+err3:
+	iounmap(omap->global);
+
 err2:
 	platform_device_put(dwc3);
 
@@ -140,6 +201,9 @@ static int __devexit dwc3_omap_remove(struct platform_device *pdev)
 	struct dwc3_omap	*omap = platform_get_drvdata(pdev);
 
 	platform_device_unregister(omap->dwc3);
+
+	iounmap(omap->device);
+	iounmap(omap->global);
 
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
