@@ -605,8 +605,10 @@ static int __dwc3_gadget_kick_transfer(struct dwc3_ep *dep, u16 cmd_param)
 	req = next_request(&dep->req_queued);
 
 	memset(&params, 0, sizeof(params));
-	params.param0.depstrtxfer.transfer_desc_addr_high = 0;
-	params.param1.depstrtxfer.transfer_desc_addr_low = req->trb_dma;
+	params.param0.depstrtxfer.transfer_desc_addr_high =
+		upper_32_bits(req->trb_dma);
+	params.param1.depstrtxfer.transfer_desc_addr_low =
+		lower_32_bits(req->trb_dma);
 
 	cmd = DWC3_DEPCMD_STARTTRANSFER | DWC3_DEPCMD_PARAM(cmd_param);
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
