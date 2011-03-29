@@ -704,6 +704,15 @@ static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
 	}
 
 	if (r != req) {
+		list_for_each_entry(r, &dep->req_queued, list) {
+			if (r == req)
+				break;
+		}
+		if (r == req) {
+			ret = -EBUSY;
+			/* wait until it is processed */
+			goto out0;
+		}
 		dev_err(dwc->dev, "request %p was not queued to %s\n",
 				request, ep->name);
 		ret = -EINVAL;
