@@ -490,7 +490,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		req->trb = trb;
 		req->queued = 1;
 
-		trb->bpl = req->request.dma;
+		dwc3_set_dmaddr(trb, req->request.dma);
 		trb->lst = last_one;
 		trb->chn = !last_one;
 		trb->ioc = last_one;

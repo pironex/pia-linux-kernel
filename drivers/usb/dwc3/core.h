@@ -406,8 +406,7 @@ enum dwc3_device_state {
  * @sid_sofn: Stream ID / SOF Number
  */
 struct dwc3_trb {
-	dma_addr_t		bpl;
-	dma_addr_t		bph;
+	__le64			bplh;
 	unsigned		length:24;
 	unsigned		pcm1:2;
 	unsigned		reserved27_26:2;
@@ -428,6 +427,16 @@ struct dwc3_trb {
 	unsigned		reserved31_30:2;
 
 } __packed;
+
+static inline void dwc3_set_dmaddr(struct dwc3_trb *trb, dma_addr_t addr)
+{
+	if (sizeof(addr) == 4)
+		trb->bplh = cpu_to_le32(addr);
+	else
+		trb->bplh = cpu_to_le64(addr);
+
+	BUILD_BUG_ON((sizeof(addr) != 4) && (sizeof(addr) != 8));
+}
 
 /**
  * struct dwc3 - representation of our controller

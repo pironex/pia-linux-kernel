@@ -115,7 +115,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		return -EINVAL;
 	}
 
-	trb->bpl = buf_dma;
+	dwc3_set_dmaddr(trb, buf_dma);
 	trb->length = len;
 
 	trb->hwo	= 1;
