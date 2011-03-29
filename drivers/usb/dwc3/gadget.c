@@ -97,6 +97,14 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 
 	if (req->queued) {
 		dep->busy_slot++;
+		/*
+		 * Skip LINK TRB. We can't use req->trb and check for
+		 * DWC3_TRBCTL_LINK_TRB because it points the TRB we just
+		 * completed (not the LINK TRB).
+		 */
+		if (((dep->busy_slot & DWC3_TRB_MASK) == DWC3_TRB_NUM - 1) &&
+				usb_endpoint_xfer_isoc(dep->desc))
+			dep->busy_slot++;
 		list_del(&req->list);
 	} else {
 		 dwc3_gadget_del_request(req);
@@ -140,6 +148,9 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 
 static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 {
+	struct dwc3_trb		*trb_st;
+	struct dwc3_trb		*trb_link;
+
 	if (dep->trb_pool)
 		return 0;
 
@@ -154,6 +165,18 @@ static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 		return -ENOMEM;
 	}
 
+	if (!usb_endpoint_xfer_isoc(dep->desc))
+		return 0;
+
+	/* Link TRB for ISOC. The HWO but is never reset */
+	trb_st = &dep->trb_pool[0];
+	trb_link = &dep->trb_pool[DWC3_TRB_NUM - 1];
+	trb_link->trbctl = DWC3_TRBCTL_LINK_TRB;
+	trb_link->hwo = true;
+	dwc3_set_dmaddr(trb_link, virt_to_phys(trb_st));
+
+	dma_sync_single_for_device(dep->dwc->dev, virt_to_phys(trb_link),
+			sizeof(*trb_link), DMA_TO_DEVICE);
 	return 0;
 }
 
@@ -459,7 +482,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 
 	/* the first request must not be queued */
 	req_left = dep->request_count;
-	trbs_left = (dep->busy_slot - dep->free_slot) & (DWC3_TRB_NUM - 1);
+	trbs_left = (dep->busy_slot - dep->free_slot) & DWC3_TRB_MASK;
 	/*
 	 * if busy & slot are equal than it is either full or empty. If we are
 	 * starting to proceed requests then we are empty. Otherwise we ar
@@ -489,13 +512,23 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		}
 	}
 
+	/* The last TRB is a link TRB, not used for xfer */
+	if ((trbs_left <= 1) && usb_endpoint_xfer_isoc(dep->desc))
+		return;
+
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned int last_one = 0;
 		unsigned int cur_slot;
 
-		trb = &dep->trb_pool[dep->free_slot & (DWC3_TRB_NUM - 1)];
+		trb = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
 		cur_slot = dep->free_slot;
 		dep->free_slot++;
+
+		/* Skip the LINK-TRB on ISOC */
+		if (((cur_slot & DWC3_TRB_MASK) == DWC3_TRB_NUM - 1) &&
+				usb_endpoint_xfer_isoc(dep->desc))
+			continue;
+
 		memset(trb, 0, sizeof(*trb));
 		trbs_left--;
 		req_left--;
