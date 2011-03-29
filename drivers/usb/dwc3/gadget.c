@@ -469,12 +469,32 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		if (!starting)
 			return;
 		trbs_left = DWC3_TRB_NUM;
+		/*
+		 * In case we start from scratch, we queue the ISOC requests
+		 * starting from slot 1. This is done because we use ring
+		 * buffer and have no LST bit to stop us. Instead, we place
+		 * IOC bit TRB_NUM/4. We try to avoid to having an interrupt
+		 * after the first request so we start at slot 1 and have
+		 * 7 requests proceed before we hit the first IOC.
+		 * Other transfer types don't use the ring buffer and are
+		 * processed from the first TRB until the last one. Since we
+		 * don't wrap around we have to start at the beginning.
+		 */
+		if (usb_endpoint_xfer_isoc(dep->desc)) {
+			dep->busy_slot = 1;
+			dep->free_slot = 1;
+		} else {
+			dep->busy_slot = 0;
+			dep->free_slot = 0;
+		}
 	}
 
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned int last_one = 0;
+		unsigned int cur_slot;
 
 		trb = &dep->trb_pool[dep->free_slot & (DWC3_TRB_NUM - 1)];
+		cur_slot = dep->free_slot;
 		dep->free_slot++;
 		memset(trb, 0, sizeof(*trb));
 		trbs_left--;
@@ -507,6 +527,10 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 
 		case USB_ENDPOINT_XFER_ISOC:
 			trb->trbctl = DWC3_TRBCTL_ISOCHRONOUS;
+
+			/* IOC every DWC3_TRB_NUM / 4 so we can refill */
+			if (!(cur_slot % (DWC3_TRB_NUM / 4)))
+				trb->ioc = last_one;
 			break;
 
 		case USB_ENDPOINT_XFER_BULK:
