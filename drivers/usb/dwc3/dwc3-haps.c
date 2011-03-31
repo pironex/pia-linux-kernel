@@ -179,9 +179,6 @@ static struct pci_driver dwc3_haps_driver = {
 	.id_table	= dwc3_haps_id_table,
 	.probe		= dwc3_haps_probe,
 	.remove		= __devexit_p(dwc3_haps_remove),
-	.driver		= {
-		.name	= "dwc3-haps",
-	},
 };
 
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
