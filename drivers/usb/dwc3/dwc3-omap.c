@@ -217,7 +217,7 @@ static struct platform_driver dwc3_omap_driver = {
 	.probe		= dwc3_omap_probe,
 	.remove		= __devexit_p(dwc3_omap_remove),
 	.driver		= {
-		.name	= "dwc3-omap",
+		.name	= "omap-dwc3",
 		.pm	= DEV_PM_OPS,
 	},
 };
