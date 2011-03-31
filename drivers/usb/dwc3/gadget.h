@@ -71,20 +71,20 @@ struct dwc3;
  *	written back by the core.
  */
 struct dwc3_gadget_ep_depcfg_param1 {
-	unsigned	interrupt_number:5;
-	unsigned	reserved7_5:3;		/* set to zero */
-	unsigned	xfer_complete_enable:1;
-	unsigned	xfer_in_progress_enable:1;
-	unsigned	xfer_not_ready_enable:1;
-	unsigned	fifo_error_enable:1;	/* IN-underrun, OUT-overrun */
-	unsigned	reserved12:1;		/* set to zero */
-	unsigned	stream_event_enable:1;
-	unsigned	reserved14_15:2;
-	u8		binterval_m1;		/* bInterval minus 1 */
-	unsigned	stream_capable:1;
-	unsigned	ep_number:5;
-	unsigned	bulk_based:1;
-	unsigned	fifo_based:1;
+	u32	interrupt_number:5;
+	u32	reserved7_5:3;		/* set to zero */
+	u32	xfer_complete_enable:1;
+	u32	xfer_in_progress_enable:1;
+	u32	xfer_not_ready_enable:1;
+	u32	fifo_error_enable:1;	/* IN-underrun, OUT-overrun */
+	u32	reserved12:1;		/* set to zero */
+	u32	stream_event_enable:1;
+	u32	reserved14_15:2;
+	u32	binterval_m1:8;		/* bInterval minus 1 */
+	u32	stream_capable:1;
+	u32	ep_number:5;
+	u32	bulk_based:1;
+	u32	fifo_based:1;
 } __packed;
 
 /**
@@ -103,14 +103,14 @@ struct dwc3_gadget_ep_depcfg_param1 {
  *	event enable bits without modifying other endpoint settings.
  */
 struct dwc3_gadget_ep_depcfg_param0 {
-	unsigned	reserved0:1;
-	unsigned	ep_type:2;
-	unsigned	max_packet_size:11;
-	unsigned	reserved16_14:3;
-	unsigned	fifo_number:5;
-	unsigned	burst_size:4;
-	unsigned	data_sequence_number:5;
-	unsigned	ignore_sequence_number:1;
+	u32	reserved0:1;
+	u32	ep_type:2;
+	u32	max_packet_size:11;
+	u32	reserved16_14:3;
+	u32	fifo_number:5;
+	u32	burst_size:4;
+	u32	data_sequence_number:5;
+	u32	ignore_sequence_number:1;
 } __packed;
 
 /**
@@ -120,8 +120,8 @@ struct dwc3_gadget_ep_depcfg_param0 {
  * @reserved16_31: set to zero;
  */
 struct dwc3_gadget_ep_depxfercfg_param0 {
-	u16		number_xfer_resources;
-	u16		reserved16_31;
+	u32		number_xfer_resources:16;
+	u32		reserved16_31:16
 } __packed;
 
 /**

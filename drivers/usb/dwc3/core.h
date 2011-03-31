@@ -407,25 +407,25 @@ enum dwc3_device_state {
  * @sid_sofn: Stream ID / SOF Number
  */
 struct dwc3_trb {
-	__le64			bplh;
-	unsigned		length:24;
-	unsigned		pcm1:2;
-	unsigned		reserved27_26:2;
-	unsigned		trbsts:4;
+	__le64		bplh;
+	u32		length:24;
+	u32		pcm1:2;
+	u32		reserved27_26:2;
+	u32		trbsts:4;
 #define DWC3_TRB_STS_OKAY			0
 #define DWC3_TRB_STS_MISSED_ISOC		1
 #define DWC3_TRB_STS_SETUP_PENDING		2
 
-	unsigned		hwo:1;
-	unsigned		lst:1;
-	unsigned		chn:1;
-	unsigned		csp:1;
-	unsigned		trbctl:6;
-	unsigned		isp_imi:1;
-	unsigned		ioc:1;
-	unsigned		reserved13_12:2;
-	u16			sid_sofn;
-	unsigned		reserved31_30:2;
+	u32		hwo:1;
+	u32		lst:1;
+	u32		chn:1;
+	u32		csp:1;
+	u32		trbctl:6;
+	u32		isp_imi:1;
+	u32		ioc:1;
+	u32		reserved13_12:2;
+	u32		sid_sofn:16;
+	u32		reserved31_30:2;
 
 } __packed;
 
@@ -524,9 +524,9 @@ struct dwc3 {
 /* -------------------------------------------------------------------------- */
 
 struct dwc3_event_type {
-	unsigned	is_devspec:1;
-	unsigned	type:6;
-	unsigned	reserved8_31:25;
+	u32	is_devspec:1;
+	u32	type:6;
+	u32	reserved8_31:25;
 } __packed;
 
 #define DWC3_DEPEVT_XFERCOMPLETE	0x01
@@ -556,13 +556,13 @@ struct dwc3_event_type {
  *	more information.
  */
 struct dwc3_event_depevt {
-	unsigned	one_bit:1;
-	unsigned	endpoint_number:5;
-	unsigned	endpoint_event:4;
-	unsigned	reserved11_10:2;
-	unsigned	status:4;
+	u32	one_bit:1;
+	u32	endpoint_number:5;
+	u32	endpoint_event:4;
+	u32	reserved11_10:2;
+	u32	status:4;
 #define DEPEVT_STATUS_LST	(1 << 3)
-	u16		parameters;
+	u32	parameters:16;
 } __packed;
 
 /**
@@ -588,12 +588,12 @@ struct dwc3_event_depevt {
  * @reserved31_24: Reserved, not used
  */
 struct dwc3_event_devt {
-	unsigned	one_bit:1;
-	unsigned	device_event:7;
-	unsigned	type:4;
-	unsigned	reserved15_12:4;
-	u8		event_info;
-	u8		reserved31_24;
+	u32	one_bit:1;
+	u32	device_event:7;
+	u32	type:4;
+	u32	reserved15_12:4;
+	u32	event_info:8;
+	u32	reserved31_24:8;
 } __packed;
 
 /**
@@ -604,10 +604,10 @@ struct dwc3_event_devt {
  * @reserved31_12: Reserved, not used.
  */
 struct dwc3_event_gevt {
-	unsigned	one_bit:1;
-	unsigned	device_event:7;
-	unsigned	phy_port_number:4;
-	unsigned	reserved31_12:20;
+	u32	one_bit:1;
+	u32	device_event:7;
+	u32	phy_port_number:4;
+	u32	reserved31_12:20;
 } __packed;
 
 /**
