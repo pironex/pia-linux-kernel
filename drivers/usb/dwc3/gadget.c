@@ -425,7 +425,7 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 	}
 
 	dep = to_dwc3_ep(ep);
-
+	dwc = dep->dwc;
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_disable(dep);
 	spin_unlock_irqrestore(&dwc->lock, flags);
