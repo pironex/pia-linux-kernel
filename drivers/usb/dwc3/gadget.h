@@ -121,7 +121,7 @@ struct dwc3_gadget_ep_depcfg_param0 {
  */
 struct dwc3_gadget_ep_depxfercfg_param0 {
 	u32		number_xfer_resources:16;
-	u32		reserved16_31:16
+	u32		reserved16_31:16;
 } __packed;
 
 /**
