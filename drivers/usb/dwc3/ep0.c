@@ -58,19 +58,20 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		u32 len)
 {
 	struct dwc3_gadget_ep_cmd_params params;
-	struct dwc3_trb			*trb;
+	struct dwc3_trb_hw		*trb_hw;
+	struct dwc3_trb			trb;
 	struct dwc3_ep			*dep;
 
 	int				ret;
 
 	dep = dwc->eps[epnum];
 
-	trb = &dwc->ep0_trb;
-	memset(trb, 0, sizeof(*trb));
+	trb_hw = &dwc->ep0_trb;
+	memset(&trb, 0, sizeof(trb));
 
 	switch (dwc->ep0state) {
 	case EP0_IDLE:
-		trb->trbctl = DWC3_TRBCTL_CONTROL_SETUP;
+		trb.trbctl = DWC3_TRBCTL_CONTROL_SETUP;
 		break;
 
 	case EP0_IN_WAIT_NRDY:
@@ -78,9 +79,9 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 	case EP0_IN_STATUS_PHASE:
 	case EP0_OUT_STATUS_PHASE:
 		if (dwc->three_stage_setup)
-			trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS3;
+			trb.trbctl = DWC3_TRBCTL_CONTROL_STATUS3;
 		else
-			trb->trbctl = DWC3_TRBCTL_CONTROL_STATUS2;
+			trb.trbctl = DWC3_TRBCTL_CONTROL_STATUS2;
 
 		if (dwc->ep0state == EP0_IN_WAIT_NRDY)
 			dwc->ep0state = EP0_IN_STATUS_PHASE;
@@ -106,7 +107,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	case EP0_IN_DATA_PHASE:
 	case EP0_OUT_DATA_PHASE:
-		trb->trbctl = DWC3_TRBCTL_CONTROL_DATA;
+		trb.trbctl = DWC3_TRBCTL_CONTROL_DATA;
 		break;
 
 	default:
@@ -115,15 +116,17 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		return -EINVAL;
 	}
 
-	dwc3_set_dmaddr(trb, buf_dma);
-	trb->length = len;
+	trb.bplh = buf_dma;
+	trb.length = len;
 
-	trb->hwo	= 1;
-	trb->lst	= 1;
-	trb->chn	= 0;
-	trb->ioc	= 1;
+	trb.hwo	= 1;
+	trb.lst	= 1;
+	trb.chn	= 0;
+	trb.ioc	= 1;
 
-	dwc->ep0_trb_addr = dma_map_single(dwc->dev, trb, sizeof(*trb),
+	dwc3_trb_to_hw(&trb, trb_hw);
+
+	dwc->ep0_trb_addr = dma_map_single(dwc->dev, trb_hw, sizeof(*trb_hw),
 			DMA_BIDIRECTIONAL);
 
 	memset(&params, 0, sizeof(params));
@@ -133,7 +136,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-		dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb),
+		dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb_hw),
 				DMA_BIDIRECTIONAL);
 		return ret;
 	}
@@ -606,7 +609,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 {
 	struct dwc3_request	*r;
 	struct usb_request	*ur;
-	struct dwc3_trb		*trb;
+	struct dwc3_trb		trb;
 	struct dwc3_ep		*dep;
 	u32			transfered;
 	u8			epnum;
@@ -622,13 +625,13 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		dwc->ep0_status_pending = 0;
 	}
 
-	trb = &dwc->ep0_trb;
+	dwc3_trb_to_nat(&dwc->ep0_trb, &trb);
 	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
 			sizeof(dwc->ctrl_req), DMA_BIDIRECTIONAL);
-	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb),
+	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(trb),
 			DMA_BIDIRECTIONAL);
 
-	transfered = ur->length - trb->length;
+	transfered = ur->length - trb.length;
 	ur->actual += transfered;
 
 	if ((epnum & 1) && ur->actual < ur->length) {
@@ -653,14 +656,12 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	struct dwc3_request	*r;
-	struct dwc3_trb		*trb;
 	struct dwc3_ep		*dep;
 	u8			epnum;
 
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
 	r = list_first_entry(&dep->request_list, struct dwc3_request, list);
-	trb = &dwc->ep0_trb;
 
 	list_del(&r->list);
 	r->request.status = 0;

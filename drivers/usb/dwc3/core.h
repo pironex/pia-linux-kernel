@@ -262,7 +262,7 @@
 
 /* Structures */
 
-struct dwc3_trb;
+struct dwc3_trb_hw;
 
 /**
  * struct dwc3_event_buffer - Software event buffer representation
@@ -317,7 +317,7 @@ struct dwc3_ep {
 	unsigned		request_count;
 	struct list_head	req_queued;
 
-	struct dwc3_trb		*trb_pool;
+	struct dwc3_trb_hw		*trb_pool;
 	u32			free_slot;
 	u32			busy_slot;
 	const struct usb_endpoint_descriptor *desc;
@@ -407,36 +407,71 @@ enum dwc3_device_state {
  * @sid_sofn: Stream ID / SOF Number
  */
 struct dwc3_trb {
-	__le64		bplh;
-	u32		length:24;
-	u32		pcm1:2;
-	u32		reserved27_26:2;
-	u32		trbsts:4;
-#define DWC3_TRB_STS_OKAY			0
-#define DWC3_TRB_STS_MISSED_ISOC		1
-#define DWC3_TRB_STS_SETUP_PENDING		2
+	u64             bplh;
 
-	u32		hwo:1;
-	u32		lst:1;
-	u32		chn:1;
-	u32		csp:1;
-	u32		trbctl:6;
-	u32		isp_imi:1;
-	u32		ioc:1;
-	u32		reserved13_12:2;
-	u32		sid_sofn:16;
-	u32		reserved31_30:2;
+	union {
+		struct {
+			u32             length:24;
+			u32             pcm1:2;
+			u32             reserved27_26:2;
+			u32             trbsts:4;
+#define DWC3_TRB_STS_OKAY                       0
+#define DWC3_TRB_STS_MISSED_ISOC                1
+#define DWC3_TRB_STS_SETUP_PENDING              2
+		};
+		u32 len_pcm;
+	};
 
+	union {
+		struct {
+			u32             hwo:1;
+			u32             lst:1;
+			u32             chn:1;
+			u32             csp:1;
+			u32             trbctl:6;
+			u32             isp_imi:1;
+			u32             ioc:1;
+			u32             reserved13_12:2;
+			u32             sid_sofn:16;
+			u32             reserved31_30:2;
+		};
+		u32 control;
+	};
 } __packed;
 
-static inline void dwc3_set_dmaddr(struct dwc3_trb *trb, dma_addr_t addr)
-{
-	if (sizeof(addr) == 4)
-		trb->bplh = cpu_to_le32(addr);
-	else
-		trb->bplh = cpu_to_le64(addr);
+/**
+ * struct dwc3_trb_hw - transfer request block (hw format)
+ * @bpl: DW0-3
+ * @bph: DW4-7
+ * @size: DW8-B
+ * @trl: DWC-F
+ */
+struct dwc3_trb_hw {
+	__le32		bpl;
+	__le32		bph;
+	__le32		size;
+	__le32		ctrl;
+} __packed;
 
-	BUILD_BUG_ON((sizeof(addr) != 4) && (sizeof(addr) != 8));
+static inline void dwc3_trb_to_hw(struct dwc3_trb *nat, struct dwc3_trb_hw *hw)
+{
+	hw->bpl = cpu_to_le32(lower_32_bits(nat->bplh));
+	hw->bph = cpu_to_le32(upper_32_bits(nat->bplh));
+	hw->size = cpu_to_le32p(&nat->len_pcm);
+	/* HWO is written last */
+	hw->ctrl = cpu_to_le32p(&nat->control);
+}
+
+static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
+{
+	u64 bplh;
+
+	bplh = le32_to_cpup(&hw->bpl);
+	bplh |= (u64) le32_to_cpup(&hw->bph) << 32;
+	nat->bplh = bplh;
+
+	nat->len_pcm = le32_to_cpup(&hw->size);
+	nat->control = le32_to_cpup(&hw->ctrl);
 }
 
 /**
@@ -469,7 +504,7 @@ static inline void dwc3_set_dmaddr(struct dwc3_trb *trb, dma_addr_t addr)
  */
 struct dwc3 {
 	struct usb_ctrlrequest	ctrl_req __aligned(16);
-	struct dwc3_trb		ep0_trb __aligned(16);
+	struct dwc3_trb_hw	ep0_trb __aligned(16);
 	u8			setup_buf[2] __aligned(16);
 	dma_addr_t		ctrl_req_addr;
 	dma_addr_t		ep0_trb_addr;

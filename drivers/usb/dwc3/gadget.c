@@ -148,8 +148,9 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 
 static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 {
-	struct dwc3_trb		*trb_st;
-	struct dwc3_trb		*trb_link;
+	struct dwc3_trb_hw	*trb_st_hw;
+	struct dwc3_trb_hw	*trb_link_hw;
+	struct dwc3_trb		trb_link;
 
 	if (dep->trb_pool)
 		return 0;
@@ -168,15 +169,20 @@ static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 	if (!usb_endpoint_xfer_isoc(dep->desc))
 		return 0;
 
-	/* Link TRB for ISOC. The HWO but is never reset */
-	trb_st = &dep->trb_pool[0];
-	trb_link = &dep->trb_pool[DWC3_TRB_NUM - 1];
-	trb_link->trbctl = DWC3_TRBCTL_LINK_TRB;
-	trb_link->hwo = true;
-	dwc3_set_dmaddr(trb_link, virt_to_phys(trb_st));
+	memset(&trb_link, 0, sizeof(trb_link));
 
-	dma_sync_single_for_device(dep->dwc->dev, virt_to_phys(trb_link),
-			sizeof(*trb_link), DMA_TO_DEVICE);
+	/* Link TRB for ISOC. The HWO but is never reset */
+	trb_st_hw = &dep->trb_pool[0];
+
+	trb_link.bplh = virt_to_phys(trb_st_hw);
+	trb_link.trbctl = DWC3_TRBCTL_LINK_TRB;
+	trb_link.hwo = true;
+
+	trb_link_hw = &dep->trb_pool[DWC3_TRB_NUM - 1];
+	dwc3_trb_to_hw(&trb_link, trb_link_hw);
+
+	dma_sync_single_for_device(dep->dwc->dev, virt_to_phys(trb_link_hw),
+			sizeof(trb_link_hw), DMA_TO_DEVICE);
 	return 0;
 }
 
@@ -473,7 +479,8 @@ static void dwc3_gadget_ep_free_request(struct usb_ep *ep,
 static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 {
 	struct dwc3_request	*req, *n;
-	struct dwc3_trb		*trb;
+	struct dwc3_trb_hw	*trb_hw;
+	struct dwc3_trb		trb;
 	struct dwc3		*dwc	= dep->dwc;
 	u32			trbs_left;
 	u32			req_left;
@@ -520,7 +527,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		unsigned int last_one = 0;
 		unsigned int cur_slot;
 
-		trb = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
+		trb_hw = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
 		cur_slot = dep->free_slot;
 		dep->free_slot++;
 
@@ -529,7 +536,7 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 				usb_endpoint_xfer_isoc(dep->desc))
 			continue;
 
-		memset(trb, 0, sizeof(*trb));
+		memset(&trb, 0, sizeof(trb));
 		trbs_left--;
 		req_left--;
 
@@ -540,35 +547,35 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		if (!req_left)
 			last_one = 1;
 
-		req->trb = trb;
+		req->trb = trb_hw;
 		req->queued = 1;
 
-		dwc3_set_dmaddr(trb, req->request.dma);
+		trb.bplh = req->request.dma;
 
 		if (usb_endpoint_xfer_isoc(dep->desc)) {
-			trb->isp_imi = true;
-			trb->csp = true;
+			trb.isp_imi = true;
+			trb.csp = true;
 		} else {
-			trb->lst = last_one;
-			trb->ioc = last_one;
+			trb.lst = last_one;
+			trb.ioc = last_one;
 		}
 
 		switch (usb_endpoint_type(dep->desc)) {
 		case USB_ENDPOINT_XFER_CONTROL:
-			trb->trbctl = DWC3_TRBCTL_CONTROL_SETUP;
+			trb.trbctl = DWC3_TRBCTL_CONTROL_SETUP;
 			break;
 
 		case USB_ENDPOINT_XFER_ISOC:
-			trb->trbctl = DWC3_TRBCTL_ISOCHRONOUS;
+			trb.trbctl = DWC3_TRBCTL_ISOCHRONOUS;
 
 			/* IOC every DWC3_TRB_NUM / 4 so we can refill */
 			if (!(cur_slot % (DWC3_TRB_NUM / 4)))
-				trb->ioc = last_one;
+				trb.ioc = last_one;
 			break;
 
 		case USB_ENDPOINT_XFER_BULK:
 		case USB_ENDPOINT_XFER_INT:
-			trb->trbctl = DWC3_TRBCTL_NORMAL;
+			trb.trbctl = DWC3_TRBCTL_NORMAL;
 			break;
 		default:
 			/*
@@ -578,12 +585,12 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 			BUG();
 		}
 
-		trb->length	= req->request.length;
+		trb.length	= req->request.length;
+		trb.hwo = true;
 
-		req->trb_dma = dma_map_single(dwc->dev, trb, sizeof(*trb),
+		dwc3_trb_to_hw(&trb, trb_hw);
+		req->trb_dma = dma_map_single(dwc->dev, trb_hw, sizeof(*trb_hw),
 				DMA_BIDIRECTIONAL);
-		trb->hwo = true;
-
 		dwc3_gadget_move_request_queued(req);
 
 		if (last_one)
@@ -1082,6 +1089,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 		struct dwc3_ep *dep, const unsigned int event_status)
 {
 	struct dwc3_request	*req;
+	struct dwc3_trb         trb;
 	unsigned		status = 0;
 	int			ret;
 	unsigned int		count;
@@ -1095,14 +1103,15 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 
 	dma_unmap_single(dwc->dev, req->trb_dma, sizeof(struct dwc3_trb),
 			DMA_BIDIRECTIONAL);
+	dwc3_trb_to_nat(req->trb, &trb);
 
-	if (req->trb->hwo) {
+	if (trb.hwo) {
 		dev_err(dwc->dev, "%s's TRB (%p) still owned by HW\n",
 				dep->name, req->trb);
 		return;
 	}
 
-	count = req->trb->length;
+	count = trb.length;
 
 	if (dep->direction) {
 		if (count) {

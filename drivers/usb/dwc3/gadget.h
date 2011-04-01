@@ -171,7 +171,7 @@ struct dwc3_request {
 	struct dwc3_ep		*dep;
 
 	u8			epnum;
-	struct dwc3_trb		*trb;
+	struct dwc3_trb_hw	*trb;
 	dma_addr_t		trb_dma;
 
 	unsigned		direction:1;
