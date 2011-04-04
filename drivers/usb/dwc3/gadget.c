@@ -1564,11 +1564,10 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 {
 	struct dwc3			*dwc = _dwc;
-	unsigned long			flags;
 	int				i;
 	irqreturn_t			ret = IRQ_NONE;
 
-	spin_lock_irqsave(&dwc->lock, flags);
+	spin_lock(&dwc->lock);
 
 	for (i = 0; i < DWC3_EVENT_BUFFERS_NUM; i++) {
 		irqreturn_t status;
@@ -1578,7 +1577,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
 			ret = status;
 	}
 
-	spin_unlock_irqrestore(&dwc->lock, flags);
+	spin_unlock(&dwc->lock);
 
 	return ret;
 }
