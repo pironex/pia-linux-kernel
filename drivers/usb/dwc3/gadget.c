@@ -1606,10 +1606,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	the_dwc				= dwc;
 
-	/* flush all fifos */
-	reg = DWC3_DGCMD_ALL_FIFO_FLUSH;
-	dwc3_writel(dwc->global, DWC3_DGCMD, reg);
-
 	/*
 	 * REVISIT: Here we should clear all pending IRQs to be
 	 * sure we're starting from a well known location.
