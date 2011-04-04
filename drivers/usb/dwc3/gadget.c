@@ -968,7 +968,7 @@ static int dwc3_gadget_set_selfpowered(struct usb_gadget *g,
 static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 {
 	u32			reg;
-	unsigned long timeout;
+	unsigned long		timeout = 500;
 
 	reg = dwc3_readl(dwc->device, DWC3_DCTL);
 	if (is_on)
@@ -978,7 +978,6 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 
 	dwc3_writel(dwc->device, DWC3_DCTL, reg);
 
-	timeout = jiffies + msecs_to_jiffies(500);
 	do {
 		reg = dwc3_readl(dwc->device, DWC3_DSTS);
 		if (is_on) {
@@ -988,9 +987,13 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 			if (reg & DWC3_DSTS_DEVCTRLHLT)
 				break;
 		}
-		cpu_relax();
-		if (time_after(jiffies, timeout))
+		/*
+		 * XXX reduce the 500ms delay
+		 */
+		timeout--;
+		if (!timeout)
 			break;
+		mdelay(1);
 	} while (1);
 
 	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
