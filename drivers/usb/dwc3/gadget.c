@@ -236,9 +236,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 		goto err1;
 	}
 
-	params.param0.depcfg.ep_type = desc->bmAttributes &
-		USB_ENDPOINT_XFERTYPE_MASK;
-
+	params.param0.depcfg.ep_type = usb_endpoint_type(desc);
 	params.param0.depcfg.ignore_sequence_number = true;
 	params.param0.depcfg.max_packet_size = desc->wMaxPacketSize;
 
@@ -401,7 +399,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	dep = to_dwc3_ep(ep);
 	dwc = dep->dwc;
 
-	switch (desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) {
+	switch (usb_endpoint_type(desc)) {
 	case USB_ENDPOINT_XFER_CONTROL:
 		strncat(dep->name, "-control", 8);
 		break;
