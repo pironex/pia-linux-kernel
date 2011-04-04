@@ -141,7 +141,7 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 			return -ETIMEDOUT;
 
 		cpu_relax();
-	} while (!(reg & DWC3_DEPCMD_CMDACT));
+	} while (reg & DWC3_DEPCMD_CMDACT);
 
 	return 0;
 }
