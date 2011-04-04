@@ -127,7 +127,7 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params)
 {
-	unsigned long		timeout = jiffies + msecs_to_jiffies(500);
+	unsigned long		timeout = 500;
 	u32			reg;
 
 	dwc3_writel(dwc->device, DWC3_DEPCMDPAR0(ep), params->param0.raw);
@@ -137,13 +137,20 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
 	do {
 		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(ep));
-		if (time_after(jiffies, timeout))
+		if (!(reg & DWC3_DEPCMD_CMDACT))
+			return 0;
+
+		/*
+		 * XXX Figure out a sane timeout here. 500ms is way too much.
+		 * We can't sleep here, because it is also called from
+		 * interrupt context.
+		 */
+		timeout--;
+		if (!timeout)
 			return -ETIMEDOUT;
 
-		cpu_relax();
-	} while (reg & DWC3_DEPCMD_CMDACT);
-
-	return 0;
+		mdelay(1);
+	} while (1);
 }
 
 static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
