@@ -1197,6 +1197,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 			return;
 		}
 
+		dwc3_endpoint_transfer_complete(dwc, dep, event->parameters);
 		break;
 	case DWC3_DEPEVT_XFERNOTREADY:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
