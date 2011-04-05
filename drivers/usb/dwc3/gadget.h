@@ -240,7 +240,7 @@ static inline u32 dwc3_gadget_ep_get_transfer_index(struct dwc3 *dwc, u8 number)
 {
 	u32			res_id;
 
-	res_id = dwc3_readl(dwc->device, DWC3_DEPCMD(number));
+	res_id = dwc3_readl(dwc->regs, DWC3_DEPCMD(number));
 
 	return DWC3_DEPCMD_GET_RSC_IDX(res_id);
 }

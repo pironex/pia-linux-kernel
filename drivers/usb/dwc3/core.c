@@ -178,11 +178,11 @@ static int __devinit dwc3_event_buffers_setup(struct dwc3 *dwc)
 		dev_dbg(dwc->dev, "Event buf %p dma %u length %d\n",
 				evt->buf, evt->dma, evt->length);
 
-		dwc3_writel(dwc->global, DWC3_GEVNTADRLO(n), evt->dma);
-		dwc3_writel(dwc->global, DWC3_GEVNTADRHI(n), 0);
-		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n),
+		dwc3_writel(dwc->regs, DWC3_GEVNTADRLO(n), evt->dma);
+		dwc3_writel(dwc->regs, DWC3_GEVNTADRHI(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTSIZ(n),
 				evt->length & 0xffff);
-		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(n), 0);
 	}
 
 	return 0;
@@ -195,10 +195,10 @@ static void dwc3_event_buffers_cleanup(struct dwc3 *dwc)
 
 	for (n = 0; n < DWC3_EVENT_BUFFERS_NUM; n++) {
 		evt = dwc->ev_buffs[n];
-		dwc3_writel(dwc->global, DWC3_GEVNTADRLO(n), 0);
-		dwc3_writel(dwc->global, DWC3_GEVNTADRHI(n), 0);
-		dwc3_writel(dwc->global, DWC3_GEVNTSIZ(n), 0);
-		dwc3_writel(dwc->global, DWC3_GEVNTCOUNT(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTADRLO(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTADRHI(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTSIZ(n), 0);
+		dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(n), 0);
 	}
 }
 
@@ -215,7 +215,7 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 
 	int			ret;
 
-	reg = dwc3_readl(dwc->global, DWC3_GSNPSID);
+	reg = dwc3_readl(dwc->regs, DWC3_GSNPSID);
 	/* This should read as U3 followed by revision number */
 	if ((reg & DWC3_GSNPSID_MASK) != 0x55330000) {
 		dev_err(dwc->dev, "this is not a DesignWare USB3 DRD Core\n");
@@ -225,10 +225,10 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 
 	dwc->revision = reg & DWC3_GSNPSREV_MASK;
 
-	dwc3_writel(dwc->device, DWC3_DCTL, DWC3_DCTL_CSFTRST);
+	dwc3_writel(dwc->regs, DWC3_DCTL, DWC3_DCTL_CSFTRST);
 
 	do {
-		reg = dwc3_readl(dwc->device, DWC3_DCTL);
+		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 
 		if (time_after(jiffies, timeout)) {
 			dev_err(dwc->dev, "Reset Timed Out\n");
@@ -274,7 +274,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 {
 	struct resource		*res;
 	struct dwc3		*dwc;
-	void __iomem		*base;
+	void __iomem		*regs;
 	int			ret = -ENOMEM;
 	int			irq;
 	void			*mem;
@@ -291,101 +291,52 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	dwc = PTR_ALIGN(mem, DWC3_ALIGN_MASK + 1);
 	dwc->mem = mem;
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "global");
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		dev_err(&pdev->dev, "missing 'global' resource\n");
+		dev_err(&pdev->dev, "missing resource\n");
 		goto err1;
 	}
 
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
+	regs = ioremap(res->start, resource_size(res));
+	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		goto err1;
 	}
-
-	dwc->global	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xhci");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'xhci' resource\n");
-		goto err2;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err2;
-	}
-
-	dwc->xhci	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "device");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'device' resource\n");
-		goto err3;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err3;
-	}
-
-	dwc->device	= base;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "otg");
-	if (!res) {
-		dev_err(&pdev->dev, "missing 'otg' resource\n");
-		goto err4;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		goto err4;
-	}
-
-	dwc->otg	= base;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(&pdev->dev, "missing IRQ\n");
-		goto err4;
+		goto err2;
 	}
 
 	spin_lock_init(&dwc->lock);
 	platform_set_drvdata(pdev, dwc);
 
+	dwc->regs	= regs;
 	dwc->dev	= &pdev->dev;
 	dwc->irq	= irq;
 
 	ret = dwc3_core_init(dwc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core\n");
-		goto err4;
+		goto err2;
 	}
 
 	ret = dwc3_gadget_init(dwc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialized gadget\n");
-		goto err5;
+		goto err3;
 	}
 
 	pm_runtime_allow(&pdev->dev);
 
 	return 0;
 
-err5:
+err3:
 	dwc3_core_exit(dwc);
 
-err4:
-	iounmap(dwc->device);
-
-err3:
-	iounmap(dwc->xhci);
-
 err2:
-	iounmap(dwc->global);
+	iounmap(regs);
 
 err1:
 	kfree(dwc->mem);
@@ -403,12 +354,7 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 
 	dwc3_gadget_exit(dwc);
 	dwc3_core_exit(dwc);
-
-	iounmap(dwc->otg);
-	iounmap(dwc->device);
-	iounmap(dwc->global);
-	iounmap(dwc->xhci);
-
+	iounmap(dwc->regs);
 	kfree(dwc->mem);
 
 	return 0;

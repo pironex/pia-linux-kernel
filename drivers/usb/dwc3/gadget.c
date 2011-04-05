@@ -130,13 +130,13 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	unsigned long		timeout = 500;
 	u32			reg;
 
-	dwc3_writel(dwc->device, DWC3_DEPCMDPAR0(ep), params->param0.raw);
-	dwc3_writel(dwc->device, DWC3_DEPCMDPAR1(ep), params->param1.raw);
-	dwc3_writel(dwc->device, DWC3_DEPCMDPAR2(ep), params->param2.raw);
+	dwc3_writel(dwc->regs, DWC3_DEPCMDPAR0(ep), params->param0.raw);
+	dwc3_writel(dwc->regs, DWC3_DEPCMDPAR1(ep), params->param1.raw);
+	dwc3_writel(dwc->regs, DWC3_DEPCMDPAR2(ep), params->param2.raw);
 
-	dwc3_writel(dwc->device, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
+	dwc3_writel(dwc->regs, DWC3_DEPCMD(ep), cmd | DWC3_DEPCMD_CMDACT);
 	do {
-		reg = dwc3_readl(dwc->device, DWC3_DEPCMD(ep));
+		reg = dwc3_readl(dwc->regs, DWC3_DEPCMD(ep));
 		if (!(reg & DWC3_DEPCMD_CMDACT))
 			return 0;
 
@@ -280,14 +280,14 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	dep->type = usb_endpoint_type(desc);
 	dep->flags |= DWC3_EP_ENABLED;
 
-	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
 
 	if (usb_endpoint_dir_in(dep->desc))
 		reg |= DWC3_DALEPENA_EPIN(dep->number);
 	else
 		reg |= DWC3_DALEPENA_EPOUT(dep->number);
 
-	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
 
 	return 0;
 
@@ -345,14 +345,14 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 		return ret;
 	}
 
-	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
 
 	if (usb_endpoint_dir_in(dep->desc))
 		reg &= ~DWC3_DALEPENA_EPIN(dep->number);
 	else
 		reg &= ~DWC3_DALEPENA_EPOUT(dep->number);
 
-	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
 
 	dep->desc = NULL;
 	dep->type = 0;
@@ -845,7 +845,7 @@ static int dwc3_gadget_get_frame(struct usb_gadget *g)
 	struct dwc3		*dwc = gadget_to_dwc(g);
 	u32			reg;
 
-	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 	return DWC3_DSTS_SOFFN(reg);
 }
 
@@ -871,7 +871,7 @@ static int dwc3_gadget_wakeup(struct usb_gadget *g)
 	 *
 	 * We can check that via USB Link State bits in DSTS register.
 	 */
-	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 
 	speed = reg & DWC3_DSTS_CONNECTSPD;
 	if (speed == DWC3_DSTS_SUPERSPEED) {
@@ -893,27 +893,27 @@ static int dwc3_gadget_wakeup(struct usb_gadget *g)
 		goto out;
 	}
 
-	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 
 	/*
 	 * Switch link state to Recovery. In HS/FS/LS this means
 	 * RemoteWakeup Request
 	 */
 	reg |= DWC3_DCTL_ULSTCHNG_RECOVERY;
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	/* wait for at least 2000us */
 	usleep_range(2000, 2500);
 
 	/* write zeroes to Link Change Request */
 	reg &= ~DWC3_DCTL_ULSTCHNGREQ_MASK;
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	/* pool until Link State change to ON */
 	timeout = jiffies + msecs_to_jiffies(100);
 
 	while (!(time_after(jiffies, timeout))) {
-		reg = dwc3_readl(dwc->device, DWC3_DSTS);
+		reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 
 		/* in HS, means ON */
 		if (DWC3_DSTS_USBLNKST(reg) == DWC3_LINK_STATE_U0)
@@ -946,16 +946,16 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 	u32			reg;
 	unsigned long		timeout = 500;
 
-	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	if (is_on)
 		reg |= DWC3_DCTL_RUN_STOP;
 	else
 		reg &= ~DWC3_DCTL_RUN_STOP;
 
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	do {
-		reg = dwc3_readl(dwc->device, DWC3_DSTS);
+		reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 		if (is_on) {
 			if (!(reg & DWC3_DSTS_DEVCTRLHLT))
 				break;
@@ -1299,12 +1299,12 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 	U1/U2 is powersave optimization. Skip it for now. Anyway we need to
 	enable it before we can disable it.
 
-	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	reg &= ~DWC3_DCTL_INITU1ENA;
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	reg &= ~DWC3_DCTL_INITU2ENA;
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 #endif
 	dwc3_disconnect_gadget(dwc);
 	dwc3_stop_active_transfers(dwc);
@@ -1323,15 +1323,15 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	dwc3_clear_stall_all_ep(dwc);
 
 	/* Reset device address to zero */
-	reg = dwc3_readl(dwc->device, DWC3_DCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	reg &= ~(DWC3_DCFG_DEVADDR(DWC3_DCFG_DAVADDR_MASK));
-	dwc3_writel(dwc->device, DWC3_DCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
 	/* The following could be part of dwc3_stop_active_transfers() on EP0 */
 	/* Enable ep0 in DALEPENA register */
-	reg = dwc3_readl(dwc->device, DWC3_DALEPENA);
+	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
 	reg |= DWC3_DALEPENA_EPOUT(0) | DWC3_DALEPENA_EPIN(0);
-	dwc3_writel(dwc->device, DWC3_DALEPENA, reg);
+	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
 
 	/*
 	 * Wait for RxFifo to drain
@@ -1348,7 +1348,7 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	 *
 	 * REVISIT why wait until the RXFIFO is empty anyway?
 	 */
-	while (!(dwc3_readl(dwc->device, DWC3_DSTS)
+	while (!(dwc3_readl(dwc->regs, DWC3_DSTS)
 				& DWC3_DSTS_RXFIFOEMPTY))
 		cpu_relax();
 
@@ -1375,9 +1375,9 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 	if (!usb30_clock)
 		return;
 
-	reg = dwc3_readl(dwc->global, DWC3_GCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 	reg |= DWC3_GCTL_RAMCLKSEL(usb30_clock);
-	dwc3_writel(dwc->global, DWC3_GCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 }
 
 static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
@@ -1395,7 +1395,7 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	memset(&params, 0x00, sizeof(params));
 
 	dwc->ep0state = EP0_IDLE;
-	reg = dwc3_readl(dwc->device, DWC3_DSTS);
+	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 	speed = reg & DWC3_DSTS_CONNECTSPD;
 	dwc->speed = speed;
 
@@ -1509,7 +1509,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 	int left;
 	u32 count;
 
-	count = dwc3_readl(dwc->device, DWC3_GEVNTCOUNT(buf));
+	count = dwc3_readl(dwc->regs, DWC3_GEVNTCOUNT(buf));
 	count &= DWC3_GEVNTCOUNT_MASK;
 	if (!count)
 		return IRQ_NONE;
@@ -1533,7 +1533,7 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3 *dwc, u32 buf)
 		left -= 4;
 	}
 
-	dwc3_writel(dwc->device, DWC3_GEVNTCOUNT(buf), count);
+	dwc3_writel(dwc->regs, DWC3_GEVNTCOUNT(buf), count);
 
 	return IRQ_HANDLED;
 }
@@ -1588,21 +1588,21 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	 * sure we're starting from a well known location.
 	 */
 
-	reg = dwc3_readl(dwc->global, DWC3_GCTL);
+	reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 
 	/*
 	 * REVISIT: power down scale might be different
 	 * depending on PHY used, need to pass that via platform_data
 	 */
 	reg |= DWC3_GCTL_PWRDNSCALE(0x61a) | DWC3_GCTL_DISSCRAMBLE;
-	dwc3_writel(dwc->global, DWC3_GCTL, reg);
+	dwc3_writel(dwc->regs, DWC3_GCTL, reg);
 
-	dwc3_writel(dwc->device, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
+	dwc3_writel(dwc->regs, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
 
 	/* Disable Start and End of Frame IRQs */
-	reg = dwc3_readl(dwc->device, DWC3_DEVTEN);
+	reg = dwc3_readl(dwc->regs, DWC3_DEVTEN);
 	reg &= ~(DWC3_DEVTEN_SOFEN | DWC3_DEVTEN_EOPFEN);
-	dwc3_writel(dwc->device, DWC3_DEVTEN, reg);
+	dwc3_writel(dwc->regs, DWC3_DEVTEN, reg);
 
 	ret = dwc3_gadget_init_endpoints(dwc);
 	if (ret)
