@@ -42,9 +42,6 @@
 #include <linux/spinlock.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
-#include <linux/io.h>
-
-#include "platform_data.h"
 
 /* FIXME define these in <linux/pci_ids.h> */
 #define PCI_VENDOR_ID_SYNOPSYS		0x16c3
@@ -55,27 +52,14 @@ struct dwc3_haps {
 	spinlock_t		lock;
 	struct device		*dev;
 	struct platform_device	*dwc3;
-
-	/*
-	 * hold memory base pointer here
-	 * so we can iounmap on exit
-	 */
-	void __iomem		*base;
 };
 
 static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		const struct pci_device_id *id)
 {
-	struct dwc3_core_platform_data	pdata;
-	struct platform_device		*dwc3;
-	struct dwc3_haps		*haps;
-	struct resource			*res;
-
-	int				ret = -ENOMEM;
-
-	void __iomem			*base;
-
-	memset(&pdata, 0x00, sizeof(pdata));
+	struct platform_device	*dwc3;
+	struct dwc3_haps	*haps;
+	int			ret = -ENOMEM;
 
 	haps = kzalloc(sizeof(*haps), GFP_KERNEL);
 	if (!haps) {
@@ -98,28 +82,11 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		goto err2;
 	}
 
-	res = &pci->resource[0];
-	if (!res) {
-		dev_err(&pci->dev, "missing resource\n");
-		goto err3;
-	}
-
-	base = ioremap(res->start, resource_size(res));
-	if (!base) {
-		dev_err(&pci->dev, "ioremap failed\n");
-		goto err3;
-	}
-
-	pdata.global = base;
-	pdata.device = base + 0x0600;
-	pdata.irq = pci->irq;
-
-	haps->base = base;
-
-	ret = platform_device_add_data(dwc3, &pdata, sizeof(pdata));
+	ret = platform_device_add_resources(dwc3, pci->resource,
+			PCI_NUM_RESOURCES);
 	if (ret) {
 		dev_err(&pci->dev, "couldn't add resources to dwc3 device\n");
-		goto err4;
+		goto err3;
 	}
 
 	spin_lock_init(&haps->lock);
@@ -136,9 +103,6 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	}
 
 	return 0;
-
-err4:
-	iounmap(haps->base);
 
 err3:
 	pci_set_drvdata(pci, NULL);
@@ -159,7 +123,6 @@ static void __devexit dwc3_haps_remove(struct pci_dev *pci)
 	struct dwc3_haps	*haps = pci_get_drvdata(pci);
 
 	platform_device_unregister(haps->dwc3);
-	iounmap(haps->base);
 	pci_set_drvdata(pci, NULL);
 	pci_disable_device(pci);
 	kfree(haps);
