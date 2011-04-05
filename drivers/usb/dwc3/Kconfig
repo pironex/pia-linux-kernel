@@ -16,16 +16,4 @@ config USB_DWC3_DEBUG
 	help
 	  Say Y here to enable debugging messages on DWC3 Driver.
 
-choice
-	prompt "Platform Glue Layer"
-
-config USB_DWC3_OMAP
-	tristate "OMAP"
-	depends on ARCH_OMAP
-
-config USB_DWC3_HAPS
-	tristate "HAPS"
-	depends on  PCI
-
-endchoice
 endif

@@ -76,7 +76,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	pci_set_power_state(pci, PCI_D0);
 	pci_set_master(pci);
 
-	dwc3 = platform_device_alloc("dwc3", -1);
+	dwc3 = platform_device_alloc("haps-dwc3", -1);
 	if (!dwc3) {
 		dev_err(&pci->dev, "couldn't allocate dwc3 device\n");
 		goto err2;
