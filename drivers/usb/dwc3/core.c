@@ -272,9 +272,11 @@ static void dwc3_core_exit(struct dwc3 *dwc)
 
 static int __devinit dwc3_probe(struct platform_device *pdev)
 {
+	const struct platform_device_id *id = platform_get_device_id(pdev);
 	struct resource		*res;
 	struct dwc3		*dwc;
 	void __iomem		*regs;
+	unsigned int		features = id->driver_data;
 	int			ret = -ENOMEM;
 	int			irq;
 	void			*mem;
@@ -322,10 +324,12 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		goto err2;
 	}
 
-	ret = dwc3_gadget_init(dwc);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to initialized gadget\n");
-		goto err3;
+	if (features & DWC3_HAS_PERIPHERAL) {
+		ret = dwc3_gadget_init(dwc);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to initialized gadget\n");
+			goto err3;
+		}
 	}
 
 	pm_runtime_allow(&pdev->dev);
@@ -347,18 +351,37 @@ err0:
 
 static int __devexit dwc3_remove(struct platform_device *pdev)
 {
+	const struct platform_device_id *id = platform_get_device_id(pdev);
 	struct dwc3	*dwc = platform_get_drvdata(pdev);
+	unsigned int	features = id->driver_data;
 
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
-	dwc3_gadget_exit(dwc);
+	if (features & DWC3_HAS_PERIPHERAL)
+		dwc3_gadget_exit(dwc);
+
 	dwc3_core_exit(dwc);
 	iounmap(dwc->regs);
 	kfree(dwc->mem);
 
 	return 0;
 }
+
+static const struct platform_device_id dwc3_id_table[] = {
+	{
+		.name	= "omap-dwc3",
+		.driver_data = (DWC3_HAS_PERIPHERAL
+			| DWC3_HAS_XHCI
+			| DWC3_HAS_OTG),
+	},
+	{
+		.name	= "haps-dwc3",
+		.driver_data = DWC3_HAS_PERIPHERAL,
+	},
+	{  },	/* Terminating Entry */
+};
+MODULE_DEVICE_TABLE(platform, dwc3_id_table);
 
 static struct platform_driver dwc3_driver = {
 	.probe		= dwc3_probe,
@@ -367,6 +390,7 @@ static struct platform_driver dwc3_driver = {
 		.name	= "dwc3",
 		.pm	= DEV_PM_OPS,
 	},
+	.id_table	= dwc3_id_table,
 };
 
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
