@@ -805,28 +805,6 @@ static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 	return usb_ep_set_halt(ep);
 }
 
-static void dwc3_gadget_ep_fifo_flush(struct usb_ep *ep)
-{
-	struct dwc3_ep			*dep = to_dwc3_ep(ep);
-	struct dwc3			*dwc = dep->dwc;
-
-	unsigned long			flags;
-	unsigned			reg;
-
-	spin_lock_irqsave(&dwc->lock, flags);
-
-	reg = dep->number;
-	reg |= ((dep->number & 1) << 5);
-
-	dwc3_writel(dwc->global, DWC3_DGCMDPAR, reg);
-
-	reg = DWC3_DGCMD_SELECTED_FIFO_FLUSH;
-
-	dwc3_writel(dwc->global, DWC3_DGCMD, reg);
-
-	spin_unlock_irqrestore(&dwc->lock, flags);
-}
-
 /* -------------------------------------------------------------------------- */
 
 static const struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
@@ -847,7 +825,6 @@ static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
 	.dequeue	= dwc3_gadget_ep_dequeue,
 	.set_halt	= dwc3_gadget_ep_set_halt,
 	.set_wedge	= dwc3_gadget_ep_set_wedge,
-	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
 
 static const struct usb_ep_ops dwc3_gadget_ep_ops = {
@@ -859,7 +836,6 @@ static const struct usb_ep_ops dwc3_gadget_ep_ops = {
 	.dequeue	= dwc3_gadget_ep_dequeue,
 	.set_halt	= dwc3_gadget_ep_set_halt,
 	.set_wedge	= dwc3_gadget_ep_set_wedge,
-	.fifo_flush	= dwc3_gadget_ep_fifo_flush,
 };
 
 /* -------------------------------------------------------------------------- */
