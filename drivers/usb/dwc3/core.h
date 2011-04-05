@@ -655,4 +655,12 @@ union dwc3_event {
 	struct dwc3_event_gevt		gevt;
 };
 
+/*
+ * DWC3 Features to be used as Driver Data
+ */
+
+#define DWC3_HAS_PERIPHERAL		BIT(0)
+#define DWC3_HAS_XHCI			BIT(1)
+#define DWC3_HAS_OTG			BIT(3)
+
 #endif /* __DRIVERS_USB_DWC3_CORE_H */
