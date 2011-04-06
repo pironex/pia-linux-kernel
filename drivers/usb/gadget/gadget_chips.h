@@ -102,7 +102,7 @@
 #endif
 
 #ifdef CONFIG_USB_GADGET_DWC3
-#define gadget_is_dwc3(g)	!strncmp("dwc3-udc", (g)->name)
+#define gadget_is_dwc3(g)	(!strcmp("dwc3-udc", (g)->name))
 #else
 #define gadget_is_dwc3(g)	0
 #endif
@@ -221,6 +221,8 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x27;
 	else if (gadget_is_ci13xxx_msm(gadget))
 		return 0x28;
+	else if (gadget_is_dwc3(gadget))
+		return 0x29;
 	return -ENOENT;
 }
 
