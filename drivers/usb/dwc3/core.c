@@ -282,7 +282,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	void			*mem;
 
 	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
 	pm_runtime_forbid(&pdev->dev);
 
 	mem = kzalloc(sizeof(*dwc) + DWC3_ALIGN_MASK, GFP_KERNEL);
