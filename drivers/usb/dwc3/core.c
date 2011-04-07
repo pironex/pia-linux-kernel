@@ -368,7 +368,7 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct platform_device_id dwc3_id_table[] = {
+static const struct platform_device_id dwc3_id_table[] __devinitconst = {
 	{
 		.name	= "omap-dwc3",
 		.driver_data = (DWC3_HAS_PERIPHERAL
