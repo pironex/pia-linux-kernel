@@ -102,7 +102,7 @@
 #endif
 
 #ifdef CONFIG_USB_GADGET_DWC3
-#define gadget_is_dwc3(g)	(!strcmp("dwc3-udc", (g)->name))
+#define gadget_is_dwc3(g)	(!strcmp("dwc3-gadget", (g)->name))
 #else
 #define gadget_is_dwc3(g)	0
 #endif
