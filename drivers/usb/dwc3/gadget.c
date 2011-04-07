@@ -1600,8 +1600,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
 
 	/* Enable all but Start and End of Frame IRQs */
-	reg = (DWC3_DEVTEN_INACTTIMEOUTRCVEDEN |
-			DWC3_DEVTEN_VNDRDEVTSTRCVEDEN |
+	reg = (DWC3_DEVTEN_VNDRDEVTSTRCVEDEN |
 			DWC3_DEVTEN_EVNTOVERFLOWEN |
 			DWC3_DEVTEN_CMDCMPLTEN |
 			DWC3_DEVTEN_ERRTICERREN |
