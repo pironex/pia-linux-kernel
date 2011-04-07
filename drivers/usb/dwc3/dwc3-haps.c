@@ -79,6 +79,13 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		goto err2;
 	}
 
+	/*
+	 * REVISIT update the resourc name to what the core driver expects
+	 * otherwise we won't probe correctly. Is there a better way to
+	 * achieve this with PCI ?
+	 */
+	pci->resource[0].name = "dwc_usb3";
+
 	ret = platform_device_add_resources(dwc3, pci->resource,
 			PCI_NUM_RESOURCES);
 	if (ret) {
