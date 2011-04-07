@@ -229,6 +229,8 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 
 	do {
 		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+		if (!(reg & DWC3_DCTL_CSFTRST))
+			break;
 
 		if (time_after(jiffies, timeout)) {
 			dev_err(dwc->dev, "Reset Timed Out\n");
@@ -237,7 +239,7 @@ static int __devinit dwc3_core_init(struct dwc3 *dwc)
 		}
 
 		cpu_relax();
-	} while (reg & DWC3_DCTL_CSFTRST);
+	} while (true);
 
 	ret = dwc3_alloc_event_buffers(dwc, DWC3_EVENT_BUFFERS_NUM,
 			DWC3_EVENT_BUFFERS_SIZE);
