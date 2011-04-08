@@ -1620,7 +1620,7 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
 
-	ret = request_irq(irq, dwc3_interrupt, 0, "dwc3", dwc);
+	ret = request_irq(irq, dwc3_interrupt, IRQF_SHARED, "dwc3", dwc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
 				irq, ret);
