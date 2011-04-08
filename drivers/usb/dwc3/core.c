@@ -307,7 +307,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	irq = platform_get_irq(pdev, 0);
+	irq = platform_get_irq_byname(pdev, "dwc_usb3");
 	if (irq < 0) {
 		dev_err(&pdev->dev, "missing IRQ\n");
 		goto err2;
