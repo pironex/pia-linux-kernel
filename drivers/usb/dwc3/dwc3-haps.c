@@ -73,7 +73,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	pci_set_power_state(pci, PCI_D0);
 	pci_set_master(pci);
 
-	dwc3 = platform_device_alloc("haps-dwc3", -1);
+	dwc3 = platform_device_alloc("dwc3-haps", -1);
 	if (!dwc3) {
 		dev_err(&pci->dev, "couldn't allocate dwc3 device\n");
 		goto err2;
@@ -141,7 +141,6 @@ static DEFINE_PCI_DEVICE_TABLE(dwc3_haps_id_table) = {
 MODULE_DEVICE_TABLE(pci, dwc3_haps_id_table);
 
 static struct pci_driver dwc3_haps_driver = {
-	.name		= "dwc3-haps",
 	.id_table	= dwc3_haps_id_table,
 	.probe		= dwc3_haps_probe,
 	.remove		= __devexit_p(dwc3_haps_remove),
