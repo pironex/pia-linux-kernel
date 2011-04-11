@@ -54,6 +54,8 @@
 #include "gadget.h"
 #include "io.h"
 
+#include "debug.h"
+
 #ifdef CONFIG_PM
 static int dwc3_suspend(struct device *dev)
 {
@@ -335,9 +337,19 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = dwc3_debugfs_init(dwc);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to initialize debugfs\n");
+		goto err4;
+	}
+
 	pm_runtime_allow(&pdev->dev);
 
 	return 0;
+
+err4:
+	if (features & DWC3_HAS_PERIPHERAL)
+		dwc3_gadget_exit(dwc);
 
 err3:
 	dwc3_core_exit(dwc);
@@ -360,6 +372,8 @@ static int __devexit dwc3_remove(struct platform_device *pdev)
 
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
+
+	dwc3_debugfs_exit(dwc);
 
 	if (features & DWC3_HAS_PERIPHERAL)
 		dwc3_gadget_exit(dwc);

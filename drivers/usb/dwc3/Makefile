@@ -15,3 +15,7 @@ endif
 ifneq ($(CONFIG_PCI),)
 	obj-$(CONFIG_USB_DWC3)		+= dwc3-haps.o
 endif
+
+ifneq ($(CONFIG_DEBUG_FS),)
+	dwc3-y				+= debugfs.o
+endif

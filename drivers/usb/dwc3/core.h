@@ -45,6 +45,7 @@
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
+#include <linux/debugfs.h>
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -498,6 +499,7 @@ static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
  * @link_state: link state
  * @speed: device speed (super, high, full, low)
  * @mem: ponts to start of memory which is used for this struct.
+ * @root: debugfs root folder pointer
  */
 struct dwc3 {
 	struct usb_ctrlrequest	ctrl_req __aligned(16);
@@ -534,6 +536,8 @@ struct dwc3 {
 
 	u8			speed;
 	void			*mem;
+
+	struct dentry		*root;
 };
 
 /* -------------------------------------------------------------------------- */
