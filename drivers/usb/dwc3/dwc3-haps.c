@@ -99,7 +99,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	haps->dev	= &pci->dev;
 	haps->dwc3	= dwc3;
 
-	ret = platform_device_register(dwc3);
+	ret = platform_device_add(dwc3);
 	if (ret) {
 		dev_err(&pci->dev, "failed to register dwc3 device\n");
 		goto err3;
