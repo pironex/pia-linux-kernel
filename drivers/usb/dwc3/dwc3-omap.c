@@ -331,7 +331,7 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 		goto err4;
 	}
 
-	ret = platform_device_register(dwc3);
+	ret = platform_device_add(dwc3);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register dwc3 device\n");
 		goto err4;
