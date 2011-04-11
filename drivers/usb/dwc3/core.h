@@ -488,6 +488,7 @@ static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
  * @gadget: device side representation of the peripheral controller
  * @gadget_driver: pointer to the gadget driver
  * @regs: base address for our registers
+ * @regs_size: address space size
  * @irq: IRQ number
  * @revision: revision register contents
  * @is_selfpowered: true when we are selfpowered
@@ -517,6 +518,7 @@ struct dwc3 {
 	struct usb_gadget_driver *gadget_driver;
 
 	void __iomem		*regs;
+	size_t			regs_size;
 
 	int			irq;
 

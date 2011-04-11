@@ -317,6 +317,7 @@ static int __devinit dwc3_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dwc);
 
 	dwc->regs	= regs;
+	dwc->regs_size	= resource_size(res);
 	dwc->dev	= &pdev->dev;
 	dwc->irq	= irq;
 
