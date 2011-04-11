@@ -54,6 +54,7 @@ struct dwc3_haps {
 static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		const struct pci_device_id *id)
 {
+	struct resource		res[2];
 	struct platform_device	*dwc3;
 	struct dwc3_haps	*haps;
 	int			ret = -ENOMEM;
@@ -79,15 +80,19 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		goto err2;
 	}
 
-	/*
-	 * REVISIT update the resourc name to what the core driver expects
-	 * otherwise we won't probe correctly. Is there a better way to
-	 * achieve this with PCI ?
-	 */
-	pci->resource[0].name = "dwc_usb3";
+	memset(res, 0x00, sizeof(struct resource) * ARRAY_SIZE(res));
 
-	ret = platform_device_add_resources(dwc3, pci->resource,
-			PCI_NUM_RESOURCES);
+	res[0].start	= pci_resource_start(pci, 0);
+	res[0].end	= pci_resource_start(pci, 0) +
+		pci_resource_len(pci, 0);
+	res[0].name	= "dwc_usb3";
+	res[0].flags	= IORESOURCE_MEM;
+
+	res[1].start	= pci->irq;
+	res[1].name	= "dwc_usb3";
+	res[1].flags	= IORESOURCE_IRQ;
+
+	ret = platform_device_add_resources(dwc3, res, ARRAY_SIZE(res));
 	if (ret) {
 		dev_err(&pci->dev, "couldn't add resources to dwc3 device\n");
 		goto err3;
