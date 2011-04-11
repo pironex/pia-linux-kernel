@@ -42,7 +42,6 @@
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 #include <linux/platform_device.h>
-#include <linux/pm_runtime.h>
 #include <linux/dma-mapping.h>
 #include <linux/ioport.h>
 
@@ -250,10 +249,6 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 
 	void __iomem		*base;
 
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
-	pm_runtime_forbid(&pdev->dev);
-
 	omap = kzalloc(sizeof(*omap), GFP_KERNEL);
 	if (!omap) {
 		dev_err(&pdev->dev, "not enough memory\n");
@@ -337,8 +332,6 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 		goto err4;
 	}
 
-	pm_runtime_allow(&pdev->dev);
-
 	return 0;
 
 err4:
@@ -365,8 +358,6 @@ static int __devexit dwc3_omap_remove(struct platform_device *pdev)
 
 	free_irq(omap->irq, omap);
 	iounmap(omap->base);
-	pm_runtime_put(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
 
 	kfree(omap);
 
