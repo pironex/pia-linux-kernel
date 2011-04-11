@@ -1387,11 +1387,7 @@ static void dwc3_update_ram_clk_sel(struct dwc3 *dwc, u32 speed)
 static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 {
 	struct dwc3_gadget_ep_cmd_params params;
-	struct dwc3_ep		*dep;
-
 	u32			reg;
-	int			ret;
-
 	u8			speed;
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
@@ -1404,20 +1400,6 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	dwc->speed = speed;
 
 	dwc3_update_ram_clk_sel(dwc, speed);
-
-	dep = dwc->eps[0];
-	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
-	if (ret) {
-		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return;
-	}
-
-	dep = dwc->eps[1];
-	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
-	if (ret) {
-		dev_err(dwc->dev, "failed to enabled %s\n", dep->name);
-		return;
-	}
 
 	/*
 	 * Configure PHY via GUSB3PIPECTLn if required.
@@ -1571,6 +1553,7 @@ static irqreturn_t dwc3_interrupt(int irq, void *_dwc)
  */
 int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 {
+	struct dwc3_ep				*dep;
 	u32					reg;
 	int					ret;
 	int					irq;
@@ -1603,6 +1586,37 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	dwc3_writel(dwc->regs, DWC3_DCFG, DWC3_DCFG_SUPERSPEED);
 
+	ret = dwc3_gadget_init_endpoints(dwc);
+	if (ret)
+		goto err1;
+
+	/* begin to receive SETUP packets */
+	dwc3_ep0_out_start(dwc);
+
+	dep = dwc->eps[0];
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enable %s\n", dep->name);
+		goto err2;
+	}
+
+	dep = dwc->eps[1];
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to enable %s\n", dep->name);
+		goto err3;
+	}
+
+	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
+
+	ret = request_irq(irq, dwc3_interrupt, IRQF_SHARED,
+			"dwc3", dwc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
+				irq, ret);
+		goto err4;
+	}
+
 	/* Enable all but Start and End of Frame IRQs */
 	reg = (DWC3_DEVTEN_VNDRDEVTSTRCVEDEN |
 			DWC3_DEVTEN_EVNTOVERFLOWEN |
@@ -1615,22 +1629,15 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 			DWC3_DEVTEN_DISCONNEVTEN);
 	dwc3_writel(dwc->regs, DWC3_DEVTEN, reg);
 
-	ret = dwc3_gadget_init_endpoints(dwc);
-	if (ret)
-		goto err1;
-
-	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
-
-	ret = request_irq(irq, dwc3_interrupt, IRQF_SHARED, "dwc3", dwc);
-	if (ret) {
-		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
-				irq, ret);
-		goto err2;
-	}
-	/* begin to receive SETUP packets */
-	dwc3_ep0_out_start(dwc);
+	dwc3_gadget_run_stop(dwc, true);
 
 	return 0;
+
+err4:
+	__dwc3_gadget_ep_disable(dwc->eps[1]);
+
+err3:
+	__dwc3_gadget_ep_disable(dwc->eps[0]);
 
 err2:
 	dwc3_gadget_free_endpoints(dwc);
