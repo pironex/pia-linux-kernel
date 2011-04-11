@@ -295,6 +295,14 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 	reg = dwc3_readl(omap->base, USBOTGSS_SYSCONFIG);
 	omap->dma_status = !!(reg & USBOTGSS_SYSCONFIG_DMADISABLE);
 
+	ret = request_irq(omap->irq, dwc3_omap_interrupt, 0,
+			"dwc3-wrapper", omap);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to request IRQ #%d --> %d\n",
+				omap->irq, ret);
+		goto err3;
+	}
+
 	/* enable all IRQs */
 	dwc3_writel(omap->base, USBOTGSS_IRQENABLE_SET_0, 0x01);
 
@@ -310,14 +318,6 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 			USBOTGSS_IRQ1_IDPULLUP_FALL);
 
 	dwc3_writel(omap->base, USBOTGSS_IRQENABLE_SET_1, reg);
-
-	ret = request_irq(omap->irq, dwc3_omap_interrupt, 0,
-			"dwc3-wrapper", omap);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to request IRQ #%d --> %d\n",
-				omap->irq, ret);
-		goto err3;
-	}
 
 	ret = platform_device_add_resources(dwc3, pdev->resource,
 			pdev->num_resources);
