@@ -131,10 +131,10 @@
 #define DWC3_DGCMDPAR		0xc710
 #define DWC3_DGCMD		0xc714
 #define DWC3_DALEPENA		0xc720
-#define DWC3_DEPCMDPAR2(n)	(0xc800 + (n * 0x04))
-#define DWC3_DEPCMDPAR1(n)	(0xc804 + (n * 0x04))
-#define DWC3_DEPCMDPAR0(n)	(0xc808 + (n * 0x04))
-#define DWC3_DEPCMD(n)		(0xc80c + (n * 0x04))
+#define DWC3_DEPCMDPAR2(n)	(0xc800 + (n * 0x10))
+#define DWC3_DEPCMDPAR1(n)	(0xc804 + (n * 0x10))
+#define DWC3_DEPCMDPAR0(n)	(0xc808 + (n * 0x10))
+#define DWC3_DEPCMD(n)		(0xc80c + (n * 0x10))
 
 /* OTG Registers */
 #define DWC3_OCFG		0xcc00
