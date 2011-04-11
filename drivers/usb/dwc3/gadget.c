@@ -262,8 +262,10 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	 */
 	if (dwc->speed != DWC3_DSTS_FULLSPEED2 &&
 			dwc->speed != DWC3_DSTS_FULLSPEED1) {
-		params.param1.depcfg.binterval_m1 = desc->bInterval - 1;
-		dep->interval = 1 << (desc->bInterval - 1);
+		if (desc->bInterval) {
+			params.param1.depcfg.binterval_m1 = desc->bInterval - 1;
+			dep->interval = 1 << (desc->bInterval - 1);
+		}
 	}
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
@@ -815,7 +817,6 @@ static const struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0,
 	.bmAttributes	= USB_ENDPOINT_XFER_CONTROL,
-	.bInterval	= 1, /* What value to put here ? */
 	.wMaxPacketSize	= 512,	/* using SuperSpeed as default */
 };
 
