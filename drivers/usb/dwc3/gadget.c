@@ -246,15 +246,6 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	u32			cmd;
 	int			ret = -ENOMEM;
 
-	if (dep->flags & DWC3_EP_ENABLED) {
-		dev_WARN_ONCE(dwc->dev, true, "%s is already enabled\n",
-				dep->name);
-		return 0;
-	}
-
-	if (dwc3_alloc_trb_pool(dep))
-		goto err0;
-
 	memset(&params, 0x00, sizeof(params));
 
 	if (dep->number != 1) {
@@ -450,6 +441,18 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		break;
 	default:
 		dev_err(dwc->dev, "invalid endpoint transfer type\n");
+	}
+
+	if (dep->flags & DWC3_EP_ENABLED) {
+		dev_WARN_ONCE(dwc->dev, true, "%s is already enabled\n",
+				dep->name);
+		return 0;
+	}
+
+	ret = dwc3_alloc_trb_pool(dep);
+	if (ret) {
+		dev_err(dwc->dev, "failed to allocate TRB pool\n");
+		return ret;
 	}
 
 	spin_lock_irqsave(&dwc->lock, flags);
