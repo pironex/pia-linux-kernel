@@ -341,12 +341,6 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 
 	int			ret = -ENOMEM;
 
-	if (!(dep->flags & DWC3_EP_ENABLED)) {
-		dev_WARN_ONCE(dwc->dev, true, "%s is already disabled\n",
-				dep->name);
-		return 0;
-	}
-
 	memset(&params, 0x00, sizeof(params));
 
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
@@ -476,6 +470,13 @@ static int dwc3_gadget_ep_disable(struct usb_ep *ep)
 
 	dep = to_dwc3_ep(ep);
 	dwc = dep->dwc;
+
+	if (!(dep->flags & DWC3_EP_ENABLED)) {
+		dev_WARN_ONCE(dwc->dev, true, "%s is already disabled\n",
+				dep->name);
+		return 0;
+	}
+
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_disable(dep);
 	spin_unlock_irqrestore(&dwc->lock, flags);
