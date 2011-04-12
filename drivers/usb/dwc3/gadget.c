@@ -237,7 +237,8 @@ static void dwc3_free_trb_pool(struct dwc3_ep *dep)
  * Caller should take care of locking
  */
 static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
-		const struct usb_endpoint_descriptor *desc)
+		const struct usb_endpoint_descriptor *desc,
+		bool ignore_sequence_number)
 {
 	struct dwc3_gadget_ep_cmd_params params;
 	struct dwc3		*dwc = dep->dwc;
@@ -271,7 +272,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	}
 
 	params.param0.depcfg.ep_type = usb_endpoint_type(desc);
-	params.param0.depcfg.ignore_sequence_number = true;
+	params.param0.depcfg.ignore_sequence_number = ignore_sequence_number;
 	params.param0.depcfg.max_packet_size = desc->wMaxPacketSize;
 
 	params.param1.depcfg.xfer_complete_enable = true;
@@ -452,7 +453,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 	}
 
 	spin_lock_irqsave(&dwc->lock, flags);
-	ret = __dwc3_gadget_ep_enable(dep, desc);
+	ret = __dwc3_gadget_ep_enable(dep, desc, true);
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
@@ -1624,14 +1625,14 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_ep0_out_start(dwc);
 
 	dep = dwc->eps[0];
-	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc, false);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enable %s\n", dep->name);
 		goto err2;
 	}
 
 	dep = dwc->eps[1];
-	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc);
+	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc, false);
 	if (ret) {
 		dev_err(dwc->dev, "failed to enable %s\n", dep->name);
 		goto err3;
