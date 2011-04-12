@@ -124,11 +124,41 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 			req->request.length, status);
 }
 
+static const char *dwc3_gadget_ep_cmd_string(u8 cmd)
+{
+	switch (cmd) {
+	case DWC3_DEPCMD_DEPSTARTCFG:
+		return "Start New Configuration";
+	case DWC3_DEPCMD_ENDTRANSFER:
+		return "End Transfer";
+	case DWC3_DEPCMD_UPDATETRANSFER:
+		return "Update Transfer";
+	case DWC3_DEPCMD_STARTTRANSFER:
+		return "Start Transfer";
+	case DWC3_DEPCMD_CLEARSTALL:
+		return "Clear Stall";
+	case DWC3_DEPCMD_SETSTALL:
+		return "Set Stall";
+	case DWC3_DEPCMD_GETSEQNUMBER:
+		return "Get Data Sequence Number";
+	case DWC3_DEPCMD_SETTRANSFRESOURCE:
+		return "Set Endpoint Transfer Resource";
+	case DWC3_DEPCMD_SETEPCONFIG:
+		return "Set Endpoint Configuration";
+	default:
+		return "UNKNOWN command";
+	}
+}
+
 int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params)
 {
 	unsigned long		timeout = 500;
 	u32			reg;
+
+	dev_vdbg(dwc->dev, "Sending '%s' with parameters %08x %08x %08x\n",
+			dwc3_gadget_ep_cmd_string(cmd), params->param0.raw,
+			params->param1.raw, params->param2.raw);
 
 	dwc3_writel(dwc->regs, DWC3_DEPCMDPAR0(ep), params->param0.raw);
 	dwc3_writel(dwc->regs, DWC3_DEPCMDPAR1(ep), params->param1.raw);
