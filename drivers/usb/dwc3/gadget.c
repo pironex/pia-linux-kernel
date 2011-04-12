@@ -846,12 +846,12 @@ static int dwc3_gadget_ep_set_wedge(struct usb_ep *ep)
 
 /* -------------------------------------------------------------------------- */
 
-static const struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
+static struct usb_endpoint_descriptor dwc3_gadget_ep0_desc = {
 	.bLength	= USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0,
 	.bmAttributes	= USB_ENDPOINT_XFER_CONTROL,
-	.wMaxPacketSize	= 512,	/* using SuperSpeed as default */
+	.wMaxPacketSize	= -EINVAL,	/* Fixed up later */
 };
 
 static const struct usb_ep_ops dwc3_gadget_ep0_ops = {
@@ -1437,6 +1437,19 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 
 	dwc3_update_ram_clk_sel(dwc, speed);
 
+	switch (speed) {
+	case DWC3_DCFG_SUPERSPEED:
+		dwc3_gadget_ep0_desc.wMaxPacketSize = 512;
+		break;
+	case DWC3_DCFG_HIGHSPEED:
+	case DWC3_DCFG_FULLSPEED2:
+	case DWC3_DCFG_FULLSPEED1:
+		dwc3_gadget_ep0_desc.wMaxPacketSize = 64;
+	case DWC3_DCFG_LOWSPEED:
+		dwc3_gadget_ep0_desc.wMaxPacketSize = 8;
+		break;
+	}
+
 	dep = dwc->eps[0];
 	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc, true);
 	if (ret) {
@@ -1642,6 +1655,9 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 
 	/* begin to receive SETUP packets */
 	dwc3_ep0_out_start(dwc);
+
+	/* Start with SuperSpeed Default */
+	dwc3_gadget_ep0_desc.wMaxPacketSize = 512;
 
 	dep = dwc->eps[0];
 	ret = __dwc3_gadget_ep_enable(dep, &dwc3_gadget_ep0_desc, false);
