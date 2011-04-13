@@ -1347,8 +1347,6 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 #endif
 	dwc3_disconnect_gadget(dwc);
 	dwc3_stop_active_transfers(dwc);
-
-	dwc3_gadget_run_stop(dwc, 0);
 }
 
 static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
