@@ -1366,12 +1366,6 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	reg &= ~(DWC3_DCFG_DEVADDR(DWC3_DCFG_DAVADDR_MASK));
 	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 
-	/* The following could be part of dwc3_stop_active_transfers() on EP0 */
-	/* Enable ep0 in DALEPENA register */
-	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
-	reg |= DWC3_DALEPENA_EPOUT(0) | DWC3_DALEPENA_EPIN(0);
-	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
-
 	/*
 	 * Wait for RxFifo to drain
 	 *
