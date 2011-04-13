@@ -252,8 +252,9 @@
 #define DWC3_DEPCMD_SETTRANSFRESOURCE	(0x02 << 0)
 #define DWC3_DEPCMD_SETEPCONFIG		(0x01 << 0)
 
+/* The EP number goes 0..31 so ep0 is always out and ep1 is always in */
 #define DWC3_DALEPENA_EPOUT(n)		(1 << n)
-#define DWC3_DALEPENA_EPIN(n)		(1 << (n + 1))
+#define DWC3_DALEPENA_EPIN(n)		(1 << n)
 
 #define DWC3_DEPCMD_TYPE_CONTROL	0
 #define DWC3_DEPCMD_TYPE_ISOC		1
