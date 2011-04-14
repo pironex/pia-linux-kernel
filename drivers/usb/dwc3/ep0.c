@@ -667,15 +667,18 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 
 	epnum = event->endpoint_number;
 	dep = dwc->eps[epnum];
-	r = list_first_entry(&dep->request_list, struct dwc3_request, list);
 
-	list_del(&r->list);
-	r->request.status = 0;
-	/*
-	 * not dropping locks because an enqueue in this callback would
-	 * confuse the state engine
-	 */
-	r->request.complete(&dep->endpoint, &r->request);
+	if (!list_empty(&dep->request_list)) {
+		r = list_first_entry(&dep->request_list, struct dwc3_request, list);
+
+		list_del(&r->list);
+		r->request.status = 0;
+		/*
+		 * not dropping locks because an enqueue in this callback would
+		 * confuse the state engine
+		 */
+		r->request.complete(&dep->endpoint, &r->request);
+	}
 
 	dwc->ep0state = EP0_IDLE;
 	dwc3_ep0_out_start(dwc);
