@@ -271,6 +271,40 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 	}
 }
 
+static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
+	int ret;
+	u32 len;
+
+	if (!dwc->gadget_driver)
+		goto err;
+
+	len = le16_to_cpu(ctrl->wLength);
+	if (!len) {
+		dwc->ep0state = EP0_IN_WAIT_GADGET;
+		dwc->three_stage_setup = 0;
+	} else {
+		dwc->three_stage_setup = 1;
+		if (ctrl->bRequestType & USB_DIR_IN)
+			dwc->ep0state = EP0_IN_DATA_PHASE;
+		else
+			dwc->ep0state = EP0_OUT_DATA_PHASE;
+	}
+
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
+		ret = dwc3_ep0_std_request(dwc, ctrl);
+	else
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
+
+	if (ret >= 0)
+		return;
+
+err:
+	dwc3_ep0_stall_and_restart(dwc);
+}
+
 static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
@@ -281,6 +315,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 	case EP0_UNCONNECTED:
 		break;
 	case EP0_IDLE:
+		dwc3_ep0_inspect_setup(dwc, event);
 		break;
 	case EP0_IN_DATA_PHASE:
 		break;
@@ -578,40 +613,6 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	};
 
 	return ret;
-}
-
-static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
-{
-	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
-	int ret;
-	u32 len;
-
-	if (!dwc->gadget_driver)
-		goto err;
-
-	len = le16_to_cpu(ctrl->wLength);
-	if (!len) {
-		dwc->ep0state = EP0_IN_WAIT_GADGET;
-		dwc->three_stage_setup = 0;
-	} else {
-		dwc->three_stage_setup = 1;
-		if (ctrl->bRequestType & USB_DIR_IN)
-			dwc->ep0state = EP0_IN_DATA_PHASE;
-		else
-			dwc->ep0state = EP0_OUT_DATA_PHASE;
-	}
-
-	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
-		ret = dwc3_ep0_std_request(dwc, ctrl);
-	else
-		ret = dwc3_ep0_delegate_req(dwc, ctrl);
-
-	if (ret >= 0)
-		return;
-
-err:
-	dwc3_ep0_stall_and_restart(dwc);
 }
 
 static void dwc3_ep0_complete_data(struct dwc3 *dwc,
