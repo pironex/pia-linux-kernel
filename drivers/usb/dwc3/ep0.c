@@ -121,8 +121,8 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	trb.hwo	= 1;
 	trb.lst	= 1;
-	trb.chn	= 0;
 	trb.ioc	= 1;
+	trb.isp_imi = 1;
 
 	dwc3_trb_to_hw(&trb, trb_hw);
 
