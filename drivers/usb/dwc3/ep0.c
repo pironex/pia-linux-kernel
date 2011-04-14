@@ -54,6 +54,9 @@
 #include "gadget.h"
 #include "io.h"
 
+static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event);
+
 static const char *dwc3_ep0_state_string(enum dwc3_ep0_state state)
 {
 	switch (state) {
@@ -178,10 +181,6 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep,
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
 
-	if (!(dep->number & 1))
-		/* IS OUT */
-		u32 len = req->request.length;
-
 	dwc3_gadget_add_request(dep, req);
 	dwc3_map_buffer_to_dma(req);
 
@@ -269,40 +268,6 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 		dev_dbg(dwc->dev, "failed to start transfer, stalling\n");
 		dwc3_ep0_stall_and_restart(dwc);
 	}
-}
-
-static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
-{
-	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
-	int ret;
-	u32 len;
-
-	if (!dwc->gadget_driver)
-		goto err;
-
-	len = le16_to_cpu(ctrl->wLength);
-	if (!len) {
-		dwc->ep0state = EP0_IN_WAIT_GADGET;
-		dwc->three_stage_setup = 0;
-	} else {
-		dwc->three_stage_setup = 1;
-		if (ctrl->bRequestType & USB_DIR_IN)
-			dwc->ep0state = EP0_IN_DATA_PHASE;
-		else
-			dwc->ep0state = EP0_OUT_DATA_PHASE;
-	}
-
-	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
-		ret = dwc3_ep0_std_request(dwc, ctrl);
-	else
-		ret = dwc3_ep0_delegate_req(dwc, ctrl);
-
-	if (ret >= 0)
-		return;
-
-err:
-	dwc3_ep0_stall_and_restart(dwc);
 }
 
 static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
@@ -613,6 +578,40 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	};
 
 	return ret;
+}
+
+static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
+	int ret;
+	u32 len;
+
+	if (!dwc->gadget_driver)
+		goto err;
+
+	len = le16_to_cpu(ctrl->wLength);
+	if (!len) {
+		dwc->ep0state = EP0_IN_WAIT_GADGET;
+		dwc->three_stage_setup = 0;
+	} else {
+		dwc->three_stage_setup = 1;
+		if (ctrl->bRequestType & USB_DIR_IN)
+			dwc->ep0state = EP0_IN_DATA_PHASE;
+		else
+			dwc->ep0state = EP0_OUT_DATA_PHASE;
+	}
+
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
+		ret = dwc3_ep0_std_request(dwc, ctrl);
+	else
+		ret = dwc3_ep0_delegate_req(dwc, ctrl);
+
+	if (ret >= 0)
+		return;
+
+err:
+	dwc3_ep0_stall_and_restart(dwc);
 }
 
 static void dwc3_ep0_complete_data(struct dwc3 *dwc,
