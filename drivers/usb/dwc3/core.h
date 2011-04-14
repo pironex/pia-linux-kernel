@@ -507,7 +507,7 @@ struct dwc3 {
 	u8			setup_buf[2] __aligned(16);
 	dma_addr_t		ctrl_req_addr;
 	dma_addr_t		ep0_trb_addr;
-	dma_addr_t		setup_buf_addr;;
+	dma_addr_t		setup_buf_addr;
 	struct usb_request	ep0_usb_req;
 	/* device lock */
 	spinlock_t		lock;
