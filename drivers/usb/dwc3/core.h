@@ -498,7 +498,7 @@ static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
  * @ep0state: state of endpoint zero
  * @link_state: link state
  * @speed: device speed (super, high, full, low)
- * @mem: ponts to start of memory which is used for this struct.
+ * @mem: points to start of memory which is used for this struct.
  * @root: debugfs root folder pointer
  */
 struct dwc3 {
