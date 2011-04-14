@@ -66,7 +66,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	dep = dwc->eps[epnum];
 
-	trb_hw = &dwc->ep0_trb;
+	trb_hw = dwc->ep0_trb;
 	memset(&trb, 0, sizeof(trb));
 
 	switch (dwc->ep0state) {
@@ -126,9 +126,6 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	dwc3_trb_to_hw(&trb, trb_hw);
 
-	dwc->ep0_trb_addr = dma_map_single(dwc->dev, trb_hw, sizeof(*trb_hw),
-			DMA_BIDIRECTIONAL);
-
 	memset(&params, 0, sizeof(params));
 	params.param1.depstrtxfer.transfer_desc_addr_low = dwc->ep0_trb_addr;
 
@@ -136,8 +133,6 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 			DWC3_DEPCMD_STARTTRANSFER, &params);
 	if (ret < 0) {
 		dev_dbg(dwc->dev, "failed to send STARTTRANSFER command\n");
-		dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(*trb_hw),
-				DMA_BIDIRECTIONAL);
 		return ret;
 	}
 
@@ -220,16 +215,9 @@ void dwc3_ep0_out_start(struct dwc3 *dwc)
 
 	dep = dwc->eps[0];
 
-	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->ctrl_req,
-			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
-
 	ret = dwc3_ep0_start_trans(dwc, 0, dwc->ctrl_req_addr,
 			dep->endpoint.maxpacket);
-	if (ret < 0) {
-		dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
-				sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
-		WARN_ON(1);
-	}
+	WARN_ON(ret < 0);
 }
 
 /*
@@ -254,11 +242,7 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 	 * Not sure Why I need a buffer for a zero transfer. Maybe the
 	 * HW reacts strange on a NULL pointer
 	 */
-	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->ctrl_req,
-			sizeof(dwc->ctrl_req), DMA_FROM_DEVICE);
-
-	/* no dma mapping because it should not write at all */
-	ret = dwc3_ep0_start_trans(dwc, epnum, virt_to_phys(&dwc->ctrl_req), 0);
+	ret = dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr, 0);
 	if (ret)
 		dwc3_ep0_stall_and_restart(dwc);
 }
@@ -319,8 +303,6 @@ static void dwc3_ep0_send_status_response(struct dwc3 *dwc)
 	else
 		epnum = 0;
 
-	dwc->ctrl_req_addr = dma_map_single(dwc->dev, &dwc->setup_buf,
-			dwc->ep0_usb_req.length, DMA_BIDIRECTIONAL);
 	dwc3_ep0_start_trans(dwc, epnum, dwc->ctrl_req_addr,
 			dwc->ep0_usb_req.length);
 	dwc->ep0_status_pending = 1;
@@ -365,7 +347,7 @@ static int dwc3_ep0_handle_status(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl
 		return -EINVAL;
 	};
 
-	response_pkt = (__le16*)&dwc->setup_buf;
+	response_pkt = (__le16 *) dwc->setup_buf;
 	*response_pkt = cpu_to_le16(usb_status);
 	dwc->ep0_usb_req.length = sizeof(*response_pkt);
 	dwc3_ep0_send_status_response(dwc);
@@ -568,14 +550,9 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
-	struct usb_ctrlrequest *ctrl = &dwc->ctrl_req;
+	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
 	int ret;
 	u32 len;
-
-	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr, sizeof(dwc->ctrl_req),
-			DMA_FROM_DEVICE);
-	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(struct dwc3_trb),
-			DMA_BIDIRECTIONAL);
 
 	if (!dwc->gadget_driver)
 		goto err;
@@ -625,11 +602,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		dwc->ep0_status_pending = 0;
 	}
 
-	dwc3_trb_to_nat(&dwc->ep0_trb, &trb);
-	dma_unmap_single(dwc->dev, dwc->ctrl_req_addr,
-			sizeof(dwc->ctrl_req), DMA_BIDIRECTIONAL);
-	dma_unmap_single(dwc->dev, dwc->ep0_trb_addr, sizeof(trb),
-			DMA_BIDIRECTIONAL);
+	dwc3_trb_to_nat(dwc->ep0_trb, &trb);
 
 	transfered = ur->length - trb.length;
 	ur->actual += transfered;

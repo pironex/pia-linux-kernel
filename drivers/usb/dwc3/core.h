@@ -502,9 +502,9 @@ static inline void dwc3_trb_to_nat(struct dwc3_trb_hw *hw, struct dwc3_trb *nat)
  * @root: debugfs root folder pointer
  */
 struct dwc3 {
-	struct usb_ctrlrequest	ctrl_req __aligned(16);
-	struct dwc3_trb_hw	ep0_trb __aligned(16);
-	u8			setup_buf[2] __aligned(16);
+	struct usb_ctrlrequest	*ctrl_req;
+	struct dwc3_trb_hw	*ep0_trb;
+	u8			*setup_buf;
 	dma_addr_t		ctrl_req_addr;
 	dma_addr_t		ep0_trb_addr;
 	dma_addr_t		setup_buf_addr;
