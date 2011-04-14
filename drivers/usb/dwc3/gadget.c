@@ -309,12 +309,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	dep->flags |= DWC3_EP_ENABLED;
 
 	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
-
-	if (usb_endpoint_dir_in(dep->desc))
-		reg |= DWC3_DALEPENA_EP(dep->number);
-	else
-		reg |= DWC3_DALEPENA_EP(dep->number);
-
+	reg |= DWC3_DALEPENA_EP(dep->number);
 	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
 
 	return 0;
@@ -367,12 +362,7 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
 	}
 
 	reg = dwc3_readl(dwc->regs, DWC3_DALEPENA);
-
-	if (usb_endpoint_dir_in(dep->desc))
-		reg &= ~DWC3_DALEPENA_EP(dep->number);
-	else
-		reg &= ~DWC3_DALEPENA_EP(dep->number);
-
+	reg &= ~DWC3_DALEPENA_EP(dep->number);
 	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
 
 	dep->desc = NULL;
