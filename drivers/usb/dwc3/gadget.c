@@ -1671,9 +1671,6 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	if (ret)
 		goto err3;
 
-	/* begin to receive SETUP packets */
-	dwc3_ep0_out_start(dwc);
-
 	/* Start with SuperSpeed Default */
 	dwc3_gadget_ep0_desc.wMaxPacketSize = 512;
 
@@ -1714,6 +1711,10 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_DEVTEN, reg);
 
 	dwc3_gadget_run_stop(dwc, true);
+
+	/* begin to receive SETUP packets */
+	dwc->ep0state = EP0_IDLE;
+	dwc3_ep0_out_start(dwc);
 
 	return 0;
 
