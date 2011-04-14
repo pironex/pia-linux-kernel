@@ -117,6 +117,7 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 			dwc->ep0state = EP0_IN_STATUS_PHASE;
 		else if (dwc->ep0state == EP0_OUT_WAIT_NRDY)
 			dwc->ep0state = EP0_OUT_STATUS_PHASE;
+		break;
 
 	case EP0_IN_WAIT_GADGET:
 		dwc->ep0state = EP0_IN_WAIT_NRDY;
