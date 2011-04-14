@@ -121,17 +121,11 @@ static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 
 	case EP0_IN_WAIT_GADGET:
 		dwc->ep0state = EP0_IN_WAIT_NRDY;
-		/*
-		 * Not sure what this is about. The reference code does nothing
-		 * (except the sate change) and returns with 0
-		 */
-		WARN_ON(1);
 		return 0;
 		break;
 
 	case EP0_OUT_WAIT_GADGET:
 		dwc->ep0state = EP0_OUT_WAIT_NRDY;
-		WARN_ON(1);
 		return 0;
 
 		break;
@@ -184,12 +178,9 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep,
 	req->direction		= dep->direction;
 	req->epnum		= dep->number;
 
-	if (!(dep->number & 1)) {
+	if (!(dep->number & 1))
 		/* IS OUT */
 		u32 len = req->request.length;
-
-		WARN_ON(len % dep->endpoint.maxpacket);
-	}
 
 	dwc3_gadget_add_request(dep, req);
 	dwc3_map_buffer_to_dma(req);
