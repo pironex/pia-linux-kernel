@@ -54,6 +54,36 @@
 #include "gadget.h"
 #include "io.h"
 
+static const char *dwc3_ep0_state_string(enum dwc3_ep0_state state)
+{
+	switch (state) {
+	case EP0_UNCONNECTED:
+		return "Unconnected";
+	case EP0_IDLE:
+		return "Idle";
+	case EP0_IN_DATA_PHASE:
+		return "IN Data Phase";
+	case EP0_OUT_DATA_PHASE:
+		return "OUT Data Phase";
+	case EP0_IN_WAIT_GADGET:
+		return "IN Wait Gadget";
+	case EP0_OUT_WAIT_GADGET:
+		return "OUT Wait Gadget";
+	case EP0_IN_WAIT_NRDY:
+		return "IN Wait NRDY";
+	case EP0_OUT_WAIT_NRDY:
+		return "OUT Wait NRDY";
+	case EP0_IN_STATUS_PHASE:
+		return "IN Status Phase";
+	case EP0_OUT_STATUS_PHASE:
+		return "OUT Status Phase";
+	case EP0_STALL:
+		return "Stall";
+	default:
+		return "UNKNOWN";
+	}
+}
+
 static int dwc3_ep0_start_trans(struct dwc3 *dwc, u8 epnum, dma_addr_t buf_dma,
 		u32 len)
 {
@@ -250,6 +280,9 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
+	dev_vdbg(dwc->dev, "Xfer Not Ready while on state '%s'\n",
+			dwc3_ep0_state_string(dwc->ep0state));
+
 	switch (dwc->ep0state) {
 	case EP0_UNCONNECTED:
 		break;
