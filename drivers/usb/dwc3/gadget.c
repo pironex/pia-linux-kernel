@@ -1012,7 +1012,8 @@ static void dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 	} while (1);
 
 	dev_vdbg(dwc->dev, "gadget %s data soft-%s\n",
-			dwc->gadget_driver->function,
+			dwc->gadget_driver
+			? dwc->gadget_driver->function : "no-function",
 			is_on ? "connect" : "disconnect");
 }
 
