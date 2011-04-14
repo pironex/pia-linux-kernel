@@ -258,7 +258,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 		if (ret) {
 			dev_err(dwc->dev, "failed to start new configuration for %s\n",
 					dep->name);
-			goto err1;
+			goto err0;
 		}
 	}
 
@@ -293,7 +293,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	ret = dwc3_send_gadget_ep_cmd(dwc, 1, DWC3_DEPCMD_SETEPCONFIG, &params);
 	if (ret) {
 		dev_err(dwc->dev, "failed to configure %s\n", dep->name);
-		goto err1;
+		goto err0;
 	}
 
 	memset(&params, 0x00, sizeof(params));
@@ -301,7 +301,7 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	ret = dwc3_send_gadget_ep_cmd(dwc, dep->number,
 			DWC3_DEPCMD_SETTRANSFRESOURCE, &params);
 	if (ret)
-		goto err1;
+		goto err0;
 
 	dep->desc = desc;
 	dep->type = usb_endpoint_type(desc);
@@ -318,10 +318,9 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 
 	return 0;
 
-err1:
+err0:
 	dwc3_free_trb_pool(dep);
 
-err0:
 	return ret;
 }
 
