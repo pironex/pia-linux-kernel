@@ -205,6 +205,24 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 
 	int				ret;
 
+	switch (dwc->ep0state) {
+	case EP0_IN_DATA_PHASE:
+	case EP0_IN_WAIT_GADGET:
+	case EP0_IN_WAIT_NRDY:
+	case EP0_IN_STATUS_PHASE:
+		dep = dwc->eps[1];
+		break;
+
+	case EP0_OUT_DATA_PHASE:
+	case EP0_OUT_WAIT_GADGET:
+	case EP0_OUT_WAIT_NRDY:
+	case EP0_OUT_STATUS_PHASE:
+		dep = dwc->eps[0];
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	if (!dep->desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
 				request, ep->name);
