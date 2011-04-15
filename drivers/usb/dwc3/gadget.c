@@ -439,6 +439,8 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		return ret;
 	}
 
+	dev_vdbg(dwc->dev, "Enabling %s\n", dep->name);
+
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_enable(dep, desc, true);
 	spin_unlock_irqrestore(&dwc->lock, flags);
@@ -696,6 +698,7 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 		return 0;
 
 	dwc3_prepare_trbs(dep, false);
+
 	return 0;
 }
 
@@ -716,7 +719,8 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 		return -ESHUTDOWN;
 	}
 
-	dev_vdbg(dwc->dev, "queing request %p to %s\n", request, ep->name);
+	dev_vdbg(dwc->dev, "queing request %p to %s length %d\n",
+			request, ep->name, request->length);
 
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep_queue(dep, req);
