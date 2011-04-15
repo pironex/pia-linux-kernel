@@ -727,8 +727,8 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 		break;
 
 	case EP0_IN_WAIT_NRDY:
-		break;
 	case EP0_OUT_WAIT_NRDY:
+		dwc3_ep0_do_setup_status(dwc, event);
 		break;
 
 	case EP0_IN_STATUS_PHASE:
