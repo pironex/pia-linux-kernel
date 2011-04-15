@@ -183,7 +183,8 @@ int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 	} while (1);
 }
 
-static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
+static int dwc3_alloc_trb_pool(struct dwc3_ep *dep,
+		const struct usb_endpoint_descriptor *desc)
 {
 	struct dwc3_trb_hw	*trb_st_hw;
 	struct dwc3_trb_hw	*trb_link_hw;
@@ -203,7 +204,7 @@ static int dwc3_alloc_trb_pool(struct dwc3_ep *dep)
 		return -ENOMEM;
 	}
 
-	if (!usb_endpoint_xfer_isoc(dep->desc))
+	if (!usb_endpoint_xfer_isoc(desc))
 		return 0;
 
 	memset(&trb_link, 0, sizeof(trb_link));
@@ -433,7 +434,7 @@ static int dwc3_gadget_ep_enable(struct usb_ep *ep,
 		return 0;
 	}
 
-	ret = dwc3_alloc_trb_pool(dep);
+	ret = dwc3_alloc_trb_pool(dep, desc);
 	if (ret) {
 		dev_err(dwc->dev, "failed to allocate TRB pool\n");
 		return ret;
