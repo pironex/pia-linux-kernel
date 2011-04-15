@@ -82,7 +82,8 @@ struct dwc3_gadget_ep_depcfg_param1 {
 	u32	reserved14_15:2;
 	u32	binterval_m1:8;		/* bInterval minus 1 */
 	u32	stream_capable:1;
-	u32	ep_number:5;
+	u32	ep_direction:1;
+	u32	ep_number:4;
 	u32	bulk_based:1;
 	u32	fifo_based:1;
 } __packed;

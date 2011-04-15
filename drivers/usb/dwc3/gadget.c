@@ -270,7 +270,26 @@ static int __dwc3_gadget_ep_enable(struct dwc3_ep *dep,
 	params.param1.depcfg.xfer_complete_enable = true;
 	params.param1.depcfg.xfer_in_progress_enable = true;
 	params.param1.depcfg.xfer_not_ready_enable = true;
-	params.param1.depcfg.ep_number = dep->number;
+	params.param1.depcfg.ep_direction = dep->number & 1;
+
+	if (dep->number == 0 || dep->number == 1) {
+		/*
+		 * Physical Endpoints 0 and 1 *MUST* be mapped
+		 * to Logical Endpoint 0. Do not change this or
+		 * the driver has no way to work.
+		 */
+		params.param1.depcfg.ep_number = 0;
+	} else {
+		/*
+		 * We are doing 1:1 mapping for other endpoints, meaning
+		 * Physical Endpoints 2 maps to Logical Endpoint 2 and
+		 * so on.
+		 *
+		 * We did this on purpose so that don't need to have trickery
+		 * mapping logical endpoints to physical endpoints and so on.
+		 */
+		params.param1.depcfg.ep_number = dep->number;
+	}
 
 	/*
 	 * REVISIT for some reason, databook says in case we're
