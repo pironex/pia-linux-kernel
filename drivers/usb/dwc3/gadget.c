@@ -1701,6 +1701,12 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 			DWC3_DEVTEN_DISCONNEVTEN);
 	dwc3_writel(dwc->regs, DWC3_DEVTEN, reg);
 
+	ret = device_register(&dwc->gadget.dev);
+	if (ret) {
+		dev_err(dwc->dev, "failed to register gadget device\n");
+		goto err7;
+	}
+
 	dwc3_gadget_run_stop(dwc, true);
 
 	/* begin to receive SETUP packets */
@@ -1708,6 +1714,9 @@ int __devinit dwc3_gadget_init(struct dwc3 *dwc)
 	dwc3_ep0_out_start(dwc);
 
 	return 0;
+
+err7:
+	put_device(&dwc->gadget.dev);
 
 err6:
 	__dwc3_gadget_ep_disable(dwc->eps[1]);
