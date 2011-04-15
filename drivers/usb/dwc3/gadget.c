@@ -1428,13 +1428,19 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 	switch (speed) {
 	case DWC3_DCFG_SUPERSPEED:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = 512;
+		dwc->gadget.speed = USB_SPEED_SUPER;
 		break;
 	case DWC3_DCFG_HIGHSPEED:
+		dwc3_gadget_ep0_desc.wMaxPacketSize = 64;
+		dwc->gadget.speed = USB_SPEED_HIGH;
+		break;
 	case DWC3_DCFG_FULLSPEED2:
 	case DWC3_DCFG_FULLSPEED1:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = 64;
+		dwc->gadget.speed = USB_SPEED_FULL;
 	case DWC3_DCFG_LOWSPEED:
 		dwc3_gadget_ep0_desc.wMaxPacketSize = 8;
+		dwc->gadget.speed = USB_SPEED_LOW;
 		break;
 	}
 
