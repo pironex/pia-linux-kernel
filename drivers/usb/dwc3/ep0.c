@@ -647,7 +647,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 	dep = dwc->eps[epnum];
 
 	if (!dwc->ep0_status_pending) {
-		r = list_first_entry(&dep->request_list, struct dwc3_request, list);
+		r = next_request(&dep->request_list);
 		ur = &r->request;
 	} else {
 		ur = &dwc->ep0_usb_req;
