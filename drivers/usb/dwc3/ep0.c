@@ -673,9 +673,6 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 			struct dwc3_event_depevt *event)
 {
-	dev_vdbg(dwc->dev, "Xfer Complete while on state '%s'\n",
-			dwc3_ep0_state_string(dwc->ep0state));
-
 	switch (dwc->ep0state) {
 	case EP0_UNCONNECTED:
 		break;
@@ -743,32 +740,24 @@ void dwc3_ep0_interrupt(struct dwc3 *dwc,
 {
 	u8			epnum = event->endpoint_number;
 
+	dev_dbg(dwc->dev, "%s while ep%d%s in state '%s'\n",
+			dwc3_ep_event_string(event->endpoint_event),
+			epnum, (epnum & 1) ? "in" : "out",
+			dwc3_ep0_state_string(dwc->ep0state));
+
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
-		dev_vdbg(dwc->dev, "ep%d%s Transfer Complete\n", epnum,
-				epnum & 1 ? "in" : "out");
 		dwc3_ep0_xfer_complete(dwc, event);
 		break;
 
-	case DWC3_DEPEVT_XFERINPROGRESS:
-		dev_dbg(dwc->dev, "ep%din Transfer In Progress\n", epnum);
-		break;
-
 	case DWC3_DEPEVT_XFERNOTREADY:
-		dev_dbg(dwc->dev, "ep%din Transfer Not Ready\n", epnum);
 		dwc3_ep0_xfernotready(dwc, event);
 		break;
 
+	case DWC3_DEPEVT_XFERINPROGRESS:
 	case DWC3_DEPEVT_RXTXFIFOEVT:
-		dev_dbg(dwc->dev, "ep%din FIFO Error\n", epnum);
-		break;
-
 	case DWC3_DEPEVT_STREAMEVT:
-		dev_dbg(dwc->dev, "ep%din Stream Event\n", epnum);
-		break;
-
 	case DWC3_DEPEVT_EPCMDCMPLT:
-		dev_dbg(dwc->dev, "ep%din Command Complete\n", epnum);
 		break;
 	}
 }
