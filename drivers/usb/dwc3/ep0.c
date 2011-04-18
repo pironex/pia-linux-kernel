@@ -225,12 +225,13 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 
 	if (!dep->desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
-				request, ep->name);
+				request, dep->name);
 		return -ESHUTDOWN;
 	}
 
-	dev_vdbg(dwc->dev, "queueing request %p to %s length %d\n",
-			request, ep->name, request->length);
+	dev_vdbg(dwc->dev, "queueing request %p to %s length %d, state '%s'\n",
+			request, dep->name, request->length,
+			dwc3_ep0_state_string(dwc->ep0state));
 
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep0_queue(dep, req);
