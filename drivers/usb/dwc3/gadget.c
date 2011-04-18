@@ -1354,6 +1354,7 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 	reg &= ~DWC3_DCTL_INITU2ENA;
 	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 #endif
+
 	dwc3_disconnect_gadget(dwc);
 	dwc3_stop_active_transfers(dwc);
 }
@@ -1364,7 +1365,9 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 
 	dev_vdbg(dwc->dev, "%s\n", __func__);
 
-	dwc3_disconnect_gadget(dwc);
+	if (dwc->gadget.speed != USB_SPEED_UNKNOWN)
+		dwc3_disconnect_gadget(dwc);
+
 	dwc3_stop_active_transfers(dwc);
 	dwc3_clear_stall_all_ep(dwc);
 
