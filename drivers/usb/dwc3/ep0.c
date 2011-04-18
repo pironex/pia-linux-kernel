@@ -290,40 +290,6 @@ static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
 	}
 }
 
-static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
-{
-	dev_vdbg(dwc->dev, "Xfer Not Ready while on state '%s'\n",
-			dwc3_ep0_state_string(dwc->ep0state));
-
-	switch (dwc->ep0state) {
-	case EP0_UNCONNECTED:
-		break;
-	case EP0_IDLE:
-		dwc3_ep0_inspect_setup(dwc, event);
-		break;
-	case EP0_IN_DATA_PHASE:
-		break;
-	case EP0_OUT_DATA_PHASE:
-		break;
-	case EP0_IN_WAIT_GADGET:
-		dwc->ep0state = EP0_IN_WAIT_NRDY;
-		break;
-	case EP0_OUT_WAIT_GADGET:
-		dwc->ep0state = EP0_OUT_WAIT_NRDY;
-		break;
-	case EP0_IN_WAIT_NRDY:
-	case EP0_OUT_WAIT_NRDY:
-		dwc3_ep0_do_setup_status(dwc, event);
-		break;
-	case EP0_IN_STATUS_PHASE:
-	case EP0_OUT_STATUS_PHASE:
-		break;
-	case EP0_STALL:
-		break;
-	}
-}
-
 static struct dwc3_ep *dwc3_wIndex_to_dep(struct dwc3 *dwc, __le16 wIndex_le)
 {
 	struct dwc3_ep		*dep;
@@ -735,6 +701,37 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 	case EP0_IN_STATUS_PHASE:
 	case EP0_OUT_STATUS_PHASE:
 		dwc3_ep0_complete_req(dwc, event);
+		break;
+	case EP0_STALL:
+		break;
+	}
+}
+
+static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
+		struct dwc3_event_depevt *event)
+{
+	switch (dwc->ep0state) {
+	case EP0_UNCONNECTED:
+		break;
+	case EP0_IDLE:
+		dwc3_ep0_inspect_setup(dwc, event);
+		break;
+	case EP0_IN_DATA_PHASE:
+		break;
+	case EP0_OUT_DATA_PHASE:
+		break;
+	case EP0_IN_WAIT_GADGET:
+		dwc->ep0state = EP0_IN_WAIT_NRDY;
+		break;
+	case EP0_OUT_WAIT_GADGET:
+		dwc->ep0state = EP0_OUT_WAIT_NRDY;
+		break;
+	case EP0_IN_WAIT_NRDY:
+	case EP0_OUT_WAIT_NRDY:
+		dwc3_ep0_do_setup_status(dwc, event);
+		break;
+	case EP0_IN_STATUS_PHASE:
+	case EP0_OUT_STATUS_PHASE:
 		break;
 	case EP0_STALL:
 		break;
