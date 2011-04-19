@@ -221,6 +221,9 @@ static inline int dwc3_gadget_init(struct dwc3 *dwc) { return 0; }
 static inline void dwc3_gadget_exit(struct dwc3 *dwc) { }
 #endif
 
+void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
+		int status);
+
 void dwc3_ep0_interrupt(struct dwc3 *dwc, struct dwc3_event_depevt *event);
 void dwc3_ep0_out_start(struct dwc3 *dwc);
 int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,

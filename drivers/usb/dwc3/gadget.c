@@ -90,7 +90,7 @@ void dwc3_unmap_buffer_from_dma(struct dwc3_request *req)
 	}
 }
 
-static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
+void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 		int status)
 {
 	struct dwc3			*dwc = dep->dwc;

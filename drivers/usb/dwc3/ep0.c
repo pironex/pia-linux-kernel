@@ -641,6 +641,8 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 			dwc->ep0state = EP0_IN_WAIT_NRDY;
 		else
 			dwc->ep0state = EP0_OUT_WAIT_NRDY;
+
+		dwc3_gadget_giveback(dep, ur, 0);
 	}
 }
 
@@ -655,15 +657,9 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 	dep = dwc->eps[epnum];
 
 	if (!list_empty(&dep->request_list)) {
-		r = list_first_entry(&dep->request_list, struct dwc3_request, list);
+		r = next_request(&dep->request_list);
 
-		list_del(&r->list);
-		r->request.status = 0;
-		/*
-		 * not dropping locks because an enqueue in this callback would
-		 * confuse the state engine
-		 */
-		r->request.complete(&dep->endpoint, &r->request);
+		dwc3_gadget_giveback(dep, r, 0);
 	}
 
 	dwc->ep0state = EP0_IDLE;
