@@ -209,6 +209,7 @@ static inline void dwc3_gadget_move_request_queued(struct dwc3_request *req)
 	struct dwc3_ep		*dep = req->dep;
 
 	dep->request_count--;
+	req->queued = true;
 	list_move_tail(&req->list, &dep->req_queued);
 }
 

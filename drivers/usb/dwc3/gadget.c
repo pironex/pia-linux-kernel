@@ -107,7 +107,7 @@ static void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 			dep->busy_slot++;
 		list_del(&req->list);
 	} else {
-		 dwc3_gadget_del_request(req);
+		dwc3_gadget_del_request(req);
 	}
 
 	if (req->request.status == -EINPROGRESS)
@@ -598,7 +598,6 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 			last_one = 1;
 
 		req->trb = trb_hw;
-		req->queued = 1;
 
 		trb.bplh = req->request.dma;
 
