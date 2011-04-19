@@ -255,6 +255,8 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 		goto err0;
 	}
 
+	platform_set_drvdata(pdev, omap);
+
 	irq = platform_get_irq_byname(pdev, "wrapper");
 	if (irq == 0) {
 		dev_err(&pdev->dev, "missing IRQ resource\n");
@@ -282,7 +284,6 @@ static int __devinit dwc3_omap_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&omap->lock);
-	platform_set_drvdata(pdev, omap);
 	dma_set_coherent_mask(&dwc3->dev, pdev->dev.coherent_dma_mask);
 
 	dwc3->dev.parent = &pdev->dev;
