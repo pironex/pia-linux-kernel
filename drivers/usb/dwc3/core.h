@@ -108,7 +108,7 @@
 #define DWC3_GPRTBIMAP_FS1	0xc18c
 
 #define DWC3_GUSB2PHYCFG(n)	(0xc200 + (n * 0x04))
-#define DWC3_GUSB2I2(n)		(0xc240 + (n * 0x04))
+#define DWC3_GUSB2I2CCTL(n)	(0xc240 + (n * 0x04))
 
 #define DWC3_GUSB2PHYACC(n)	(0xc280 + (n * 0x04))
 
