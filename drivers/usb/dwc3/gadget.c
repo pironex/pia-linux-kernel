@@ -1354,8 +1354,10 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
 #endif
 
-	dwc3_disconnect_gadget(dwc);
 	dwc3_stop_active_transfers(dwc);
+	dwc3_disconnect_gadget(dwc);
+
+	dwc->gadget.speed = USB_SPEED_UNKNOWN;
 }
 
 static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
