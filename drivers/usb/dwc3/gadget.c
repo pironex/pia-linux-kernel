@@ -1277,6 +1277,23 @@ static void dwc3_disconnect_gadget(struct dwc3 *dwc)
 	}
 }
 
+static void dwc3_gadget_nuke(struct dwc3_ep *dep, const int status)
+{
+	struct dwc3_request		*req;
+
+	while (!list_empty(&dep->request_list)) {
+		req = next_request(&dep->request_list);
+
+		dwc3_gadget_giveback(dep, req, status);
+	}
+
+	while (!list_empty(&dep->req_queued)) {
+		req = next_request(&dep->req_queued);
+
+		dwc3_gadget_giveback(dep, req, status);
+	}
+}
+
 static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 {
 	u32 epnum;
@@ -1287,20 +1304,12 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 		u32 cmd;
 		int ret;
 
-		if (epnum == 0) {
-			/*
-			 * XXX
-			 * get the core into the "Setup a Control-Setup TRB /
-			 * Start Transfer" state in case it is busy here.
-			 */
-			continue;
-		}
 		dep = dwc->eps[epnum];
 
 		if (!(dep->flags & DWC3_EP_ENABLED))
 			continue;
 
-		cmd = DWC3_DEPCMD_ENDTRANSFER;
+		dwc3_gadget_nuke(dep, -ESHUTDOWN);
 
 		cmd = DWC3_DEPCMD_ENDTRANSFER;
 		cmd |= DWC3_DEPCMD_HIPRI_FORCERM;
@@ -1308,6 +1317,12 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 		memset(&params, 0, sizeof(params));
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 		WARN_ON_ONCE(ret);
+
+		if (epnum == 0) {
+			/* begin to receive SETUP packets */
+			dwc->ep0state = EP0_IDLE;
+			dwc3_ep0_out_start(dwc);
+		}
 	}
 }
 
