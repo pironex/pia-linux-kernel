@@ -1230,7 +1230,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 	switch (event->endpoint_event) {
 	case DWC3_DEPEVT_XFERCOMPLETE:
 		if (usb_endpoint_xfer_isoc(dep->desc)) {
-			dev_err(dwc->dev, "%s is an Isochronous endpoint\n",
+			dev_dbg(dwc->dev, "%s is an Isochronous endpoint\n",
 					dep->name);
 			return;
 		}
@@ -1239,7 +1239,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
-			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
+			dev_dbg(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
 			return;
 		}
@@ -1248,7 +1248,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 		break;
 	case DWC3_DEPEVT_XFERNOTREADY:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
-			dev_err(dwc->dev, "%s is not an Isochronous endpoint\n",
+			dev_dbg(dwc->dev, "%s is not an Isochronous endpoint\n",
 					dep->name);
 			return;
 		}
