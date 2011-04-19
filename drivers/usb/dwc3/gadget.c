@@ -1302,11 +1302,7 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 
 		cmd = DWC3_DEPCMD_ENDTRANSFER;
 
-		/*
-		 * This one issues an interrupt. I wonder if we have to wait
-		 * for it or can simply ignore/remove the inrerupt
-		 */
-		cmd |= DWC3_DEPCMD_CMDIOC;
+		cmd = DWC3_DEPCMD_ENDTRANSFER;
 		cmd |= DWC3_DEPCMD_HIPRI_FORCERM;
 		cmd |= DWC3_DEPCMD_PARAM(dep->res_trans_idx);
 		memset(&params, 0, sizeof(params));
