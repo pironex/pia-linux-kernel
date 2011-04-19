@@ -229,6 +229,9 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 		return -ESHUTDOWN;
 	}
 
+	if (!list_empty(&dep->request_list))
+		return -EBUSY;
+
 	dev_vdbg(dwc->dev, "queueing request %p to %s length %d, state '%s'\n",
 			request, dep->name, request->length,
 			dwc3_ep0_state_string(dwc->ep0state));
