@@ -229,7 +229,10 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 		return -ESHUTDOWN;
 	}
 
-	if (!list_empty(&dep->request_list))
+	/* we share one TRB for ep0/1 */
+	if (!list_empty(&dwc->eps[0]->request_list) ||
+			!list_empty(&dwc->eps[1]->request_list) ||
+			dwc->ep0_status_pending)
 		return -EBUSY;
 
 	dev_vdbg(dwc->dev, "queueing request %p to %s length %d, state '%s'\n",
