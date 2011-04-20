@@ -606,7 +606,7 @@ err:
 static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
-	struct dwc3_request	*r;
+	struct dwc3_request	*r = NULL;
 	struct usb_request	*ur;
 	struct dwc3_trb		trb;
 	struct dwc3_ep		*dep;
@@ -645,7 +645,8 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 		else
 			dwc->ep0state = EP0_OUT_WAIT_NRDY;
 
-		dwc3_gadget_giveback(dep, ur, 0);
+		if (r)
+			dwc3_gadget_giveback(dep, r, 0);
 	}
 }
 
