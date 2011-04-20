@@ -708,10 +708,6 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		struct dwc3_event_depevt *event)
 {
 	switch (dwc->ep0state) {
-	case EP0_IDLE:
-		dwc3_ep0_inspect_setup(dwc, event);
-		break;
-
 	case EP0_IN_WAIT_GADGET:
 		dwc->ep0state = EP0_IN_WAIT_NRDY;
 		break;
@@ -724,6 +720,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 		dwc3_ep0_do_setup_status(dwc, event);
 		break;
 
+	case EP0_IDLE:
 	case EP0_IN_STATUS_PHASE:
 	case EP0_OUT_STATUS_PHASE:
 	case EP0_IN_DATA_PHASE:
