@@ -1806,6 +1806,8 @@ void __devexit dwc3_gadget_exit(struct dwc3 *dwc)
 	dma_free_coherent(dwc->dev, sizeof(*dwc->ctrl_req),
 			dwc->ctrl_req, dwc->ctrl_req_addr);
 
+	device_unregister(&dwc->gadget.dev);
+
 	the_dwc = NULL;
 }
 
