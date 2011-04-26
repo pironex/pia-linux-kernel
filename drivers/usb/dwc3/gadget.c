@@ -1889,6 +1889,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	if (dwc->gadget_driver != driver)
 		return -EINVAL;
 
+	driver->disconnect(&dwc->gadget);
 	driver->unbind(&dwc->gadget);
 
 	spin_lock_irqsave(&dwc->lock, flags);
