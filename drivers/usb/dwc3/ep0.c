@@ -223,24 +223,29 @@ int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 		return -EINVAL;
 	}
 
+	spin_lock_irqsave(&dwc->lock, flags);
 	if (!dep->desc) {
 		dev_dbg(dwc->dev, "trying to queue request %p to disabled %s\n",
 				request, dep->name);
-		return -ESHUTDOWN;
+		ret = -ESHUTDOWN;
+		goto out;
 	}
 
 	/* we share one TRB for ep0/1 */
 	if (!list_empty(&dwc->eps[0]->request_list) ||
 			!list_empty(&dwc->eps[1]->request_list) ||
-			dwc->ep0_status_pending)
-		return -EBUSY;
+			dwc->ep0_status_pending) {
+		ret = -EBUSY;
+		goto out;
+	}
 
 	dev_vdbg(dwc->dev, "queueing request %p to %s length %d, state '%s'\n",
 			request, dep->name, request->length,
 			dwc3_ep0_state_string(dwc->ep0state));
 
-	spin_lock_irqsave(&dwc->lock, flags);
 	ret = __dwc3_gadget_ep0_queue(dep, req);
+
+out:
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 	return ret;
