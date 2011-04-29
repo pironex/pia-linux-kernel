@@ -1299,7 +1299,7 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 {
 	u32 epnum;
 
-	for (epnum = 0; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
+	for (epnum = 2; epnum < DWC3_ENDPOINTS_NUM; epnum++) {
 		struct dwc3_ep *dep;
 		struct dwc3_gadget_ep_cmd_params params;
 		u32 cmd;
