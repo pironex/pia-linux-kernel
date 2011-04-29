@@ -691,16 +691,13 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 		dwc3_ep0_complete_data(dwc, event);
 		break;
 
-	case EP0_IN_WAIT_NRDY:
-	case EP0_OUT_WAIT_NRDY:
-		dwc3_ep0_do_setup_status(dwc, event);
-		break;
-
 	case EP0_IN_STATUS_PHASE:
 	case EP0_OUT_STATUS_PHASE:
 		dwc3_ep0_complete_req(dwc, event);
 		break;
 
+	case EP0_IN_WAIT_NRDY:
+	case EP0_OUT_WAIT_NRDY:
 	case EP0_IN_WAIT_GADGET:
 	case EP0_OUT_WAIT_GADGET:
 	case EP0_UNCONNECTED:
