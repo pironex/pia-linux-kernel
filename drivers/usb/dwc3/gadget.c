@@ -1310,8 +1310,6 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 		if (!(dep->flags & DWC3_EP_ENABLED))
 			continue;
 
-		dwc3_gadget_nuke(dep, -ESHUTDOWN);
-
 		cmd = DWC3_DEPCMD_ENDTRANSFER;
 		cmd |= DWC3_DEPCMD_HIPRI_FORCERM;
 		cmd |= DWC3_DEPCMD_PARAM(dep->res_trans_idx);
@@ -1319,12 +1317,13 @@ static void dwc3_stop_active_transfers(struct dwc3 *dwc)
 		ret = dwc3_send_gadget_ep_cmd(dwc, dep->number, cmd, &params);
 		WARN_ON_ONCE(ret);
 
-		if (epnum == 0) {
-			/* begin to receive SETUP packets */
-			dwc->ep0state = EP0_IDLE;
-			dwc3_ep0_out_start(dwc);
-		}
+		dwc3_gadget_nuke(dep, -ESHUTDOWN);
+
 	}
+
+	/* begin to receive SETUP packets */
+	dwc->ep0state = EP0_IDLE;
+	dwc3_ep0_out_start(dwc);
 }
 
 static void dwc3_clear_stall_all_ep(struct dwc3 *dwc)
