@@ -698,7 +698,8 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 	dwc3_map_buffer_to_dma(req);
 	dwc3_gadget_add_request(dep, req);
 
-	if (!(dep->request_count == 1) && !usb_endpoint_xfer_isoc(dep->desc)) {
+	if (!usb_endpoint_xfer_isoc(dep->desc) &&
+			!list_empty(&dep->req_queued)) {
 		dev_vdbg(dwc->dev, "%s's request_list isn't singular\n",
 				dep->name);
 		return 0;
@@ -1171,7 +1172,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	if (!(event_status & DEPEVT_STATUS_LST))
 		goto out;
 
-	if (!dep->request_count)
+	if (list_empty(&dep->request_list))
 		goto out;
 
 	ret = __dwc3_gadget_kick_transfer(dep, 0);
