@@ -1114,7 +1114,7 @@ static void dwc3_gadget_release(struct device *dev)
 /* -------------------------------------------------------------------------- */
 
 static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
-		struct dwc3_ep *dep, const unsigned int event_status)
+		struct dwc3_ep *dep, const struct dwc3_event_depevt *event)
 {
 	struct dwc3_request	*req;
 	struct dwc3_trb         trb;
@@ -1169,7 +1169,7 @@ static void dwc3_endpoint_transfer_complete(struct dwc3 *dwc,
 	 * request with the TRB bit set. We wait for it before we enqueue new
 	 * requests
 	 */
-	if (!(event_status & DEPEVT_STATUS_LST))
+	if (!(event->status & DEPEVT_STATUS_LST))
 		goto out;
 
 	if (list_empty(&dep->request_list))
@@ -1191,7 +1191,7 @@ out:
 }
 
 static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
-		struct dwc3_ep *dep, const unsigned int event_status)
+		struct dwc3_ep *dep, const struct dwc3_event_depevt *event)
 {
 	u32 uf;
 
@@ -1201,11 +1201,11 @@ static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
 		return;
 	}
 
-	if (event_status) {
+	if (event->parameters) {
 		u32 mask;
 
 		mask = ~(dep->interval - 1);
-		uf = event_status & mask;
+		uf = event->parameters & mask;
 		/* 4 micro frames in the future */
 		uf += dep->interval * 4;
 	} else {
@@ -1237,7 +1237,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 			return;
 		}
 
-		dwc3_endpoint_transfer_complete(dwc, dep, event->parameters);
+		dwc3_endpoint_transfer_complete(dwc, dep, event);
 		break;
 	case DWC3_DEPEVT_XFERINPROGRESS:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
@@ -1246,7 +1246,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 			return;
 		}
 
-		dwc3_endpoint_transfer_complete(dwc, dep, event->parameters);
+		dwc3_endpoint_transfer_complete(dwc, dep, event);
 		break;
 	case DWC3_DEPEVT_XFERNOTREADY:
 		if (!usb_endpoint_xfer_isoc(dep->desc)) {
@@ -1255,7 +1255,7 @@ static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
 			return;
 		}
 		dep->flags &= ~DWC3_EP_ISOC_RUNNING;
-		dwc3_gadget_start_isoc(dwc, dep, event->parameters);
+		dwc3_gadget_start_isoc(dwc, dep, event);
 
 		break;
 	case DWC3_DEPEVT_RXTXFIFOEVT:
