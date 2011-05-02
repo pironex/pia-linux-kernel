@@ -55,7 +55,7 @@
 #include "io.h"
 
 static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event);
+		const struct dwc3_event_depevt *event);
 
 static const char *dwc3_ep0_state_string(enum dwc3_ep0_state state)
 {
@@ -276,7 +276,7 @@ void dwc3_ep0_out_start(struct dwc3 *dwc)
  * Send a zero length packet for the status phase of the control transfer
  */
 static void dwc3_ep0_do_setup_status(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	struct dwc3_ep			*dep;
 	int				ret;
@@ -578,7 +578,7 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 }
 
 static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	struct usb_ctrlrequest *ctrl = dwc->ctrl_req;
 	int ret;
@@ -612,7 +612,7 @@ err:
 }
 
 static void dwc3_ep0_complete_data(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	struct dwc3_request	*r = NULL;
 	struct usb_request	*ur;
@@ -659,7 +659,7 @@ static void dwc3_ep0_complete_data(struct dwc3 *dwc,
 }
 
 static void dwc3_ep0_complete_req(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	struct dwc3_request	*r;
 	struct dwc3_ep		*dep;
@@ -679,7 +679,7 @@ static void dwc3_ep0_complete_req(struct dwc3 *dwc,
 }
 
 static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
-			struct dwc3_event_depevt *event)
+			const struct dwc3_event_depevt *event)
 {
 	switch (dwc->ep0state) {
 	case EP0_IDLE:
@@ -707,7 +707,7 @@ static void dwc3_ep0_xfer_complete(struct dwc3 *dwc,
 }
 
 static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	switch (dwc->ep0state) {
 	case EP0_IN_WAIT_GADGET:
@@ -734,7 +734,7 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 }
 
 void dwc3_ep0_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const const struct dwc3_event_depevt *event)
 {
 	u8			epnum = event->endpoint_number;
 

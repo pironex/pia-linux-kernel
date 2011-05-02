@@ -1217,7 +1217,7 @@ static void dwc3_gadget_start_isoc(struct dwc3 *dwc,
 }
 
 static void dwc3_endpoint_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_depevt *event)
+		const struct dwc3_event_depevt *event)
 {
 	struct dwc3_ep		*dep;
 	u8			epnum = event->endpoint_number;
@@ -1519,7 +1519,7 @@ static void dwc3_gadget_linksts_change_interrupt(struct dwc3 *dwc,
 }
 
 static void dwc3_gadget_interrupt(struct dwc3 *dwc,
-		struct dwc3_event_devt *event)
+		const struct dwc3_event_devt *event)
 {
 	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
@@ -1558,7 +1558,7 @@ static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 }
 
 static void dwc3_process_event_entry(struct dwc3 *dwc,
-		union dwc3_event *event)
+		const union dwc3_event *event)
 {
 	/* Endpoint IRQ, handle it and return early */
 	if (event->type.is_devspec == 0) {
