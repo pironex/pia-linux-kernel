@@ -14,7 +14,7 @@ ifneq ($(CONFIG_ARCH_OMAP5),)
 endif
 
 ifneq ($(CONFIG_PCI),)
-	obj-$(CONFIG_USB_DWC3)		+= dwc3-haps.o
+	obj-$(CONFIG_USB_DWC3)		+= dwc3-pci.o
 endif
 
 ifneq ($(CONFIG_DEBUG_FS),)

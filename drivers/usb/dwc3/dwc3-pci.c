@@ -1,5 +1,5 @@
 /**
- * dwc3-haps.c - HAPS Specific glue layer
+ * dwc3-pci.c - PCI Specific glue layer
  *
  * Copyright (C) 2010-2011 Texas Instruments Incorporated - http://www.ti.com
  * All rights reserved.
@@ -46,21 +46,21 @@
 #define PCI_VENDOR_ID_SYNOPSYS		0x16c3
 #define PCI_DEVICE_ID_SYNOPSYS_HAPSUSB3	0xabcd
 
-struct dwc3_haps {
+struct dwc3_pci {
 	struct device		*dev;
 	struct platform_device	*dwc3;
 };
 
-static int __devinit dwc3_haps_probe(struct pci_dev *pci,
+static int __devinit dwc3_pci_probe(struct pci_dev *pci,
 		const struct pci_device_id *id)
 {
 	struct resource		res[2];
 	struct platform_device	*dwc3;
-	struct dwc3_haps	*haps;
+	struct dwc3_pci		*pci;
 	int			ret = -ENOMEM;
 
-	haps = kzalloc(sizeof(*haps), GFP_KERNEL);
-	if (!haps) {
+	pci = kzalloc(sizeof(*pci), GFP_KERNEL);
+	if (!pci) {
 		dev_err(&pci->dev, "not enough memory\n");
 		goto err0;
 	}
@@ -74,7 +74,7 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 	pci_set_power_state(pci, PCI_D0);
 	pci_set_master(pci);
 
-	dwc3 = platform_device_alloc("dwc3-haps", -1);
+	dwc3 = platform_device_alloc("dwc3-pci", -1);
 	if (!dwc3) {
 		dev_err(&pci->dev, "couldn't allocate dwc3 device\n");
 		goto err2;
@@ -98,11 +98,11 @@ static int __devinit dwc3_haps_probe(struct pci_dev *pci,
 		goto err3;
 	}
 
-	pci_set_drvdata(pci, haps);
+	pci_set_drvdata(pci, pci);
 
 	dwc3->dev.parent = &pci->dev;
-	haps->dev	= &pci->dev;
-	haps->dwc3	= dwc3;
+	pci->dev	= &pci->dev;
+	pci->dwc3	= dwc3;
 
 	ret = platform_device_add(dwc3);
 	if (ret) {
@@ -120,49 +120,49 @@ err2:
 	pci_disable_device(pci);
 
 err1:
-	kfree(haps);
+	kfree(pci);
 
 err0:
 	return ret;
 }
 
-static void __devexit dwc3_haps_remove(struct pci_dev *pci)
+static void __devexit dwc3_pci_remove(struct pci_dev *pci)
 {
-	struct dwc3_haps	*haps = pci_get_drvdata(pci);
+	struct dwc3_pci	*pci = pci_get_drvdata(pci);
 
-	platform_device_unregister(haps->dwc3);
+	platform_device_unregister(pci->dwc3);
 	pci_set_drvdata(pci, NULL);
 	pci_disable_device(pci);
-	kfree(haps);
+	kfree(pci);
 }
 
-static DEFINE_PCI_DEVICE_TABLE(dwc3_haps_id_table) = {
+static DEFINE_PCI_DEVICE_TABLE(dwc3_pci_id_table) = {
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_SYNOPSYS,
 				PCI_DEVICE_ID_SYNOPSYS_HAPSUSB3),
 	},
 	{  }	/* Terminating Entry */
 };
-MODULE_DEVICE_TABLE(pci, dwc3_haps_id_table);
+MODULE_DEVICE_TABLE(pci, dwc3_pci_id_table);
 
-static struct pci_driver dwc3_haps_driver = {
-	.id_table	= dwc3_haps_id_table,
-	.probe		= dwc3_haps_probe,
-	.remove		= __devexit_p(dwc3_haps_remove),
+static struct pci_driver dwc3_pci_driver = {
+	.id_table	= dwc3_pci_id_table,
+	.probe		= dwc3_pci_probe,
+	.remove		= __devexit_p(dwc3_pci_remove),
 };
 
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_DESCRIPTION("DesignWare USB3 HAPS Glue Layer");
+MODULE_DESCRIPTION("DesignWare USB3 PCI Glue Layer");
 
-static int __init dwc3_haps_init(void)
+static int __init dwc3_pci_init(void)
 {
-	return pci_register_driver(&dwc3_haps_driver);
+	return pci_register_driver(&dwc3_pci_driver);
 }
-module_init(dwc3_haps_init);
+module_init(dwc3_pci_init);
 
-static void __exit dwc3_haps_exit(void)
+static void __exit dwc3_pci_exit(void)
 {
-	pci_unregister_driver(&dwc3_haps_driver);
+	pci_unregister_driver(&dwc3_pci_driver);
 }
-module_exit(dwc3_haps_exit);
+module_exit(dwc3_pci_exit);

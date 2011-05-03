@@ -393,7 +393,7 @@ static const struct platform_device_id dwc3_id_table[] __devinitconst = {
 			| DWC3_HAS_OTG),
 	},
 	{
-		.name	= "dwc3-haps",
+		.name	= "dwc3-pci",
 		.driver_data = DWC3_HAS_PERIPHERAL,
 	},
 	{  },	/* Terminating Entry */
