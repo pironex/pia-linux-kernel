@@ -20,8 +20,10 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/gpio.h>
+#include <linux/mfd/tps6507x.h>
 #include <linux/mmc/host.h>
 #include <linux/regulator/machine.h>
+#include <linux/regulator/tps6507x.h>
 
 #include <mach/hardware.h>
 #include <asm/mach-types.h>
@@ -65,43 +67,29 @@ static struct usbhs_omap_board_data usbhs_bdata __initdata = {
  * MMC
  */
 #include <linux/regulator/fixed.h>
+#include <linux/regulator/tps6507x.h>
 
-static struct regulator_consumer_supply pia3517_vmmc1_supply = {
-	.supply         = "vmmc",
-	.dev_name       = "mmci-omap-hs.0", /* bind to our MMC1 device */
+static struct regulator_consumer_supply pia3517_ldo1_consumers[] = {
 };
 
-static struct regulator_init_data pia3517_vmmc1_data = {
-	.constraints = {
-			.min_uV           = 1850000,
-			.max_uV           = 3150000,
-			.valid_modes_mask = REGULATOR_MODE_NORMAL
-					| REGULATOR_MODE_STANDBY,
-			.valid_ops_mask   = REGULATOR_CHANGE_VOLTAGE
-					| REGULATOR_CHANGE_MODE
-					| REGULATOR_CHANGE_STATUS,
-	},
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &pia3517_vmmc1_supply,
-};
+//static struct fixed_voltage_config pia3517_vmmc1_config = {
+//	.supply_name = "vmmc1",
+//	.microvolts = 1800000,  /* 1.8V */
+//	//.gpio = OMAP_BEAGLE_WLAN_EN_GPIO,
+//	.startup_delay = 70000, /* 70ms */
+//	.enable_high = 1,
+//	.enabled_at_boot = 1,
+//	.init_data = &pia3517_vmmc1_data,
+//};
+//
+//static struct platform_device pia3517_vmmc1_device = {
+//	.name           = "reg-fixed-voltage",
+//	.id             = 1,
+//	.dev = {
+//		.platform_data = &pia3517_vmmc1_config,
+//	},
+//};
 
-static struct fixed_voltage_config pia3517_vmmc1_config = {
-	.supply_name = "vmmc1",
-	.microvolts = 1800000,  /* 1.8V */
-	//.gpio = OMAP_BEAGLE_WLAN_EN_GPIO,
-	.startup_delay = 70000, /* 70ms */
-	.enable_high = 1,
-	.enabled_at_boot = 1,
-	.init_data = &pia3517_vmmc1_data,
-};
-
-static struct platform_device pia3517_vmmc1_device = {
-	.name           = "reg-fixed-voltage",
-	.id             = 1,
-	.dev = {
-		.platform_data = &pia3517_vmmc1_config,
-	},
-};
 
 static struct omap2_hsmmc_info mmc[] = {
 	/* first MMC port used for system MMC modules */
@@ -124,10 +112,10 @@ static struct omap2_hsmmc_info mmc[] = {
 	{}	/* Terminator */
 };
 
-static void pia3517_mmc_init(void)
+static void pia35x_mmc_init(void)
 {
-	printk(KERN_INFO "piA-am35x: registering VMMC1 platform device\n");
-	platform_device_register(&pia3517_vmmc1_device);
+	pr_info("piA-am35x: registering VMMC1 platform device\n");
+	//platform_device_register(&pia3517_vmmc1_device);
 	/* handling of different MMC2 expansions here */
 	omap2_hsmmc_init(mmc);
 	/* link regulators to MMC adapters */
@@ -136,16 +124,169 @@ static void pia3517_mmc_init(void)
 
 }
 
+/*
+ * Voltage Regulator
+ */
+static struct tps6507x_reg_platform_data pia35x_tps_platform_data = {
+		.defdcdc_default = true,
+};
+
+static struct regulator_consumer_supply pia35x_vdd1_consumers[] = {
+	{
+		.supply = "vdds",
+	},
+};
+
+static struct regulator_consumer_supply pia35x_vdd2_consumers[] = {
+	{
+		.supply = "vddshv",
+	},
+	{
+		.supply         = "vmmc",
+		.dev_name       = "mmci-omap-hs.0", /* bind to our MMC1 device */
+	},
+};
+
+static struct regulator_consumer_supply pia35x_vdd3_consumers[] = {
+	{
+		.supply = "vdd_core",
+	},
+};
+
+static struct regulator_consumer_supply pia35x_ldo1_consumers[] = {
+	{
+		.supply = "vdda1p8v_usbphy",
+	},
+};
+
+static struct regulator_consumer_supply pia35x_vpll_consumers[] = {
+	{
+		.supply = "vdds_dpll_mpu_usbhost",
+	},
+	{
+		.supply = "vdds_dpll_per_core",
+	},
+	{
+		.supply = "vdd_sram_mpu",
+	},
+	{
+		.supply = "vdd_sram_core_bg0",
+	},
+	{
+		.supply = "vddsosc",
+	},
+};
+
+static struct regulator_init_data pia35x_tps_regulator_data[] = {
+		/* dcdc: VDDS_1V8*/
+		{
+				.constraints = {
+						.min_uV = 1800000,
+						.max_uV = 1800000,
+						.valid_modes_mask = REGULATOR_MODE_NORMAL,
+						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+						.always_on = true,
+						.apply_uV = true,
+				},
+				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd1_consumers),
+				.consumer_supplies     = &pia35x_vdd1_consumers[0],
+		},
+		/* dcdc2: VDDSHV_3V3 */
+		{
+				.constraints = {
+						.min_uV = 3300000,
+						.max_uV = 3300000,
+						.valid_modes_mask = REGULATOR_MODE_NORMAL,
+						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+						.always_on = true,
+						.apply_uV = true
+				},
+				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd2_consumers),
+				.consumer_supplies = &pia35x_vdd2_consumers[0],
+		},
+		/* dcdc3: VDDCORE_1V2 */
+		{
+				.constraints = {
+						.min_uV = 1200000,
+						.max_uV = 1200000,
+						.valid_modes_mask = REGULATOR_MODE_NORMAL,
+						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+						.always_on = true,
+						.apply_uV = true
+				},
+				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd3_consumers),
+				.consumer_supplies = &pia35x_vdd3_consumers[0],
+		},
+		/* ldo1: VDDA1P8V_USBPHY */
+		{
+				.constraints = {
+						.min_uV           = 1800000,
+						.max_uV           = 1800000,
+						.valid_modes_mask = REGULATOR_MODE_NORMAL,
+						.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+						//.boot_on = 1,
+						.always_on = true,
+						.apply_uV = true,
+				},
+				.num_consumer_supplies = ARRAY_SIZE(pia35x_ldo1_consumers),
+				.consumer_supplies = &pia3517_ldo1_consumers[0],
+		},
+		/* ldo2: VDDS_DPLL_1V8 */
+		{
+				.constraints = {
+						.min_uV           = 1800000,
+						.max_uV           = 1800000,
+						.valid_modes_mask = REGULATOR_MODE_NORMAL,
+						.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+						//.boot_on = 1,
+						.always_on = true,
+						.apply_uV = true,
+				},
+				.num_consumer_supplies = ARRAY_SIZE(pia35x_vpll_consumers),
+				.consumer_supplies = &pia35x_vpll_consumers[0],
+		},
+};
+
+static struct tps6507x_board pia35x_tps_board = {
+		/* regulator */
+		.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
+		.tps6507x_ts_init_data   = 0,   /* no touchscreen */
+};
+
+static struct i2c_board_info __initdata pia35x_tps_info[] = {
+		{
+				I2C_BOARD_INFO("tps6507x", 0x48),
+				.platform_data = &pia35x_tps_board,
+		},
+};
+
+/* initialize our voltage regulator TPS6507 */
+static int __init pia35x_pmic_tps65070_init(void)
+{
+	return i2c_register_board_info(1, pia35x_tps_info,
+									ARRAY_SIZE(pia35x_tps_info));
+}
+
+/*
+ * base initialisation function
+ */
 static void __init am3517_crane_init(void)
 {
-	/* additional pin muxing */
-	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
-	/* initialize uarts */
+	int ret;
+
+	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
+	if (ret)
+		pr_warning("pia35x_init: MUX init failed: %d", ret);
+
 	omap_serial_init();
+	pr_info("pia35x_init: serial init done");
 	omap_sdrc_init(NULL, NULL);
 
 	omap_board_config = am3517_crane_config;
 	omap_board_config_size = ARRAY_SIZE(am3517_crane_config);
+	ret = pia35x_pmic_tps65070_init();
+	if (ret)
+		pr_warning("pia35x_init: TPS65070 PMIC init failed: %d", ret);
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
@@ -171,7 +312,7 @@ static void __init am3517_crane_init(void)
 	usbhs_init(&usbhs_bdata);
 #endif
 
-	pia3517_mmc_init();
+	pia35x_mmc_init();
 }
 
 MACHINE_START(CRANEBOARD, "AM3517/05 CRANEBOARD")
