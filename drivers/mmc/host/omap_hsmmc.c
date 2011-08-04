@@ -417,6 +417,7 @@ static int omap_hsmmc_reg_get(struct omap_hsmmc_host *host)
 		* we don't require a main regulator
 		* for MMC2 or MMC3
 		*/
+		pr_warning("%s: vmmc regulator missing for mmc.%d", __func__, host->id);
 		if (host->id == OMAP_MMC1_DEVID) {
 			ret = PTR_ERR(reg);
 			goto err;
