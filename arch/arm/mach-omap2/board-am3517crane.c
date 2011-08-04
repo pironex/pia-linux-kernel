@@ -29,6 +29,8 @@
 #include <linux/mtd/nand.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/tps6507x.h>
+#include <linux/regulator/fixed.h>
+#include <linux/wl12xx.h>
 #include <linux/can/platform/ti_hecc.h>
 
 #include <mach/hardware.h>
@@ -268,19 +270,19 @@ static int __init pia35x_gsm_init(void)
 {
 	int ret;
 	//omap_mux_init_gpio(29, OMAP_PIN_OUTPUT);
-	if (ret = gpio_request(29, "GSM_Power"))
+	if ((ret = gpio_request(29, "GSM_Power")))
 		pr_warning("%s: GPIO 29 request failed: %d\n", __func__, ret);
 	gpio_export(29, 1);
 	gpio_direction_output(29, 1);
 
 	//omap_mux_init_gpio(126, OMAP_PIN_OUTPUT);
-	if (gpio_request(126,"GSM_Reset"))
+	if ((ret = gpio_request(126,"GSM_Reset")))
 		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
 	gpio_export(126, 1);
 	gpio_direction_output(126, 1);
 
 	//omap_mux_init_gpio(127, OMAP_PIN_OUTPUT);
-	if (gpio_request(127,"GSM_On/Off"))
+	if ((ret = gpio_request(127,"GSM_On/Off")))
 		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
 	gpio_export(127, 1);
 	gpio_direction_output(127, 1);
@@ -342,14 +344,9 @@ static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
 	platform_device_register(&pia35x_hecc_device);
 }
 
-
-
 /*
  * MMC
  */
-#include <linux/regulator/fixed.h>
-#include <linux/regulator/tps6507x.h>
-
 /* MMC1 has fixed power supply */
 static struct regulator_consumer_supply pia35x_vmmc1_consumers[] = {
 		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.0"),
@@ -374,7 +371,7 @@ static struct fixed_voltage_config pia35x_vmmc1_config = {
 
 static struct platform_device pia35x_vmmc1_device = {
 	.name           = "reg-fixed-voltage",
-	.id             = 0,
+	.id             = 2,
 	.dev = {
 		.platform_data = &pia35x_vmmc1_config,
 	},
@@ -542,11 +539,11 @@ static struct omap2_hsmmc_info mmc[] = {
 		.gpio_wp        = -EINVAL, /* we don't have a WP pin connected, was: 40 */
 		//.ocr_mask       = MMC_VDD_33_34,
 	},
-#if defined(CONFIG_WL1271) || defined (CONFIG_WL1271_MODULEx)
+#if defined(CONFIG_WL1271) || defined (CONFIG_WL1271_MODULE)
 	{
 		.name		= "wl1271",
 		.mmc		= 2,
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
+		.caps		= MMC_CAP_4_BIT_DATA,
 		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
 		.nonremovable	= true,
@@ -563,6 +560,83 @@ static void __init pia35x_mmc_init(void)
 	/* link regulator to on-board MMC adapter */
 	pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
 	platform_device_register(&pia35x_vmmc1_device);
+}
+
+/*
+ * external WLAN WL1271
+ */
+#define PIA35X_WLAN_IRQ_GPIO	137
+#define PIA35X_WLAN_PMENA_GPIO	139
+
+static struct regulator_consumer_supply pia35x_vmmc2_consumers[] = {
+		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1"),
+};
+
+static struct regulator_init_data pia35x_vmmc2_data = {
+	.constraints = {
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.always_on		= 1,
+		.min_uV         = 3300000,
+		.max_uV         = 3300000,
+		.apply_uV       = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(pia35x_vmmc2_consumers),
+	.consumer_supplies	    = pia35x_vmmc2_consumers,
+};
+
+static struct fixed_voltage_config pia35x_vmmc2_config = {
+	.supply_name     = "vwl1271",
+	.microvolts      = 3300000,  /* 3.3V */
+	.gpio            = PIA35X_WLAN_PMENA_GPIO,
+	.startup_delay   = 70000,
+	.enable_high     = 1,
+	.enabled_at_boot = 0,
+	.init_data       = &pia35x_vmmc2_data,
+};
+
+static struct platform_device pia35x_vwlan_device = {
+	.name           = "reg-fixed-voltage",
+	.id             = 1,
+	.dev = {
+		.platform_data = &pia35x_vmmc2_config,
+	},
+};
+
+struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
+	/* ref clock is 26 MHz */
+	.board_ref_clock = 1,
+};
+
+static int __init pia35x_wlan_init(void)
+{
+	if (wl12xx_set_platform_data(&pia35x_wlan_data))
+		pr_err("%s: error setting wl12xx data\n", __func__);
+
+//	omap_mux_init_gpio(PIA35X_WLAN_IRQ_GPIO, OMAP_PIN_OUTPUT);
+//	if (gpio_request(PIA35X_WLAN_IRQ_GPIO, "wlan.irq"))
+//		pr_warning("GPIO 137 (WLAN.IRQ) request failed\n");
+//	//gpio_export(PIA35X_WLAN_IRQ_GPIO, 1);
+//	gpio_direction_input(PIA35X_WLAN_IRQ_GPIO);
+
+//	omap_mux_init_gpio(PIA35X_WLAN_PMENA_GPIO, OMAP_PIN_OUTPUT);
+//	if (gpio_request(PIA35X_WLAN_PMENA_GPIO, "wlan.en")) {
+//		pr_warning("GPIO 139 (WLAN.EN) request failed\n");
+//	} else {
+//		gpio_direction_output(PIA35X_WLAN_PMENA_GPIO, 1);
+//	}
+//	gpio_free(PIA35X_WLAN_PMENA_GPIO);
+//	msleep(50);
+	//gpio_export(139, 1);
+	//gpio_direction_output(139, 1);
+
+	//omap_mux_init_signal("sdmmc2_dat5.gpio_137", OMAP_PIN_INPUT_PULLUP);
+	//omap_mux_init_signal("sdmmc2_dat7.gpio_139", OMAP_PIN_OUTPUT);
+	//pia35x_vmmc2_consumers[0].dev = mmc[1].dev;
+
+	platform_device_register(&pia35x_vwlan_device);
+
+	return 0;
 }
 
 /*
@@ -629,7 +703,7 @@ static struct mtd_partition pia35x_nand_partitions[] = {
 	},
 };
 
-#if 0
+#if 0 /* we don't need this in 2.6.37 */
 static struct omap_nand_platform_data am3517crane_nand_data = {
 	.parts          = pia35x_nand_partitions,
 	.nr_parts       = ARRAY_SIZE(pia35x_nand_partitions),
@@ -704,6 +778,8 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 		/* power regulator TPS650732 */
 		{
 				I2C_BOARD_INFO("tps6507x", 0x48),
+				.flags = I2C_CLIENT_WAKE,
+				.irq = INT_34XX_SYS_NIRQ,
 				.platform_data = &pia35x_tps_board,
 		},
 #endif /* CONFIG_REGULATOR_TPS6507X */
@@ -779,6 +855,9 @@ static void __init am3517_crane_init(void)
 
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
+
+	pr_info("pia35x_init: init WLAN\n");
+	pia35x_wlan_init();
 
 	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
