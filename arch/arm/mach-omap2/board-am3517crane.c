@@ -58,22 +58,29 @@ static struct omap_board_mux board_mux[] __initdata = {
 
 		/* MMC1_CD        GPIO 041, low == card in slot */
 		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+
+		/* EN_GSM_POWER   GPIO 029, low active */
+		OMAP3_MUX(ETK_D15,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* GSM_nRESET     GPIO 126, low active */
 		OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* nGSM_ON/OFF    GPIO 127, low active */
 		OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+
 		/* UART2.485/#232 GPIO 128, low = RS232 */
 		OMAP3_MUX(SDMMC1_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* UART2.SLEW     GPIO 129 */
 		OMAP3_MUX(SDMMC1_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+
 		/* undocumented */
 		//OMAP3_MUX(CHASSIS_DMAREQ3, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
 		/* MCBSP_CLKS     GPIO 160 */
 		//OMAP3_MUX(MCBSP_CLKS, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+
 		/* INPUT_GPIO1    GPIO 055 */
 		OMAP3_MUX(GPMC_NCS4, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 		/* INPUT_GPIO2    GPIO 056 */
 		OMAP3_MUX(GPMC_NCS5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+
 		/* ETHERNET_nRST  GPIO 065 */
 		OMAP3_MUX(GPMC_WAIT3, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
@@ -253,6 +260,34 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 
 	return ;
 }
+
+/*
+ * GSM
+ */
+static int __init pia35x_gsm_init(void)
+{
+	int ret;
+	//omap_mux_init_gpio(29, OMAP_PIN_OUTPUT);
+	if (ret = gpio_request(29, "GSM_Power"))
+		pr_warning("%s: GPIO 29 request failed: %d\n", __func__, ret);
+	gpio_export(29, 1);
+	gpio_direction_output(29, 1);
+
+	//omap_mux_init_gpio(126, OMAP_PIN_OUTPUT);
+	if (gpio_request(126,"GSM_Reset"))
+		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
+	gpio_export(126, 1);
+	gpio_direction_output(126, 1);
+
+	//omap_mux_init_gpio(127, OMAP_PIN_OUTPUT);
+	if (gpio_request(127,"GSM_On/Off"))
+		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
+	gpio_export(127, 1);
+	gpio_direction_output(127, 1);
+
+	return 0;
+}
+
 
 /*
  * CAN - HECC
@@ -486,7 +521,6 @@ static struct tps6507x_board pia35x_tps_board = {
 		.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
 		.tps6507x_ts_init_data   = 0,   /* no touchscreen */
 };
-#endif /* CONFIG_REGULATOR_TPS6507X */
 
 /* register our voltage regulator TPS650732 using I2C1 */
 static int __init pia35x_pmic_tps65070_init(void)
@@ -494,6 +528,7 @@ static int __init pia35x_pmic_tps65070_init(void)
 	// does nothing, already registered with i2c inits
 	return 0;
 }
+#endif /* CONFIG_REGULATOR_TPS6507X */
 
 /*
  * MMC1
@@ -672,6 +707,11 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 				.platform_data = &pia35x_tps_board,
 		},
 #endif /* CONFIG_REGULATOR_TPS6507X */
+		/* RTC + WDOG */
+		{
+				I2C_BOARD_INFO("ds1374", 0x68),
+		},
+
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
@@ -739,6 +779,15 @@ static void __init am3517_crane_init(void)
 
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
+
+	pr_info("pia35x_init: init GSM\n");
+	pia35x_gsm_init();
+
+	/* TODO
+	 * WLAN
+	 * bluetooth
+	 * display?
+	 */
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
