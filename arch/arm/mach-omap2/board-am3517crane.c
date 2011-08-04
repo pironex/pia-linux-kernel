@@ -29,6 +29,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/tps6507x.h>
+#include <linux/can/platform/ti_hecc.h>
 
 #include <mach/hardware.h>
 #include <mach/am35xx.h>
@@ -55,7 +56,7 @@ static struct omap_board_config_kernel am3517_crane_config[] __initdata = {
 static struct omap_board_mux board_mux[] __initdata = {
 		/* only fixed MUXes here, don't add anything on expansions */
 
-		/* MMC1_CD        GPIO 041, TODO low active (?) or remove pullup */
+		/* MMC1_CD        GPIO 041, low == card in slot */
 		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 		/* GSM_nRESET     GPIO 126, low active */
 		OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
@@ -95,7 +96,7 @@ static struct usbhs_omap_board_data usbhs_bdata __initdata = {
 #endif
 
 /*
- * Ethernet
+ * Ethernet (internal) & PHY (SMSC LAN8720A-CP)
  */
 #define GPIO_ETHERNET_NRST 65
 #define AM35XX_EVM_MDIO_FREQUENCY	(1000000)
@@ -160,6 +161,9 @@ static struct platform_device pia35x_emac_device = {
 	.resource       = pia35x_emac_resources,
 };
 
+/*
+ * initialize MAC address from boot parameter eth=<MAC>
+ */
 static int __init eth_addr_setup(char *str)
 {
 	int i;
@@ -174,6 +178,9 @@ static int __init eth_addr_setup(char *str)
 /* Get MAC address from kernel boot parameter eth=AA:BB:CC:DD:EE:FF */
 __setup("eth=", eth_addr_setup);
 
+/*
+ * disable ETH interrupt
+ */
 static void pia35x_enable_ethernet_int(void)
 {
 	u32 regval;
@@ -187,6 +194,9 @@ static void pia35x_enable_ethernet_int(void)
 	regval = omap_ctrl_readl(AM35XX_CONTROL_LVL_INTR_CLEAR);
 }
 
+/*
+ * enable ETH interrupt
+ */
 static void pia35x_disable_ethernet_int(void)
 {
 	u32 regval;
@@ -198,6 +208,11 @@ static void pia35x_disable_ethernet_int(void)
 	regval = omap_ctrl_readl(AM35XX_CONTROL_LVL_INTR_CLEAR);
 }
 
+/*
+ * ETH init
+ * make sure ETH module is powered
+ * initialize MAC, PHY and configurationn
+ */
 static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 {
 	u32 regval, mac_lo, mac_hi;
@@ -239,6 +254,60 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	return ;
 }
 
+/*
+ * CAN - HECC
+ */
+//#define CAN_STB         214
+//static void hecc_phy_control(int on)
+//{
+//        int r;
+//
+//        r = gpio_request(CAN_STB, "can_stb");
+//        if (r) {
+//                printk(KERN_ERR "failed to get can_stb \n");
+//                return;
+//        }
+//
+//        gpio_direction_output(CAN_STB, (on==1)?0:1);
+//}
+
+static struct resource pia35x_hecc_resources[] = {
+	{
+		.start	= AM35XX_IPSS_HECC_BASE,
+		.end	= AM35XX_IPSS_HECC_BASE + 0x3FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_35XX_HECC0_IRQ,
+		.end	= INT_35XX_HECC0_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device pia35x_hecc_device = {
+	.name           = "ti_hecc",
+	.id	            = -1,
+	.num_resources  = ARRAY_SIZE(pia35x_hecc_resources),
+	.resource       = pia35x_hecc_resources,
+};
+
+static struct ti_hecc_platform_data pia35x_hecc_pdata = {
+	.scc_hecc_offset = AM35XX_HECC_SCC_HECC_OFFSET,
+	.scc_ram_offset  = AM35XX_HECC_SCC_RAM_OFFSET,
+	.hecc_ram_offset = AM35XX_HECC_RAM_OFFSET,
+	.mbx_offset      = AM35XX_HECC_MBOX_OFFSET,
+	.int_line        = AM35XX_HECC_INT_LINE,
+	.version         = AM35XX_HECC_VERSION,
+	//.transceiver_switch     = hecc_phy_control,
+};
+
+static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
+{
+	pia35x_hecc_device.dev.platform_data = pdata;
+	platform_device_register(&pia35x_hecc_device);
+}
+
+
 
 /*
  * MMC
@@ -248,13 +317,12 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 
 /* MMC1 has fixed power supply */
 static struct regulator_consumer_supply pia35x_vmmc1_consumers[] = {
-		REGULATOR_SUPPLY("vmmc1", "mmci-omap-hs.0"),
+		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.0"),
 };
 
 static struct regulator_init_data pia35x_vmmc1_data = {
 	.constraints = {
 		.valid_modes_mask = REGULATOR_MODE_NORMAL,
-		.valid_ops_mask	  = REGULATOR_CHANGE_STATUS,
 		.always_on		  = 1,
 	},
 	.num_consumer_supplies	= ARRAY_SIZE(pia35x_vmmc1_consumers),
@@ -264,17 +332,14 @@ static struct regulator_init_data pia35x_vmmc1_data = {
 static struct fixed_voltage_config pia35x_vmmc1_config = {
 	.supply_name     = "vmmc1",
 	.microvolts      = 3300000,  /* 3.3V */
-	//.gpio          = OMAP_BEAGLE_WLAN_EN_GPIO,
 	.gpio            = -EINVAL,
-	//.startup_delay   = 70000, /* 70ms */
-	.enable_high     = 1,
 	.enabled_at_boot = 1,
 	.init_data       = &pia35x_vmmc1_data,
 };
 
 static struct platform_device pia35x_vmmc1_device = {
 	.name           = "reg-fixed-voltage",
-	.id             = 1,
+	.id             = 0,
 	.dev = {
 		.platform_data = &pia35x_vmmc1_config,
 	},
@@ -284,6 +349,7 @@ static struct platform_device pia35x_vmmc1_device = {
 /*
  * Voltage Regulator
  */
+#if defined(CONFIG_REGULATOR_TPS6507X)
 static struct tps6507x_reg_platform_data pia35x_tps_vdd2_platform_data = {
 		.defdcdc_default = true,
 };
@@ -302,10 +368,6 @@ static struct regulator_consumer_supply pia35x_vdd2_consumers[] = {
 	{
 		.supply = "vddshv",
 	},
-//	{
-//		.supply         = "vmmc",
-//		.dev_name       = "mmci-omap-hs.0", /* bind to our MMC1 device */
-//	},
 };
 
 static struct regulator_consumer_supply pia35x_vdd3_consumers[] = {
@@ -424,11 +486,12 @@ static struct tps6507x_board pia35x_tps_board = {
 		.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
 		.tps6507x_ts_init_data   = 0,   /* no touchscreen */
 };
+#endif /* CONFIG_REGULATOR_TPS6507X */
 
 /* register our voltage regulator TPS650732 using I2C1 */
 static int __init pia35x_pmic_tps65070_init(void)
 {
-	// already registered with i2c inits
+	// does nothing, already registered with i2c inits
 	return 0;
 }
 
@@ -462,10 +525,9 @@ static void __init pia35x_mmc_init(void)
 	pr_info("piA-am35x: registering VMMC1 platform device\n");
 	/* handling of different MMC2 expansions here */
 	omap2_hsmmc_init(mmc);
-	//pia35x_vmmc1_supply.dev = mmc[0].dev;
-	platform_device_register(&pia35x_vmmc1_device);
 	/* link regulator to on-board MMC adapter */
-	//pia35x_vdd2_consumers[1].dev = mmc[0].dev;
+	pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
+	platform_device_register(&pia35x_vmmc1_device);
 }
 
 /*
@@ -500,7 +562,7 @@ static __init void pia35x_musb_init(void)
  * NAND
  * we use GPMC CS 0
  */
-#define PIA35X_NAND_CS 1
+#define PIA35X_NAND_CS 0
 static struct mtd_partition pia35x_nand_partitions[] = {
 	/* All the partition sizes are listed in terms of NAND block size */
 	{
@@ -603,11 +665,13 @@ void __init pia35x_flash_init(void)
  * I2C
  */
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
+#if defined(CONFIG_REGULATOR_TPS6507X)
 		/* power regulator TPS650732 */
 		{
 				I2C_BOARD_INFO("tps6507x", 0x48),
-				// FIXME .platform_data = &pia35x_tps_board,
+				.platform_data = &pia35x_tps_board,
 		},
+#endif /* CONFIG_REGULATOR_TPS6507X */
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
@@ -668,18 +732,13 @@ static void __init am3517_crane_init(void)
 	pr_info("pia35x_init: init USB OTG\n");
 	pia35x_musb_init();
 
-	pr_info("pia35x_init: init TPS650732\n");
-	ret = pia35x_pmic_tps65070_init();
-	if (ret)
-		pr_warning("pia35x_init: TPS650732 PMIC init failed: %d", ret);
-
 	pr_info("pia35x_init: init ETH\n");
 	pia35x_ethernet_init(&pia35x_emac_pdata);
+	pr_info("pia35x_init: init CAN\n");
+	pia35x_can_init(&pia35x_hecc_pdata);
 
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
-
-
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
