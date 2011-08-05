@@ -86,6 +86,14 @@ static struct omap_board_mux board_mux[] __initdata = {
 		/* ETHERNET_nRST  GPIO 065 */
 		OMAP3_MUX(GPMC_WAIT3, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
+		/* WLAN.EN        GPIO 139 */
+		OMAP3_MUX(SDMMC2_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN/* OMAP_PIN_OUTPUT*/),
+		/* BT.EN          GPIO 138 */
+		OMAP3_MUX(SDMMC2_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN/*OMAP_PIN_OUTPUT*/),
+		/* WLAN.IRQ       GPIO 137 */
+		OMAP3_MUX(SDMMC2_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
+		/*        GPIO 136 */
+		OMAP3_MUX(SDMMC2_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT/*OMAP_PIN_OUTPUT*/),
 		/* TERMINATOR */
 		{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
@@ -349,7 +357,7 @@ static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
  */
 /* MMC1 has fixed power supply */
 static struct regulator_consumer_supply pia35x_vmmc1_consumers[] = {
-		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.0"),
+		REGULATOR_SUPPLY("vmmc1", "mmci-omap-hs.0"),
 };
 
 static struct regulator_init_data pia35x_vmmc1_data = {
@@ -365,13 +373,13 @@ static struct fixed_voltage_config pia35x_vmmc1_config = {
 	.supply_name     = "vmmc1",
 	.microvolts      = 3300000,  /* 3.3V */
 	.gpio            = -EINVAL,
-	.enabled_at_boot = 1,
+	//.enabled_at_boot = 1,
 	.init_data       = &pia35x_vmmc1_data,
 };
 
 static struct platform_device pia35x_vmmc1_device = {
 	.name           = "reg-fixed-voltage",
-	.id             = 2,
+	.id             = 1,
 	.dev = {
 		.platform_data = &pia35x_vmmc1_config,
 	},
@@ -543,10 +551,12 @@ static struct omap2_hsmmc_info mmc[] = {
 	{
 		.name		= "wl1271",
 		.mmc		= 2,
-		.caps		= MMC_CAP_4_BIT_DATA,
+		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
 		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
 		.nonremovable	= true,
+		.ext_clock  = false,
+		//.ocr_mask   = MMC_VDD_165_195 | MMC_VDD_33_34,
 	},
 #endif /* CONFIG_WL12XX_PLATFORM_DATA */
 	{}	/* Terminator */
@@ -558,8 +568,8 @@ static void __init pia35x_mmc_init(void)
 	/* handling of different MMC2 expansions here */
 	omap2_hsmmc_init(mmc);
 	/* link regulator to on-board MMC adapter */
-	platform_device_register(&pia35x_vmmc1_device);
 	pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
+	platform_device_register(&pia35x_vmmc1_device);
 }
 
 /*
@@ -568,24 +578,24 @@ static void __init pia35x_mmc_init(void)
 #define PIA35X_WLAN_IRQ_GPIO	137
 #define PIA35X_WLAN_PMENA_GPIO	139
 
-static struct regulator_consumer_supply pia35x_vmmc2_consumers[] = {
-		//REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1"),
-		{
-				.supply = "vmmc",
-		}
-};
+static struct regulator_consumer_supply pia35x_vmmc2_supply =
+		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
+//		{
+//				.supply = "vmmc",
+//		}
+
 
 static struct regulator_init_data pia35x_vmmc2_data = {
 	.constraints = {
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL,
-		.always_on		= 1,
 		.min_uV         = 1800000,//3300000,
 		.max_uV         = 1800000,//3300000,
-		.apply_uV       = 1,
+		.apply_uV       = true,
+		.always_on		= true,
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(pia35x_vmmc2_consumers),
-	.consumer_supplies	    = pia35x_vmmc2_consumers,
+	.num_consumer_supplies	= 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
+	.consumer_supplies	    = &pia35x_vmmc2_supply,
 };
 
 static struct fixed_voltage_config pia35x_vmmc2_config = {
@@ -593,29 +603,38 @@ static struct fixed_voltage_config pia35x_vmmc2_config = {
 	.microvolts      = 1800000, // 3300000,  /* 3.3V */
 	.gpio            = PIA35X_WLAN_PMENA_GPIO,
 	.startup_delay   = 70000,
-	.enable_high     = 1,
-	.enabled_at_boot = 0,
+	.enable_high     = 1,	/* gpio = 1 means wlan_en active */
+	.enabled_at_boot = 0,	/* was the module enabled before linux boot */
 	.init_data       = &pia35x_vmmc2_data,
 };
 
 static struct platform_device pia35x_vwlan_device = {
 	.name           = "reg-fixed-voltage",
-	.id             = 1,
+	.id             = 2,
 	.dev = {
 		.platform_data = &pia35x_vmmc2_config,
 	},
 };
 
+#define WL12XX_REFCLOCK_26      1 /* 26 MHz */
+#define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
+
 struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
-	/* ref clock is 26 MHz */
-	.board_ref_clock = 1,
+	/* internal ref clock is 38 MHz */
+	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
 };
 
 static int __init pia35x_wlan_init(void)
 {
+	u32 reg;
 	if (wl12xx_set_platform_data(&pia35x_wlan_data))
 		pr_err("%s: error setting wl12xx data\n", __func__);
+
+	// we need to enable the internal clock loopback on MMC2!
+	reg = omap_ctrl_readl(OMAP343X_CONTROL_DEVCONF1);
+	reg |= OMAP2_MMCSDIO2ADPCLKISEL;
+	omap_ctrl_writel(reg, OMAP343X_CONTROL_DEVCONF1);
 
 //	omap_mux_init_gpio(PIA35X_WLAN_IRQ_GPIO, OMAP_PIN_OUTPUT);
 //	if (gpio_request(PIA35X_WLAN_IRQ_GPIO, "wlan.irq"))
@@ -638,7 +657,6 @@ static int __init pia35x_wlan_init(void)
 	//omap_mux_init_signal("sdmmc2_dat7.gpio_139", OMAP_PIN_OUTPUT);
 	//pia35x_vmmc2_consumers[0].dev = mmc[1].dev;
 
-	pia35x_vmmc2_consumers[0].dev = mmc[1].dev;
 	platform_device_register(&pia35x_vwlan_device);
 
 	return 0;
