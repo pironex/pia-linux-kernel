@@ -568,7 +568,7 @@ static void __init pia35x_mmc_init(void)
 	/* handling of different MMC2 expansions here */
 	omap2_hsmmc_init(mmc);
 	/* link regulator to on-board MMC adapter */
-	pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
+	//TODO pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
 	platform_device_register(&pia35x_vmmc1_device);
 }
 
@@ -577,6 +577,7 @@ static void __init pia35x_mmc_init(void)
  */
 #define PIA35X_WLAN_IRQ_GPIO	137
 #define PIA35X_WLAN_PMENA_GPIO	139
+#define PIA35X_BT_EN_GPIO       138
 
 static struct regulator_consumer_supply pia35x_vmmc2_supply =
 		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
@@ -660,6 +661,19 @@ static int __init pia35x_wlan_init(void)
 	platform_device_register(&pia35x_vwlan_device);
 
 	return 0;
+}
+
+/*
+ * BT
+ */
+static void __init pia35x_bt_init(void)
+{
+	/* just enable the BT module */
+	if (gpio_request(PIA35X_BT_EN_GPIO, "bt.en")) {
+		pr_warning("GPIO 138 (BT.EN) request failed\n");
+	} else {
+		gpio_direction_output(PIA35X_BT_EN_GPIO, 1);
+	}
 }
 
 /*
@@ -879,8 +893,9 @@ static void __init am3517_crane_init(void)
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
 
-	pr_info("pia35x_init: init WLAN\n");
+	pr_info("pia35x_init: init WLAN & BT\n");
 	pia35x_wlan_init();
+	pia35x_bt_init();
 
 	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
