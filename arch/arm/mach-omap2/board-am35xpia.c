@@ -1,11 +1,11 @@
 /*
- * Support for AM3517/05 Craneboard
- * http://www.mistralsolutions.com/products/craneboard.php
+ * Support for AM3505 piA
+ * by pironex GmbH -- http://www.pironex.de
  *
- * Copyright (C) 2010 Mistral Solutions Pvt Ltd. <www.mistralsolutions.com>
- * Author: R.Srinath <srinath@mistralsolutions.com>
+ * Copyright (C) 2011 pironex GmbH <info@pironex.de>
+ * Author: Bjoern Krombholz <b.krombholz@pironex.de>
  *
- * Based on mach-omap2/board-am3517evm.c
+ * Ideas taken from mach-omap2/board-am3517crane.c
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as  published by the
@@ -97,13 +97,15 @@ static struct omap_board_mux board_mux[] __initdata = {
 		/* TERMINATOR */
 		{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
+#else
+#define board_mux	NULL
 #endif
 
 #if 0 /* USB EHCI port only on expansion port */
-static struct usbhs_omap_board_data usbhs_bdata __initdata = {
-	.port_mode[0] = OMAP_EHCI_PORT_MODE_PHY,
-	.port_mode[1] = OMAP_USBHS_PORT_MODE_UNUSED,
-	.port_mode[2] = OMAP_USBHS_PORT_MODE_UNUSED,
+static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
+	.port_mode[0] = EHCI_HCD_OMAP_MODE_PHY,
+	.port_mode[1] = EHCI_HCD_OMAP_MODE_UNKNOWN,
+	.port_mode[2] = EHCI_HCD_OMAP_MODE_UNKNOWN,
 
 	.phy_reset  = true,
 	.reset_gpio_port[0]  = -EINVAL,
@@ -620,7 +622,7 @@ static struct platform_device pia35x_vwlan_device = {
 #define WL12XX_REFCLOCK_26      1 /* 26 MHz */
 #define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
 
-struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
 	/* internal ref clock is 38 MHz */
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
@@ -846,7 +848,7 @@ static int __init pia35x_i2c_init(void)
 	return 0;
 }
 
-static void __init am3517_crane_init_irq(void)
+static void __init pia35x_init_irq(void)
 {
 	omap_board_config = am3517_crane_config;
 	omap_board_config_size = ARRAY_SIZE(am3517_crane_config);
@@ -860,7 +862,7 @@ static void __init am3517_crane_init_irq(void)
 /*
  * base initialisation function
  */
-static void __init am3517_crane_init(void)
+static void __init pia35x_init(void)
 {
 	int ret;
 
@@ -874,10 +876,6 @@ static void __init am3517_crane_init(void)
 
 	pr_info("pia35x_init: init serial ports\n");
 	omap_serial_init();
-	omap_sdrc_init(NULL, NULL);
-
-	omap_board_config = am3517_crane_config;
-	omap_board_config_size = ARRAY_SIZE(am3517_crane_config);
 
 	pr_info("pia35x_init: init NAND\n");
 	pia35x_flash_init();
@@ -920,24 +918,29 @@ static void __init am3517_crane_init(void)
 		return;
 	}
 
-	ret = gpio_request_one(GPIO_USB_POWER, GPIOF_OUT_INIT_HIGH,
-			       "usb_ehci_enable");
+	ret = gpio_request(GPIO_USB_POWER, "usb_ehci_enable");
 	if (ret < 0) {
 		pr_err("Can not request GPIO %d\n", GPIO_USB_POWER);
 		return;
 	}
 
-	usbhs_init(&usbhs_bdata);
+	ret = gpio_direction_output(GPIO_USB_POWER, 1);
+	if (ret < 0) {
+		gpio_free(GPIO_USB_POWER);
+		pr_err("Unable to initialize EHCI power\n");
+		return;
+	}
+
+	usb_ehci_init(&ehci_pdata);
 #endif
 
 }
 
-MACHINE_START(CRANEBOARD, "AM3517/05 CRANEBOARD")
-	.atag_offset	= 0x100,
+MACHINE_START(PIA_AM35X, "PIA AM35X")
+	.boot_params  = 0x80000100,
+	.map_io       = omap3_map_io,
 	.reserve      = omap_reserve,
-	.map_io		= omap3_map_io,
-	.init_early	= am35xx_init_early,
-	.init_irq	= omap3_init_irq,
-	.init_machine = am3517_crane_init,
-	.timer		= &omap3_timer,
+	.init_irq     = pia35x_init_irq,
+	.init_machine = pia35x_init,
+	.timer		  = &omap_timer,
 MACHINE_END

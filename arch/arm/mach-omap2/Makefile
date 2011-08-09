@@ -234,6 +234,8 @@ obj-$(CONFIG_MACH_CRANEBOARD)		+= board-am3517crane.o \
 obj-$(CONFIG_MACH_SBC3530)		+= board-omap3stalker.o
 obj-$(CONFIG_MACH_TI8168EVM)		+= board-ti8168evm.o
 
+obj-$(CONFIG_MACH_PIA_AM35X)		+= board-am35xpia.o \
+					   hsmmc.o
 # Platform specific device init code
 
 omap-flash-$(CONFIG_MTD_NAND_OMAP2)	:= board-flash.o

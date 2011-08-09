@@ -219,6 +219,11 @@ config MACH_OMAP_3430SDP
 	default y
 	select OMAP_PACKAGE_CBB
 
+config MACH_PIA_AM35X
+	bool "piA AM35x board (AM3505)"
+	depends on ARCH_OMAP3
+	select OMAP_PACKAGE_CBB
+
 config MACH_NOKIA_N800
        bool
 
