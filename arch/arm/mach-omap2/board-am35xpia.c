@@ -1,11 +1,11 @@
 /*
- * Support for AM3517/05 Craneboard
- * http://www.mistralsolutions.com/products/craneboard.php
+ * Support for AM3505 piA
+ * by pironex GmbH -- http://www.pironex.de
  *
- * Copyright (C) 2010 Mistral Solutions Pvt Ltd. <www.mistralsolutions.com>
- * Author: R.Srinath <srinath@mistralsolutions.com>
+ * Copyright (C) 2011 pironex GmbH <info@pironex.de>
+ * Author: Bjoern Krombholz <b.krombholz@pironex.de>
  *
- * Based on mach-omap2/board-am3517evm.c
+ * Ideas taken from mach-omap2/board-am3517crane.c
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as  published by the
@@ -622,7 +622,7 @@ static struct platform_device pia35x_vwlan_device = {
 #define WL12XX_REFCLOCK_26      1 /* 26 MHz */
 #define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
 
-struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
 	/* internal ref clock is 38 MHz */
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
@@ -848,7 +848,7 @@ static int __init pia35x_i2c_init(void)
 	return 0;
 }
 
-static void __init am3517_crane_init_irq(void)
+static void __init pia35x_init_irq(void)
 {
 	omap_board_config = am3517_crane_config;
 	omap_board_config_size = ARRAY_SIZE(am3517_crane_config);
@@ -862,7 +862,7 @@ static void __init am3517_crane_init_irq(void)
 /*
  * base initialisation function
  */
-static void __init am3517_crane_init(void)
+static void __init pia35x_init(void)
 {
 	int ret;
 
@@ -936,11 +936,11 @@ static void __init am3517_crane_init(void)
 
 }
 
-MACHINE_START(CRANEBOARD, "AM3517/05 CRANEBOARD")
+MACHINE_START(PIA_AM35X, "PIA AM35X")
 	.boot_params  = 0x80000100,
 	.map_io       = omap3_map_io,
 	.reserve      = omap_reserve,
-	.init_irq     = am3517_crane_init_irq,
-	.init_machine = am3517_crane_init,
+	.init_irq     = pia35x_init_irq,
+	.init_machine = pia35x_init,
 	.timer		  = &omap_timer,
 MACHINE_END
