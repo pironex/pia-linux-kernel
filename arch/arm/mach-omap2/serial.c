@@ -465,9 +465,14 @@ static void omap_uart_idle_init(struct omap_uart_state *uart)
 	omap_uart_smart_idle_enable(uart, 0);
 
 	if (cpu_is_omap34xx() && !cpu_is_ti816x()) {
-		u32 mod = (uart->num > 1) ? OMAP3430_PER_MOD : CORE_MOD;
+		u32 mod = 0;
 		u32 wk_mask = 0;
 		u32 padconf = 0;
+		if (cpu_is_omap3505() || cpu_is_omap3517()) {
+			mod = (uart->num == 2) ? OMAP3430_PER_MOD : CORE_MOD;
+		} else {
+			mod = (uart->num > 1) ? OMAP3430_PER_MOD : CORE_MOD;
+		}
 
 		/* XXX These PRM accesses do not belong here */
 		uart->wk_en = OMAP34XX_PRM_REGADDR(mod, PM_WKEN1);
@@ -486,8 +491,13 @@ static void omap_uart_idle_init(struct omap_uart_state *uart)
 			padconf = 0x19e;
 			break;
 		case 3:
-			wk_mask = OMAP3630_ST_UART4_MASK;
-			padconf = 0x0d2;
+			if (cpu_is_omap3505() || cpu_is_omap3517()) {
+				wk_mask = AM35XX_ST_UART4_MASK;
+				padconf = 0x0d2;
+			} else {
+				wk_mask = OMAP3630_ST_UART4_MASK;
+				padconf = 0x1ec; /* CCDC_EN mux mode 2 */
+			}
 			break;
 		}
 		uart->wk_mask = wk_mask;

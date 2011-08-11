@@ -299,6 +299,24 @@ static struct omap_hwmod_ocp_if omap3_l4_per__uart4 = {
 	.user		= OCP_USER_MPU | OCP_USER_SDMA,
 };
 
+/* L4 CORE -> AM35XX UART4 interface */
+static struct omap_hwmod_addr_space am35xx_uart4_addr_space[] = {
+	{
+		.pa_start	= AM35XX_UART4_BASE,
+		.pa_end		= AM35XX_UART4_BASE + SZ_1K - 1,
+		.flags		= ADDR_MAP_ON_INIT | ADDR_TYPE_RT,
+	},
+};
+
+static struct omap_hwmod_ocp_if am35xx_l4_core__uart4 = {
+	.master		= &omap3xxx_l4_core_hwmod,
+	.slave		= &am35xx_uart4_hwmod,
+	.clk		= "uart4_ick",
+	.addr		= am35xx_uart4_addr_space,
+	.addr_cnt	= ARRAY_SIZE(am35xx_uart4_addr_space),
+	.user		= OCP_USER_MPU | OCP_USER_SDMA,
+};
+
 /* L4 CORE -> I2C1 interface */
 static struct omap_hwmod_ocp_if omap3_l4_core__i2c1 = {
 	.master		= &omap3xxx_l4_core_hwmod,
@@ -450,6 +468,7 @@ static struct omap_hwmod_ocp_if *am35xx_usbhsotg_slaves[] = {
 /* Slave interfaces on the L4_CORE interconnect */
 static struct omap_hwmod_ocp_if *omap3xxx_l4_core_slaves[] = {
 	&omap3xxx_l3_main__l4_core,
+	&am35xx_l4_core__uart4, /* FIXME only for AM35XX */
 };
 
 /* L4 CORE */

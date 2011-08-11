@@ -388,7 +388,8 @@ void omap_sram_idle(void)
 	if (per_next_state < PWRDM_POWER_ON) {
 		per_going_off = (per_next_state == PWRDM_POWER_OFF) ? 1 : 0;
 		omap_uart_prepare_idle(2);
-		omap_uart_prepare_idle(3);
+		if (!cpu_is_omap3505() && !cpu_is_omap3517())
+			omap_uart_prepare_idle(3);
 		omap2_gpio_prepare_for_idle(per_going_off);
 		if (per_next_state == PWRDM_POWER_OFF)
 				omap3_per_save_context();
@@ -398,6 +399,8 @@ void omap_sram_idle(void)
 	if (core_next_state < PWRDM_POWER_ON) {
 		omap_uart_prepare_idle(0);
 		omap_uart_prepare_idle(1);
+		if (cpu_is_omap3505() || cpu_is_omap3517())
+			omap_uart_prepare_idle(3);
 		if (core_next_state == PWRDM_POWER_OFF) {
 			omap3_core_save_context();
 			omap3_cm_save_context();
@@ -448,6 +451,8 @@ void omap_sram_idle(void)
 		}
 		omap_uart_resume_idle(0);
 		omap_uart_resume_idle(1);
+		if (cpu_is_omap3505() || cpu_is_omap3517())
+			omap_uart_resume_idle(3);
 		if (core_next_state == PWRDM_POWER_OFF)
 			omap2_prm_clear_mod_reg_bits(OMAP3430_AUTO_OFF_MASK,
 					       OMAP3430_GR_MOD,
@@ -464,7 +469,8 @@ void omap_sram_idle(void)
 		if (per_prev_state == PWRDM_POWER_OFF)
 			omap3_per_restore_context();
 		omap_uart_resume_idle(2);
-		omap_uart_resume_idle(3);
+		if (!cpu_is_omap3505() && !cpu_is_omap3517())
+			omap_uart_resume_idle(3);
 	}
 
 	if (!is_suspending())
