@@ -409,7 +409,8 @@ void omap_sram_idle(void)
 	if (per_next_state < PWRDM_POWER_ON) {
 		per_going_off = (per_next_state == PWRDM_POWER_OFF) ? 1 : 0;
 		omap_uart_prepare_idle(2);
-		omap_uart_prepare_idle(3);
+		if (!cpu_is_omap3505() && !cpu_is_omap3517())
+			omap_uart_prepare_idle(3);
 		omap2_gpio_prepare_for_idle(per_going_off);
 		if (per_next_state == PWRDM_POWER_OFF)
 				omap3_per_save_context();
@@ -419,6 +420,8 @@ void omap_sram_idle(void)
 	if (core_next_state < PWRDM_POWER_ON) {
 		omap_uart_prepare_idle(0);
 		omap_uart_prepare_idle(1);
+		if (cpu_is_omap3505() || cpu_is_omap3517())
+			omap_uart_prepare_idle(3);
 		if (core_next_state == PWRDM_POWER_OFF) {
 			omap3_core_save_context();
 			omap3_cm_save_context();
@@ -479,6 +482,8 @@ void omap_sram_idle(void)
 		}
 		omap_uart_resume_idle(0);
 		omap_uart_resume_idle(1);
+		if (cpu_is_omap3505() || cpu_is_omap3517())
+			omap_uart_resume_idle(3);
 	}
 	omap3_intc_resume_idle();
 
@@ -499,7 +504,8 @@ void omap_sram_idle(void)
 		}
 		omap2_gpio_resume_after_idle();
 		omap_uart_resume_idle(2);
-		omap_uart_resume_idle(3);
+		if (!cpu_is_omap3505() && !cpu_is_omap3517())
+			omap_uart_resume_idle(3);
 	}
 
 	if (!is_suspending())
@@ -733,7 +739,7 @@ static void __init prcm_setup_regs(void)
 		OMAP3430_AUTO_DES2_MASK |
 		OMAP3430_AUTO_MMC2_MASK |
 		OMAP3430_AUTO_MMC1_MASK |
-		OMAP3430_AUTO_MSPRO_MASK |
+		OMAP3430_AUTO_MSPRO_MASK | /* UART4 on AM35XX */
 		OMAP3430_AUTO_HDQ_MASK |
 		OMAP3430_AUTO_MCSPI4_MASK |
 		OMAP3430_AUTO_MCSPI3_MASK |
