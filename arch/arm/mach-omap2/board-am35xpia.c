@@ -87,13 +87,27 @@ static struct omap_board_mux board_mux[] __initdata = {
 		OMAP3_MUX(GPMC_WAIT3, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
 		/* WLAN.EN        GPIO 139 */
-		OMAP3_MUX(SDMMC2_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN/* OMAP_PIN_OUTPUT*/),
+		OMAP3_MUX(SDMMC2_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN),
 		/* BT.EN          GPIO 138 */
-		OMAP3_MUX(SDMMC2_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN/*OMAP_PIN_OUTPUT*/),
+		OMAP3_MUX(SDMMC2_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN),
 		/* WLAN.IRQ       GPIO 137 */
 		OMAP3_MUX(SDMMC2_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
 		/*        GPIO 136 */
-		OMAP3_MUX(SDMMC2_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT/*OMAP_PIN_OUTPUT*/),
+		//FIXME OMAP3_MUX(SDMMC2_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+		/* uart 4 tx - should be output only but works better with IE */
+		OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT), /* output */
+		/* uart 4 rx */
+		OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+//		/* uart 4 rts */
+		OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT), /* output */
+//		/* uart 4 cts */
+		OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_INPUT), /* pullup */
+
+//		OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+//		OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
+//		OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+//		OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
+
 		/* TERMINATOR */
 		{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
@@ -622,7 +636,7 @@ static struct platform_device pia35x_vwlan_device = {
 #define WL12XX_REFCLOCK_26      1 /* 26 MHz */
 #define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
 
-static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
 	/* internal ref clock is 38 MHz */
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
@@ -639,27 +653,6 @@ static int __init pia35x_wlan_init(void)
 	reg |= OMAP2_MMCSDIO2ADPCLKISEL;
 	omap_ctrl_writel(reg, OMAP343X_CONTROL_DEVCONF1);
 
-//	omap_mux_init_gpio(PIA35X_WLAN_IRQ_GPIO, OMAP_PIN_OUTPUT);
-//	if (gpio_request(PIA35X_WLAN_IRQ_GPIO, "wlan.irq"))
-//		pr_warning("GPIO 137 (WLAN.IRQ) request failed\n");
-//	//gpio_export(PIA35X_WLAN_IRQ_GPIO, 1);
-//	gpio_direction_input(PIA35X_WLAN_IRQ_GPIO);
-
-//	omap_mux_init_gpio(PIA35X_WLAN_PMENA_GPIO, OMAP_PIN_OUTPUT);
-//	if (gpio_request(PIA35X_WLAN_PMENA_GPIO, "wlan.en")) {
-//		pr_warning("GPIO 139 (WLAN.EN) request failed\n");
-//	} else {
-//		gpio_direction_output(PIA35X_WLAN_PMENA_GPIO, 1);
-//	}
-//	gpio_free(PIA35X_WLAN_PMENA_GPIO);
-//	msleep(50);
-	//gpio_export(139, 1);
-	//gpio_direction_output(139, 1);
-
-	//omap_mux_init_signal("sdmmc2_dat5.gpio_137", OMAP_PIN_INPUT_PULLUP);
-	//omap_mux_init_signal("sdmmc2_dat7.gpio_139", OMAP_PIN_OUTPUT);
-	//pia35x_vmmc2_consumers[0].dev = mmc[1].dev;
-
 	platform_device_register(&pia35x_vwlan_device);
 
 	return 0;
@@ -670,11 +663,15 @@ static int __init pia35x_wlan_init(void)
  */
 static void __init pia35x_bt_init(void)
 {
+	//gpio_request(136, "bt.wu");
+	//gpio_direction_output(136, 0);
 	/* just enable the BT module */
 	if (gpio_request(PIA35X_BT_EN_GPIO, "bt.en")) {
 		pr_warning("GPIO 138 (BT.EN) request failed\n");
 	} else {
-		gpio_direction_output(PIA35X_BT_EN_GPIO, 1);
+		gpio_direction_output(PIA35X_BT_EN_GPIO, 0);
+		msleep(50);
+		gpio_set_value(1);
 	}
 }
 
@@ -899,8 +896,6 @@ static void __init pia35x_init(void)
 	pia35x_gsm_init();
 
 	/* TODO
-	 * WLAN
-	 * bluetooth
 	 * display?
 	 */
 
