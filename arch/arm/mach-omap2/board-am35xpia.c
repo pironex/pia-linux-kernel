@@ -50,6 +50,14 @@
 #include "hsmmc.h"
 #include "board-flash.h"
 
+
+#define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
+#define GPIO_EN_GSM_POWER   29    /* GSM power supply voltage */
+#define GPIO_ETHERNET_NRST  65    /* Ethernet RESET */
+#define GPIO_GSM_NRESET    126
+#define GPIO_GSM_ONOFF     127
+
+
 /* Board initialization */
 static struct omap_board_config_kernel am3517_crane_config[] __initdata = {
 };
@@ -61,6 +69,8 @@ static struct omap_board_mux board_mux[] __initdata = {
 		/* MMC1_CD        GPIO 041, low == card in slot */
 		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
+		/* EN_VCC_5V_PER  GPIO 028, low active */
+		OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* EN_GSM_POWER   GPIO 029, low active */
 		OMAP3_MUX(ETK_D15,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* GSM_nRESET     GPIO 126, low active */
@@ -72,11 +82,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 		OMAP3_MUX(SDMMC1_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* UART2.SLEW     GPIO 129 */
 		OMAP3_MUX(SDMMC1_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-
-		/* undocumented */
-		//OMAP3_MUX(CHASSIS_DMAREQ3, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLDOWN),
-		/* MCBSP_CLKS     GPIO 160 */
-		//OMAP3_MUX(MCBSP_CLKS, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
 		/* INPUT_GPIO1    GPIO 055 */
 		OMAP3_MUX(GPMC_NCS4, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
@@ -131,32 +136,30 @@ static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 /*
  * Ethernet (internal) & PHY (SMSC LAN8720A-CP)
  */
-#define GPIO_ETHERNET_NRST 65
 #define AM35XX_EVM_MDIO_FREQUENCY	(1000000)
 
 static struct mdio_platform_data pia35x_evm_mdio_pdata = {
-	.bus_freq	= AM35XX_EVM_MDIO_FREQUENCY,
+	.bus_freq = AM35XX_EVM_MDIO_FREQUENCY,
 };
 
 static struct resource pia35x_mdio_resources[] = {
 	{
 		.start  = AM35XX_IPSS_EMAC_BASE + AM35XX_EMAC_MDIO_OFFSET,
-		.end    = AM35XX_IPSS_EMAC_BASE + AM35XX_EMAC_MDIO_OFFSET +
-			  SZ_4K - 1,
+		.end    = AM35XX_IPSS_EMAC_BASE + AM35XX_EMAC_MDIO_OFFSET + SZ_4K - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 };
 
 static struct platform_device pia35x_mdio_device = {
-	.name		= "davinci_mdio",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(pia35x_mdio_resources),
-	.resource	= pia35x_mdio_resources,
+	.name              = "davinci_mdio",
+	.id                = -1,
+	.num_resources     = ARRAY_SIZE(pia35x_mdio_resources),
+	.resource          = pia35x_mdio_resources,
 	.dev.platform_data = &pia35x_evm_mdio_pdata,
 };
 
 static struct emac_platform_data pia35x_emac_pdata = {
-	.rmii_en	= 1,
+	.rmii_en = 1,
 };
 
 static struct resource pia35x_emac_resources[] = {
@@ -251,9 +254,13 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	u32 regval, mac_lo, mac_hi;
 
 	/* unset reset */
-	gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst");
-	gpio_direction_output(GPIO_ETHERNET_NRST, 1);
-	msleep(50);
+	if (!gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst")) {
+		pr_warning("pia35x: Unable to request ETHERNET_nRST GPIO\n");
+	} else {
+		gpio_direction_output(GPIO_ETHERNET_NRST, 1);
+		gpio_export(GPIO_ETHERNET_NRST, false);
+		msleep(50);
+	}
 
 	mac_lo = omap_ctrl_readl(AM35XX_CONTROL_FUSE_EMAC_LSB);
 	mac_hi = omap_ctrl_readl(AM35XX_CONTROL_FUSE_EMAC_MSB);
@@ -293,23 +300,20 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 static int __init pia35x_gsm_init(void)
 {
 	int ret;
-	//omap_mux_init_gpio(29, OMAP_PIN_OUTPUT);
-	if ((ret = gpio_request(29, "GSM_Power")))
-		pr_warning("%s: GPIO 29 request failed: %d\n", __func__, ret);
-	gpio_export(29, 1);
-	gpio_direction_output(29, 1);
+	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm.power")))
+		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
+	gpio_export(GPIO_EN_GSM_POWER, 1);
+	gpio_direction_output(GPIO_EN_GSM_POWER, 1);
 
-	//omap_mux_init_gpio(126, OMAP_PIN_OUTPUT);
-	if ((ret = gpio_request(126,"GSM_Reset")))
+	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm.reset")))
 		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
-	gpio_export(126, 1);
-	gpio_direction_output(126, 1);
+	gpio_export(GPIO_GSM_NRESET, 1);
+	gpio_direction_output(GPIO_GSM_NRESET, 1);
 
-	//omap_mux_init_gpio(127, OMAP_PIN_OUTPUT);
-	if ((ret = gpio_request(127,"GSM_On/Off")))
+	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm.onoff")))
 		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
-	gpio_export(127, 1);
-	gpio_direction_output(127, 1);
+	gpio_export(GPIO_GSM_ONOFF, 1);
+	gpio_direction_output(GPIO_GSM_ONOFF, 1);
 
 	return 0;
 }
@@ -407,11 +411,11 @@ static struct platform_device pia35x_vmmc1_device = {
  */
 #if defined(CONFIG_REGULATOR_TPS6507X)
 static struct tps6507x_reg_platform_data pia35x_tps_vdd2_platform_data = {
-		.defdcdc_default = true,
+	.defdcdc_default = true,
 };
 
 static struct tps6507x_reg_platform_data pia35x_tps_vdd3_platform_data = {
-		.defdcdc_default = false,
+	.defdcdc_default = false,
 };
 
 static struct regulator_consumer_supply pia35x_vdd1_consumers[] = {
@@ -464,77 +468,77 @@ static struct regulator_consumer_supply pia35x_vpll_consumers[] = {
  * [4]: VLDO2   1.8V VDDS_DPLL_1V8   (pll)
  */
 static struct regulator_init_data pia35x_tps_regulator_data[] = {
-		/* dcdc: VDDS_1V8*/
-		{
-				.constraints = {
-						.min_uV = 1800000,
-						.max_uV = 1800000,
-						.valid_modes_mask = REGULATOR_MODE_NORMAL,
-						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-						.always_on = true,
-						.apply_uV = true,
-				},
-				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd1_consumers),
-				.consumer_supplies     = &pia35x_vdd1_consumers[0],
+	/* dcdc: VDDS_1V8*/
+	{
+		.constraints = {
+			.min_uV           = 1800000,
+			.max_uV           = 1800000,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL,
+			.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+			.always_on        = true,
+			.apply_uV         = true,
 		},
-		/* dcdc2: VDDSHV_3V3 */
-		{
-				.constraints = {
-						.min_uV = 3300000,
-						.max_uV = 3300000,
-						.valid_modes_mask = REGULATOR_MODE_NORMAL,
-						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-						.always_on = true,
-						.apply_uV = true
-				},
-				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd2_consumers),
-				.consumer_supplies = &pia35x_vdd2_consumers[0],
-				/* select high = 3.3V (low is 1.8) */
-				.driver_data = &pia35x_tps_vdd2_platform_data,
+		.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd1_consumers),
+		.consumer_supplies     = &pia35x_vdd1_consumers[0],
+	},
+	/* dcdc2: VDDSHV_3V3 */
+	{
+		.constraints = {
+			.min_uV           = 3300000,
+			.max_uV           = 3300000,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL,
+			.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+			.always_on        = true,
+			.apply_uV         = true
 		},
-		/* dcdc3: VDDCORE_1V2 */
-		{
-				.constraints = {
-						.min_uV = 1200000,
-						.max_uV = 1200000,
-						.valid_modes_mask = REGULATOR_MODE_NORMAL,
-						.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-						.always_on = true,
-						.apply_uV = true
-				},
-				.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd3_consumers),
-				.consumer_supplies = &pia35x_vdd3_consumers[0],
-				/* select low = 1.2V (high is 1.35) */
-				.driver_data = &pia35x_tps_vdd3_platform_data,
+		.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd2_consumers),
+		.consumer_supplies = &pia35x_vdd2_consumers[0],
+		/* select high = 3.3V (low is 1.8) */
+		.driver_data = &pia35x_tps_vdd2_platform_data,
+	},
+	/* dcdc3: VDDCORE_1V2 */
+	{
+		.constraints = {
+			.min_uV           = 1200000,
+			.max_uV           = 1200000,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL,
+			.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+			.always_on        = true,
+			.apply_uV         = true
 		},
-		/* ldo1: VDDA1P8V_USBPHY */
-		{
-				.constraints = {
-						.min_uV           = 1800000,
-						.max_uV           = 1800000,
-						.valid_modes_mask = REGULATOR_MODE_NORMAL,
-						.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
-						//.boot_on = 1,
-						.always_on = true,
-						.apply_uV = true,
-				},
-				.num_consumer_supplies = ARRAY_SIZE(pia35x_ldo1_consumers),
-				.consumer_supplies = &pia35x_ldo1_consumers[0],
+		.num_consumer_supplies = ARRAY_SIZE(pia35x_vdd3_consumers),
+		.consumer_supplies = &pia35x_vdd3_consumers[0],
+		/* select low = 1.2V (high is 1.35) */
+		.driver_data = &pia35x_tps_vdd3_platform_data,
+	},
+	/* ldo1: VDDA1P8V_USBPHY */
+	{
+		.constraints = {
+			.min_uV           = 1800000,
+			.max_uV           = 1800000,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL,
+			.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+			.always_on        = true,
+			.apply_uV         = true,
+			//.boot_on          = 1,
 		},
-		/* ldo2: VDDS_DPLL_1V8 */
-		{
-				.constraints = {
-						.min_uV           = 1800000,
-						.max_uV           = 1800000,
-						.valid_modes_mask = REGULATOR_MODE_NORMAL,
-						.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
-						//.boot_on = 1,
-						.always_on = true,
-						.apply_uV = true,
-				},
-				.num_consumer_supplies = ARRAY_SIZE(pia35x_vpll_consumers),
-				.consumer_supplies = &pia35x_vpll_consumers[0],
+		.num_consumer_supplies = ARRAY_SIZE(pia35x_ldo1_consumers),
+		.consumer_supplies = &pia35x_ldo1_consumers[0],
+	},
+	/* ldo2: VDDS_DPLL_1V8 */
+	{
+		.constraints = {
+			.min_uV           = 1800000,
+			.max_uV           = 1800000,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL,
+			.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+			.always_on        = true,
+			.apply_uV         = true,
+			//.boot_on          = 1,
 		},
+		.num_consumer_supplies = ARRAY_SIZE(pia35x_vpll_consumers),
+		.consumer_supplies = &pia35x_vpll_consumers[0],
+	},
 };
 
 static struct tps6507x_board pia35x_tps_board = {
@@ -542,13 +546,6 @@ static struct tps6507x_board pia35x_tps_board = {
 		.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
 		.tps6507x_ts_init_data   = 0,   /* no touchscreen */
 };
-
-/* register our voltage regulator TPS650732 using I2C1 */
-static int __init pia35x_pmic_tps65070_init(void)
-{
-	// does nothing, already registered with i2c inits
-	return 0;
-}
 #endif /* CONFIG_REGULATOR_TPS6507X */
 
 /*
@@ -565,17 +562,17 @@ static struct omap2_hsmmc_info mmc[] = {
 	},
 #if defined(CONFIG_WL1271) || defined (CONFIG_WL1271_MODULE)
 	{
-		.name		= "wl1271",
-		.mmc		= 2,
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
-		.gpio_wp	= -EINVAL,
-		.gpio_cd	= -EINVAL,
-		.nonremovable	= true,
-		.ext_clock  = false,
-		//.ocr_mask   = MMC_VDD_165_195 | MMC_VDD_33_34,
+		.name           = "wl1271",
+		.mmc            = 2,
+		.caps           = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
+		.gpio_wp        = -EINVAL,
+		.gpio_cd        = -EINVAL,
+		.nonremovable   = true,
+		.ext_clock      = false,
+		//.ocr_mask       = MMC_VDD_165_195 | MMC_VDD_33_34,
 	},
 #endif /* CONFIG_WL12XX_PLATFORM_DATA */
-	{}	/* Terminator */
+	{}/* Terminator */
 };
 
 static void __init pia35x_mmc_init(void)
@@ -596,32 +593,28 @@ static void __init pia35x_mmc_init(void)
 #define PIA35X_BT_EN_GPIO       138
 
 static struct regulator_consumer_supply pia35x_vmmc2_supply =
-		REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
-//		{
-//				.supply = "vmmc",
-//		}
-
+	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
 
 static struct regulator_init_data pia35x_vmmc2_data = {
 	.constraints = {
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
 		.valid_modes_mask = REGULATOR_MODE_NORMAL,
-		.min_uV         = 1800000,//3300000,
-		.max_uV         = 1800000,//3300000,
-		.apply_uV       = true,
-		.always_on		= true,
+		.min_uV           = 1800000,
+		.max_uV           = 1800000,
+		.apply_uV         = true,
+		.always_on        = true,
 	},
-	.num_consumer_supplies	= 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
-	.consumer_supplies	    = &pia35x_vmmc2_supply,
+	.num_consumer_supplies = 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
+	.consumer_supplies     = &pia35x_vmmc2_supply,
 };
 
 static struct fixed_voltage_config pia35x_vmmc2_config = {
 	.supply_name     = "vwl1271",
-	.microvolts      = 1800000, // 3300000,  /* 3.3V */
+	.microvolts      = 1800000,
 	.gpio            = PIA35X_WLAN_PMENA_GPIO,
 	.startup_delay   = 70000,
-	.enable_high     = 1,	/* gpio = 1 means wlan_en active */
-	.enabled_at_boot = 0,	/* was the module enabled before linux boot */
+	.enable_high     = 1,   /* gpio = 1 means wlan_en active */
+	.enabled_at_boot = 0,   /* was the module enabled before linux boot */
 	.init_data       = &pia35x_vmmc2_data,
 };
 
@@ -636,7 +629,7 @@ static struct platform_device pia35x_vwlan_device = {
 #define WL12XX_REFCLOCK_26      1 /* 26 MHz */
 #define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
 
-struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
 	/* internal ref clock is 38 MHz */
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
@@ -669,9 +662,9 @@ static void __init pia35x_bt_init(void)
 	if (gpio_request(PIA35X_BT_EN_GPIO, "bt.en")) {
 		pr_warning("GPIO 138 (BT.EN) request failed\n");
 	} else {
-		gpio_direction_output(PIA35X_BT_EN_GPIO, 0);
-		msleep(50);
-		gpio_set_value(1);
+		gpio_direction_output(PIA35X_BT_EN_GPIO, 1);
+//		msleep(50);
+//		gpio_set_value(PIA35X_BT_EN_GPIO, 1);
 	}
 }
 
@@ -739,68 +732,9 @@ static struct mtd_partition pia35x_nand_partitions[] = {
 	},
 };
 
-#if 0 /* we don't need this in 2.6.37 */
-static struct omap_nand_platform_data am3517crane_nand_data = {
-	.parts          = pia35x_nand_partitions,
-	.nr_parts       = ARRAY_SIZE(pia35x_nand_partitions),
-	.nand_setup     = NULL,
-	.dma_channel    = -1,           /* disable DMA in OMAP NAND driver */
-	.dev_ready      = NULL,
-};
-
-static struct resource am3517crane_nand_resource = {
-	.flags          = IORESOURCE_MEM,
-};
-
-static struct platform_device am3517crane_nand_device = {
-	.name           = "omap2-nand",
-	.id             = 0,
-	.dev            = {
-		.platform_data  = &am3517crane_nand_data,
-	},
-	.num_resources  = 1,
-	.resource       = &am3517crane_nand_resource,
-};
-#endif /* 0 */
 
 static void __init pia35x_flash_init(void)
 {
-#if 0 /* we don't need this in 2.6.37 */
-	u8 cs = 0;
-	u8 nandcs = GPMC_CS_NUM + 1;
-	u32 gpmc_base_add = OMAP34XX_GPMC_VIRT;
-
-	while (cs < GPMC_CS_NUM) {
-		u32 ret = 0;
-		ret = gpmc_cs_read_reg(cs, GPMC_CS_CONFIG1);
-
-		if ((ret & 0xC00) == 0x800) {
-			/* Found it!! */
-			if (nandcs > GPMC_CS_NUM)
-				nandcs = cs;
-		}
-		cs++;
-	}
-	if (nandcs > GPMC_CS_NUM) {
-		printk(KERN_INFO "NAND: Unable to find configuration "
-				" in GPMC\n ");
-		return;
-	}
-
-	if (nandcs < GPMC_CS_NUM) {
-		board_nand_init(pia35x_nand_partitions,
-				ARRAY_SIZE(pia35x_nand_partitions), nandcs, NAND_BUSWIDTH_16);
-//		am3517crane_nand_data.cs   = nandcs;
-//		am3517crane_nand_data.gpmc_cs_baseaddr =
-//		(void *)(gpmc_base_add + GPMC_CS0_BASE + nandcs*GPMC_CS_SIZE);
-//
-//		am3517crane_nand_data.gpmc_baseaddr = (void *)(gpmc_base_add);
-//
-//		if (platform_device_register(&am3517crane_nand_device) < 0)
-//			printk(KERN_ERR "Unable to register NAND device\n");
-
-	}
-#endif /* 0 - old nand detection */
 	board_nand_init(pia35x_nand_partitions,
 			ARRAY_SIZE(pia35x_nand_partitions),
 			PIA35X_NAND_CS, NAND_BUSWIDTH_16);
@@ -811,26 +745,26 @@ static void __init pia35x_flash_init(void)
  */
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 #if defined(CONFIG_REGULATOR_TPS6507X)
-		/* power regulator TPS650732 */
-		{
-				I2C_BOARD_INFO("tps6507x", 0x48),
-				.flags = I2C_CLIENT_WAKE,
-				.irq = INT_34XX_SYS_NIRQ,
-				.platform_data = &pia35x_tps_board,
-		},
+	/* power regulator TPS650732 */
+	{
+		I2C_BOARD_INFO("tps6507x", 0x48),
+			.flags = I2C_CLIENT_WAKE,
+			.irq = INT_34XX_SYS_NIRQ,
+			.platform_data = &pia35x_tps_board,
+	},
 #endif /* CONFIG_REGULATOR_TPS6507X */
-		/* RTC + WDOG */
-		{
-				I2C_BOARD_INFO("ds1374", 0x68),
-		},
+	/* RTC + WDOG */
+	{
+		I2C_BOARD_INFO("ds1374", 0x68),
+	},
 
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
-		/* temperature sensor LM75 */
-		{
-				I2C_BOARD_INFO("lm75", 0x48),
-		},
+	/* temperature sensor LM75 */
+	{
+		I2C_BOARD_INFO("lm75", 0x48),
+	},
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
@@ -867,6 +801,14 @@ static void __init pia35x_init(void)
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
+	if (!gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per")) {
+		pr_warning("pia35x: unable to request EN_VCC_5V_PER GPIO");
+	} else {
+		gpio_direction_output(GPIO_EN_VCC_5V_PER, 1);
+		gpio_export(GPIO_EN_VCC_5V_PER, false);
+		msleep(15);
+		gpio_set_value(GPIO_EN_VCC_5V_PER, 0);
+	}
 
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();

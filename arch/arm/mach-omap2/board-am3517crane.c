@@ -50,6 +50,8 @@
 #include "hsmmc.h"
 #include "board-flash.h"
 
+#define GPIO_EN_VCC_5V_PER  28    // expansion supply voltage
+
 /* Board initialization */
 static struct omap_board_config_kernel am3517_crane_config[] __initdata = {
 };
@@ -61,6 +63,8 @@ static struct omap_board_mux board_mux[] __initdata = {
 		/* MMC1_CD        GPIO 041, low == card in slot */
 		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
+		/* EN_VCC_5V_PER  GPIO 028, low active */
+		OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* EN_GSM_POWER   GPIO 029, low active */
 		OMAP3_MUX(ETK_D15,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* GSM_nRESET     GPIO 126, low active */
@@ -634,7 +638,7 @@ static struct platform_device pia35x_vwlan_device = {
 #define WL12XX_REFCLOCK_26      1 /* 26 MHz */
 #define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
 
-struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
 	/* internal ref clock is 38 MHz */
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
@@ -667,9 +671,10 @@ static void __init pia35x_bt_init(void)
 	if (gpio_request(PIA35X_BT_EN_GPIO, "bt.en")) {
 		pr_warning("GPIO 138 (BT.EN) request failed\n");
 	} else {
-		gpio_direction_output(PIA35X_BT_EN_GPIO, 0);
-		msleep(50);
-		gpio_set_value(1);
+		gpio_direction_output(PIA35X_BT_EN_GPIO, 1);
+		//msleep(50);
+		//gpio_set_value(PIA35X_BT_EN_GPIO, 1);
+		//msleep(50);
 	}
 }
 
@@ -865,6 +870,7 @@ static void __init am3517_crane_init(void)
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
+
 
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
