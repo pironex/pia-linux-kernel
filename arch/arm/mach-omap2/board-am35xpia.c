@@ -70,7 +70,7 @@ static struct omap_board_mux board_mux[] __initdata = {
 		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
 		/* EN_VCC_5V_PER  GPIO 028, low active */
-		OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+		OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
 		/* EN_GSM_POWER   GPIO 029, low active */
 		OMAP3_MUX(ETK_D15,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 		/* GSM_nRESET     GPIO 126, low active */
@@ -801,13 +801,13 @@ static void __init pia35x_init(void)
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
-	if (!gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per")) {
+	if (gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per")) {
 		pr_warning("pia35x: unable to request EN_VCC_5V_PER GPIO");
 	} else {
-		gpio_direction_output(GPIO_EN_VCC_5V_PER, 1);
+		gpio_direction_output(GPIO_EN_VCC_5V_PER, 0);
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 		msleep(15);
-		gpio_set_value(GPIO_EN_VCC_5V_PER, 0);
+		gpio_set_value(GPIO_EN_VCC_5V_PER, 1);
 	}
 
 	pr_info("pia35x_init: init I2C busses\n");
