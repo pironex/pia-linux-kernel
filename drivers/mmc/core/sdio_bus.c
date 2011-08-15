@@ -124,7 +124,6 @@ static int sdio_bus_probe(struct device *dev)
 	const struct sdio_device_id *id;
 	int ret;
 
-	pr_warning("pia35x: %s: %s\n", __func__, drv->name);
 	id = sdio_match_device(func, drv);
 	if (!id)
 		return -ENODEV;

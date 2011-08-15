@@ -229,7 +229,6 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	int ret;
 
 	/* We are only able to handle the wlan function */
-	pr_warning("pia35x: wl1271 %d\n", func->num);
 	if (func->num != 0x02)
 		return -ENODEV;
 

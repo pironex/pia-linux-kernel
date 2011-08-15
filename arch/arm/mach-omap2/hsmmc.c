@@ -176,7 +176,6 @@ static void hsmmc23_before_set_reg(struct device *dev, int slot,
 {
 	struct omap_mmc_platform_data *mmc = dev->platform_data;
 
-	pr_warning("pia35x: hsmmc23 po:%d ic:%d\n", power_on, mmc->slots[0].internal_clock);
 	if (mmc->slots[0].remux)
 		mmc->slots[0].remux(dev, slot, power_on);
 
@@ -338,7 +337,6 @@ static int __init omap_hsmmc_pdata_init(struct omap2_hsmmc_info *c,
 	 * temporary HACK: ocr_mask instead of fixed supply
 	 */
 	mmc->slots[0].ocr_mask = c->ocr_mask;
-		pr_warn("pia35x: %s: ocr_mask: %d", __func__, mmc->slots[0].ocr_mask);
 
 	if (cpu_is_omap3517() || cpu_is_omap3505())
 		mmc->slots[0].set_power = nop_mmc_set_power;
@@ -348,7 +346,6 @@ static int __init omap_hsmmc_pdata_init(struct omap2_hsmmc_info *c,
 	if (cpu_is_omap44xx() && (omap_rev() > OMAP4430_REV_ES1_0))
 		mmc->slots[0].features |= HSMMC_HAS_UPDATED_RESET;
 
-		pr_warn("pia35x: %s: feat: %d", __func__, mmc->slots[0].features);
 	switch (c->mmc) {
 	case 1:
 		if (mmc->slots[0].features & HSMMC_HAS_PBIAS) {
