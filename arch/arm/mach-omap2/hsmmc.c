@@ -183,7 +183,6 @@ static void hsmmc23_before_set_reg(struct device *dev, int slot,
 {
 	struct omap_mmc_platform_data *mmc = dev->platform_data;
 
-	pr_warning("pia35x: hsmmc23 po:%d ic:%d\n", power_on, mmc->slots[0].internal_clock);
 	if (mmc->slots[0].remux)
 		mmc->slots[0].remux(dev, slot, power_on);
 
@@ -218,7 +217,6 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 	int i;
 	u32 reg;
 
-	pr_warning("pia35x: %s\n", __func__);
 	if (!cpu_is_omap44xx()) {
 		if (cpu_is_omap2430()) {
 			control_pbias_offset = OMAP243X_CONTROL_PBIAS_LITE;
@@ -245,8 +243,6 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 	for (c = controllers; c->mmc; c++) {
 		struct hsmmc_controller *hc = hsmmc + c->mmc - 1;
 		struct omap_mmc_platform_data *mmc = hsmmc_data[c->mmc - 1];
-		pr_warning("pia35x: %s: init controller: %d", __func__, c->mmc);
-
 
 		if (!c->mmc || c->mmc > nr_hsmmc) {
 			pr_debug("MMC%d: no such controller\n", c->mmc);
@@ -320,7 +316,6 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 						 MMC_VDD_31_32;
 		else
 			mmc->slots[0].ocr_mask = c->ocr_mask;
-		pr_warn("pia35x: %s: ocr_mask: %d", __func__, mmc->slots[0].ocr_mask);
 
 		if (cpu_is_omap3517() || cpu_is_omap3505() || cpu_is_ti81xx())
 			mmc->slots[0].set_power = nop_mmc_set_power;
@@ -331,7 +326,6 @@ void __init omap2_hsmmc_init(struct omap2_hsmmc_info *controllers)
 				cpu_is_ti814x())
 			mmc->slots[0].features |= HSMMC_HAS_UPDATED_RESET;
 
-		pr_warn("pia35x: %s: feat: %d", __func__, mmc->slots[0].features);
 		switch (c->mmc) {
 		case 1:
 			if (mmc->slots[0].features & HSMMC_HAS_PBIAS) {
