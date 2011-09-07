@@ -51,70 +51,182 @@
 #include "board-flash.h"
 
 
-#define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
+/** Expansion boards **/
+
+/*
+ * GSM: Telit GE864 Quad-V2
+ */
 #define GPIO_EN_GSM_POWER   29    /* GSM power supply voltage */
-#define GPIO_ETHERNET_NRST  65    /* Ethernet RESET */
 #define GPIO_GSM_NRESET    126
 #define GPIO_GSM_ONOFF     127
 
+static int __init pia35x_gsm_init(void)
+{
+	int ret;
+	/* GSM_nRESET     GPIO 126, low active */
+	//OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	/* nGSM_ON/OFF    GPIO 127, low active */
+	//OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+
+	/* GSM GPIOs are low active */
+	omap_mux_init_gpio(GPIO_EN_GSM_POWER, OMAP_PIN_OUTPUT);
+	// GPIO 126 is available on 2 pins
+	omap_mux_init_signal("sdmmc1_dat4.gpio_126", OMAP_PIN_OUTPUT);
+	//omap_mux_init_gpio(GPIO_GSM_NRESET,   OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_GSM_ONOFF,    OMAP_PIN_OUTPUT);
+	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm-power")))
+		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
+	gpio_direction_output(GPIO_EN_GSM_POWER, 1);
+	gpio_export(GPIO_EN_GSM_POWER, false);
+
+	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm-reset")))
+		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
+	gpio_direction_output(GPIO_GSM_NRESET, 1);
+	gpio_export(GPIO_GSM_NRESET, false);
+
+	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm-onoff")))
+		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
+	gpio_direction_output(GPIO_GSM_ONOFF, 1);
+	gpio_export(GPIO_GSM_ONOFF, false);
+
+	return 0;
+}
+
+/* piA PLUS Wireless */
+
+/*
+ * WIFI/BT: TiWi-R2 (WL1271)
+ */
+#define GPIO_WLAN_IRQ	137
+#define GPIO_WLAN_PMENA	139
+#define GPIO_BT_EN       138
+
+static struct regulator_consumer_supply pia35x_vmmc2_supply =
+	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
+
+static struct regulator_init_data pia35x_vmmc2_data = {
+	.constraints = {
+		.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL,
+		.min_uV           = 1800000,
+		.max_uV           = 1800000,
+		.apply_uV         = true,
+		.always_on        = true,
+	},
+	.num_consumer_supplies = 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
+	.consumer_supplies     = &pia35x_vmmc2_supply,
+};
+
+static struct fixed_voltage_config pia35x_vmmc2_config = {
+	.supply_name     = "vwl1271",
+	.microvolts      = 1800000,
+	.gpio            = GPIO_WLAN_PMENA,
+	.startup_delay   = 70000,
+	.enable_high     = 1,   /* gpio = 1 means wlan_en active */
+	.enabled_at_boot = 0,   /* was the module enabled before linux boot */
+	.init_data       = &pia35x_vmmc2_data,
+};
+
+static struct platform_device pia35x_vwlan_device = {
+	.name           = "reg-fixed-voltage",
+	.id             = 2,
+	.dev = {
+		.platform_data = &pia35x_vmmc2_config,
+	},
+};
+
+#define WL12XX_REFCLOCK_26      1 /* 26 MHz */
+#define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
+static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
+	.irq = OMAP_GPIO_IRQ(GPIO_WLAN_IRQ),
+	/* internal ref clock is 38 MHz */
+	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
+};
+
+static int __init pia35x_wlan_init(void)
+{
+	u32 reg;
+	int ret;
+
+	omap_mux_init_gpio(GPIO_WLAN_IRQ, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_INPUT_PULLDOWN);
+
+	//if ((ret = gpio_request(GPIO_WLAN_PMENA, "wlan-power")))
+	//	pr_warning("%s: GPIO_WLAN_PMENA request failed: %d\n", __func__, ret);
+	//gpio_direction_output(GPIO_WLAN_PMENA, 0);
+	//gpio_export(GPIO_WLAN_PMENA, false);
+
+	if (wl12xx_set_platform_data(&pia35x_wlan_data))
+		pr_err("%s: error setting wl12xx data\n", __func__);
+
+	// we need to enable the internal clock loopback on MMC2!
+	reg = omap_ctrl_readl(OMAP343X_CONTROL_DEVCONF1);
+	reg |= OMAP2_MMCSDIO2ADPCLKISEL;
+	omap_ctrl_writel(reg, OMAP343X_CONTROL_DEVCONF1);
+
+	platform_device_register(&pia35x_vwlan_device);
+
+	return 0;
+}
+
+/*
+ * BT
+ */
+static void __init pia35x_bt_init(void)
+{
+	omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT_PULLDOWN);
+	//gpio_request(136, "bt.wu");
+	//gpio_direction_output(136, 0);
+	/* just enable the BT module */
+	if (gpio_request(GPIO_BT_EN, "bt-en")) {
+		pr_warning("GPIO 138 (BT.EN) request failed\n");
+	} else {
+		gpio_direction_output(GPIO_BT_EN, 1);
+		gpio_export(GPIO_BT_EN, false);
+	}
+}
+
+/** Integrated Devices **/
+#define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
 
 /* Board initialization */
-static struct omap_board_config_kernel am3517_crane_config[] __initdata = {
+static struct omap_board_config_kernel pia35x_config[] __initdata = {
 };
 
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux[] __initdata = {
-		/* only fixed MUXes here, don't add anything on expansions */
+	/* only fixed MUXes here, don't add anything on expansions */
 
-		/* MMC1_CD        GPIO 041, low == card in slot */
-		OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+	/* MMC1_CD        GPIO 041, low == card in slot */
+	OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
-		/* EN_VCC_5V_PER  GPIO 028, low active */
-		OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
-		/* EN_GSM_POWER   GPIO 029, low active */
-		OMAP3_MUX(ETK_D15,     OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-		/* GSM_nRESET     GPIO 126, low active */
-		OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-		/* nGSM_ON/OFF    GPIO 127, low active */
-		OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	/* EN_VCC_5V_PER  GPIO 028, low active */
+	OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
 
-		/* UART2.485/#232 GPIO 128, low = RS232 */
-		OMAP3_MUX(SDMMC1_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-		/* UART2.SLEW     GPIO 129 */
-		OMAP3_MUX(SDMMC1_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	/* UART2.485/#232 GPIO 128, low = RS232 */
+	OMAP3_MUX(SDMMC1_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	/* UART2.SLEW     GPIO 129 */
+	OMAP3_MUX(SDMMC1_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
-		/* INPUT_GPIO1    GPIO 055 */
-		OMAP3_MUX(GPMC_NCS4, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
-		/* INPUT_GPIO2    GPIO 056 */
-		OMAP3_MUX(GPMC_NCS5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+	/* INPUT_GPIO1    GPIO 055 */
+	OMAP3_MUX(GPMC_NCS4, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
+	/* INPUT_GPIO2    GPIO 056 */
+	OMAP3_MUX(GPMC_NCS5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
 
-		/* ETHERNET_nRST  GPIO 065 */
-		OMAP3_MUX(GPMC_WAIT3, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	/*        GPIO 136 */
+	//FIXME OMAP3_MUX(SDMMC2_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
-		/* WLAN.EN        GPIO 139 */
-		OMAP3_MUX(SDMMC2_DAT7, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN),
-		/* BT.EN          GPIO 138 */
-		OMAP3_MUX(SDMMC2_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN),
-		/* WLAN.IRQ       GPIO 137 */
-		OMAP3_MUX(SDMMC2_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
-		/*        GPIO 136 */
-		//FIXME OMAP3_MUX(SDMMC2_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-		/* uart 4 tx - should be output only but works better with IE */
-		OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT), /* output */
-		/* uart 4 rx */
-		OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
-//		/* uart 4 rts */
-		OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT), /* output */
-//		/* uart 4 cts */
-		OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_INPUT), /* pullup */
+	/* UART 4 tx - should be output only but works better with IE */
+	OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
+	/* UART 4 rx */
+	OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+	/* UART 4 rts */
+	OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
+	/* UART 4 cts */
+	OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
 
-//		OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
-//		OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
-//		OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
-//		OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
-
-		/* TERMINATOR */
-		{ .reg_offset = OMAP_MUX_TERMINATOR },
+	/* TERMINATOR */
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
 #define board_mux	NULL
@@ -136,6 +248,7 @@ static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 /*
  * Ethernet (internal) & PHY (SMSC LAN8720A-CP)
  */
+#define GPIO_ETHERNET_NRST  65    /* Ethernet RESET */
 #define AM35XX_EVM_MDIO_FREQUENCY	(1000000)
 
 static struct mdio_platform_data pia35x_evm_mdio_pdata = {
@@ -253,6 +366,7 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 {
 	u32 regval, mac_lo, mac_hi;
 
+	omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_OUTPUT);
 	/* unset reset */
 	if (!gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst")) {
 		pr_warning("pia35x: Unable to request ETHERNET_nRST GPIO\n");
@@ -295,31 +409,6 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 }
 
 /*
- * GSM
- */
-static int __init pia35x_gsm_init(void)
-{
-	int ret;
-	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm.power")))
-		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
-	gpio_export(GPIO_EN_GSM_POWER, 1);
-	gpio_direction_output(GPIO_EN_GSM_POWER, 1);
-
-	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm.reset")))
-		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
-	gpio_export(GPIO_GSM_NRESET, 1);
-	gpio_direction_output(GPIO_GSM_NRESET, 1);
-
-	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm.onoff")))
-		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
-	gpio_export(GPIO_GSM_ONOFF, 1);
-	gpio_direction_output(GPIO_GSM_ONOFF, 1);
-
-	return 0;
-}
-
-
-/*
  * CAN - HECC
  */
 //#define CAN_STB         214
@@ -335,7 +424,6 @@ static int __init pia35x_gsm_init(void)
 //
 //        gpio_direction_output(CAN_STB, (on==1)?0:1);
 //}
-
 static struct resource pia35x_hecc_resources[] = {
 	{
 		.start	= AM35XX_IPSS_HECC_BASE,
@@ -586,89 +674,6 @@ static void __init pia35x_mmc_init(void)
 }
 
 /*
- * external WLAN WL1271
- */
-#define PIA35X_WLAN_IRQ_GPIO	137
-#define PIA35X_WLAN_PMENA_GPIO	139
-#define PIA35X_BT_EN_GPIO       138
-
-static struct regulator_consumer_supply pia35x_vmmc2_supply =
-	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
-
-static struct regulator_init_data pia35x_vmmc2_data = {
-	.constraints = {
-		.valid_ops_mask   = REGULATOR_CHANGE_STATUS,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL,
-		.min_uV           = 1800000,
-		.max_uV           = 1800000,
-		.apply_uV         = true,
-		.always_on        = true,
-	},
-	.num_consumer_supplies = 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
-	.consumer_supplies     = &pia35x_vmmc2_supply,
-};
-
-static struct fixed_voltage_config pia35x_vmmc2_config = {
-	.supply_name     = "vwl1271",
-	.microvolts      = 1800000,
-	.gpio            = PIA35X_WLAN_PMENA_GPIO,
-	.startup_delay   = 70000,
-	.enable_high     = 1,   /* gpio = 1 means wlan_en active */
-	.enabled_at_boot = 0,   /* was the module enabled before linux boot */
-	.init_data       = &pia35x_vmmc2_data,
-};
-
-static struct platform_device pia35x_vwlan_device = {
-	.name           = "reg-fixed-voltage",
-	.id             = 2,
-	.dev = {
-		.platform_data = &pia35x_vmmc2_config,
-	},
-};
-
-#define WL12XX_REFCLOCK_26      1 /* 26 MHz */
-#define WL12XX_REFCLOCK_38      2 /* 38.4 MHz */
-
-static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
-	.irq = OMAP_GPIO_IRQ(PIA35X_WLAN_IRQ_GPIO),
-	/* internal ref clock is 38 MHz */
-	.board_ref_clock = WL12XX_REFCLOCK_38, /* 2, internal refclock of the  */
-};
-
-static int __init pia35x_wlan_init(void)
-{
-	u32 reg;
-	if (wl12xx_set_platform_data(&pia35x_wlan_data))
-		pr_err("%s: error setting wl12xx data\n", __func__);
-
-	// we need to enable the internal clock loopback on MMC2!
-	reg = omap_ctrl_readl(OMAP343X_CONTROL_DEVCONF1);
-	reg |= OMAP2_MMCSDIO2ADPCLKISEL;
-	omap_ctrl_writel(reg, OMAP343X_CONTROL_DEVCONF1);
-
-	platform_device_register(&pia35x_vwlan_device);
-
-	return 0;
-}
-
-/*
- * BT
- */
-static void __init pia35x_bt_init(void)
-{
-	//gpio_request(136, "bt.wu");
-	//gpio_direction_output(136, 0);
-	/* just enable the BT module */
-	if (gpio_request(PIA35X_BT_EN_GPIO, "bt.en")) {
-		pr_warning("GPIO 138 (BT.EN) request failed\n");
-	} else {
-		gpio_direction_output(PIA35X_BT_EN_GPIO, 1);
-//		msleep(50);
-//		gpio_set_value(PIA35X_BT_EN_GPIO, 1);
-	}
-}
-
-/*
  * MUSB (USB OTG)
  */
 static struct omap_musb_board_data pia35x_musb_board_data = {
@@ -748,9 +753,9 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 	/* power regulator TPS650732 */
 	{
 		I2C_BOARD_INFO("tps6507x", 0x48),
-			.flags = I2C_CLIENT_WAKE,
-			.irq = INT_34XX_SYS_NIRQ,
-			.platform_data = &pia35x_tps_board,
+		.flags = I2C_CLIENT_WAKE,
+		.irq = INT_34XX_SYS_NIRQ,
+		.platform_data = &pia35x_tps_board,
 	},
 #endif /* CONFIG_REGULATOR_TPS6507X */
 	/* RTC + WDOG */
@@ -781,8 +786,8 @@ static int __init pia35x_i2c_init(void)
 
 static void __init pia35x_init_irq(void)
 {
-	omap_board_config = am3517_crane_config;
-	omap_board_config_size = ARRAY_SIZE(am3517_crane_config);
+	omap_board_config = pia35x_config;
+	omap_board_config_size = ARRAY_SIZE(pia35x_config);
 
 	omap2_init_common_infrastructure();
 	omap2_init_common_devices(NULL, NULL);
@@ -790,14 +795,12 @@ static void __init pia35x_init_irq(void)
 	gpmc_init();
 }
 
-/*
- * base initialisation function
- */
+/* base initialization function */
 static void __init pia35x_init(void)
 {
 	int ret;
 
-	pr_info("pia35x_init: init pin muc\n");
+	pr_info("pia35x_init: init pin mux\n");
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
