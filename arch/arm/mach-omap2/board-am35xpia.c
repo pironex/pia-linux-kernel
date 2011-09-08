@@ -439,11 +439,14 @@ static void pia35x_disable_ethernet_int(void)
 static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 {
 	u32 regval, mac_lo, mac_hi;
+	int res;
 
 	omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_OUTPUT);
 	/* unset reset */
-	if (!gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst")) {
-		pr_warning("pia35x: Unable to request ETHERNET_nRST GPIO\n");
+	if ((res = gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst")) != 0) {
+		pr_warning("%s : Unable to request ETHERNET_nRST GPIO: %d\n",
+				__func__,
+				res);
 	} else {
 		gpio_direction_output(GPIO_ETHERNET_NRST, 1);
 		gpio_export(GPIO_ETHERNET_NRST, false);
