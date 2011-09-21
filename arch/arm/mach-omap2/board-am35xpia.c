@@ -791,29 +791,29 @@ static __init void pia35x_musb_init(void)
 #define PIA35X_NAND_CS 0
 static struct mtd_partition pia35x_nand_partitions[] = {
 	/* All the partition sizes are listed in terms of NAND block size */
-	{
+	{ /* 0x00000000 - 0x00080000 */
 		.name           = "xloader-nand",
 		.offset         = 0,
 		.size           = 4*(SZ_128K),
 		.mask_flags     = MTD_WRITEABLE
 	},
-	{
+	{ /* 0x00080000 - 0x00260000 */
 		.name           = "uboot-nand",
 		.offset         = MTDPART_OFS_APPEND,
-		.size           = 28*(SZ_128K),
+		.size           = 15*(SZ_128K),
 		.mask_flags     = MTD_WRITEABLE
 	},
-	{
+	{ /* 0x00260000 - 0x00280000 */
 		.name           = "params-nand",
 		.offset         = MTDPART_OFS_APPEND,
-		.size           = 4*(SZ_128K)
+		.size           = 1*(SZ_128K)
 	},
-	{
+	{ /* 0x00280000 - 0x00680000 */
 		.name           = "linux-nand",
 		.offset         = MTDPART_OFS_APPEND,
-		.size           = 80*(SZ_128K)
+		.size           = 32*(SZ_128K)
 	},
-	{
+	{ /* */
 		.name           = "jffs2-nand",
 		.size           = MTDPART_SIZ_FULL,
 		.offset         = MTDPART_OFS_APPEND,
