@@ -62,6 +62,7 @@
 #define GPIO_GSM_NRESET    126
 #define GPIO_GSM_ONOFF     127
 
+char expansionboard_name[16];
 static int __init pia35x_gsm_init(void)
 {
 	int ret;
@@ -878,6 +879,33 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 
 };
 
+#if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
+#include <linux/i2c/at24.h>
+
+static struct at24_platform_data m24c01 = {
+		.byte_len       = SZ_1K / 8,
+		.page_size      = 16,
+};
+
+static struct i2c_board_info __initdata pia35x_wifi_i2c2_info[] = {
+	/* temperature sensor LM75 */
+	{
+		I2C_BOARD_INFO("lm75", 0x48),
+	},
+	{
+		I2C_BOARD_INFO("24c01", 0x50),
+		.platform_data  = &m24c01,
+	},
+};
+#else
+static struct i2c_board_info __initdata pia35x_wifi_i2c2_info[] = {
+	/* temperature sensor LM75 */
+	{
+		I2C_BOARD_INFO("lm75", 0x48),
+	},
+};
+#endif
+
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
 	/* temperature sensor LM75 */
 	{
@@ -891,7 +919,14 @@ static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 static int __init pia35x_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 400, pia35x_i2c1_info, ARRAY_SIZE(pia35x_i2c1_info));
-	omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
+	if(strcmp(expansionboard_name, "pia_wifi") == 0)
+	{
+		pr_info("pia35x-expansionboard: registering i2c2 bus for pia_plus_wireless\n");
+		omap_register_i2c_bus(2, 400,  pia35x_wifi_i2c2_info,	ARRAY_SIZE(pia35x_wifi_i2c2_info));
+	}else
+	{
+		omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
+	}
 	omap_register_i2c_bus(3, 400, pia35x_i2c3_info, ARRAY_SIZE(pia35x_i2c3_info));
 
 	return 0;
@@ -914,6 +949,19 @@ static void __init pia35x_init_irq(void)
 static struct platform_device *pia35x_led_device[] __initdata = {
 		&leds_gpio,
 };
+
+static int __init expansionboard_setup(char *str)
+{
+	if (!str){
+		pr_info("pia35x: Expansion Board not found...");
+		return -EINVAL;
+	}
+	strncpy(expansionboard_name, str, 16);
+	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
+	return 0;
+}
+
+/*
 static void __init pia35x_init(void)
 {
 	int ret;
@@ -930,6 +978,8 @@ static void __init pia35x_init(void)
 		msleep(15);
 		gpio_set_value(GPIO_EN_VCC_5V_PER, 1);
 	}
+	//platform_add_devices(pia35x_led_device, ARRAY_SIZE(pia35x_led_device));
+
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
 
@@ -993,6 +1043,8 @@ static void __init pia35x_init(void)
 #endif
 
 }
+
+early_param("buddy", expansionboard_setup);
 
 MACHINE_START(PIA_AM35X, "PIA AM35X")
 	.boot_params  = 0x80000100,
