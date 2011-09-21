@@ -65,7 +65,6 @@
 #define GPIO_GSM_NRESET    126
 #define GPIO_GSM_ONOFF     127
 
-char expansionboard_name[16];
 static int __init pia35x_gsm_init(void)
 {
 	int ret;
@@ -952,6 +951,7 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 
 };
 
+char expansionboard_name[16];
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
 
@@ -1038,6 +1038,16 @@ static struct platform_device leds_gpio = {
 	},
 };
 
+static int __init expansionboard_setup(char *str)
+{
+	if (!str){
+		pr_info("pia35x: Expansion Board not found...");
+		return -EINVAL;
+	}
+	strncpy(expansionboard_name, str, 16);
+	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
+	return 0;
+}
 
 /* base initialization function */
  * Add LED device to platform
