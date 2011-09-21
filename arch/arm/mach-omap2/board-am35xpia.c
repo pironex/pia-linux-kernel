@@ -42,6 +42,7 @@
 
 #include <plat/board.h>
 #include <plat/common.h>
+#include <plat/display.h>
 #include <plat/gpmc.h>
 #include <plat/nand.h>
 #include <plat/usb.h>
@@ -92,6 +93,79 @@ static int __init pia35x_gsm_init(void)
 
 	return 0;
 }
+
+/* piA PLUS LCD */
+#define GPIO_LCD_DISP		99
+#define GPIO_LCD_BACKLIGHT 101
+#if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
+		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
+static void __init pia35x_lcd_init(void)
+{
+	int ret;
+	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+
+	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		return;
+	}
+	gpio_direction_output(GPIO_LCD_DISP, 1);
+	gpio_export(GPIO_LCD_DISP, false);
+
+	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
+		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_DISP);
+		return;
+	}
+	gpio_direction_output(GPIO_LCD_BACKLIGHT, 1);
+	gpio_export(GPIO_LCD_BACKLIGHT, false);
+
+	return;
+}
+#else
+static void __init pia35x_lcd_init(void) {}
+#endif
+
+static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(GPIO_LCD_DISP, 1);
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+
+	return 0;
+}
+
+static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	gpio_set_value(GPIO_LCD_DISP, 0);
+}
+
+static struct omap_dss_device pia35x_lcd_device = {
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "lcd",
+	.driver_name        = "sharp_lq_panel",
+	.phy.dpi.data_lines = 24,
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+
+static struct omap_dss_device *pia35x_dss_devices[] = {
+	&pia35x_lcd_device,
+};
+
+static struct omap_dss_board_info pia35x_dss_data = {
+	.num_devices     = ARRAY_SIZE(pia35x_dss_devices),
+	.devices         = pia35x_dss_devices,
+	.default_device  = &pia35x_lcd_device,
+};
+
+static struct platform_device pia35x_dss_device = {
+	.name   = "omapdss",
+	.id     = -1,
+	.dev    = {
+		.platform_data = &pia35x_dss_data,
+	},
+};
 
 /* piA PLUS Wireless */
 
@@ -868,15 +942,19 @@ static void __init pia35x_init(void)
 		gpio_direction_output(GPIO_RS485_RES, 0);
 		gpio_export(GPIO_RS485_RES, false);
 	}
-
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
+
+	platform_device_register(&pia35x_dss_device);
 
 	pr_info("pia35x_init: init serial ports\n");
 	omap_serial_init();
 
 	omap_mux_init_gpio(GPIO_STATUS_LED, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
 	platform_device_register(&leds_gpio);
+
+	pr_info("pia35x_init: init DSS LCD device\n");
+	pia35x_lcd_init();
 
 	pr_info("pia35x_init: init NAND\n");
 	pia35x_flash_init();
@@ -898,10 +976,6 @@ static void __init pia35x_init(void)
 
 	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
-
-	/* TODO
-	 * display?
-	 */
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
