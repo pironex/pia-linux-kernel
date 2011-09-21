@@ -262,6 +262,9 @@ static void __init pia35x_bt_init(void)
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
+#define GPIO_USB_SW        116
+#define GPIO_CAN_RES        26    /* resistor switch for CAN */
+#define GPIO_RS485_RES      27    /* resistor switch for RS485 */
 
 /* Board initialization */
 static struct omap_board_config_kernel pia35x_config[] __initdata = {
@@ -273,9 +276,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 
 	/* MMC1_CD        GPIO 041, low == card in slot */
 	OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
-
-	/* EN_VCC_5V_PER  GPIO 028, low active */
-	OMAP3_MUX(ETK_D14,     OMAP_MUX_MODE4 | OMAP_PIN_INPUT),
 
 	/* UART2.485/#232 GPIO 128, low = RS232 */
 	OMAP3_MUX(SDMMC1_DAT6, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
@@ -298,6 +298,12 @@ static struct omap_board_mux board_mux[] __initdata = {
 	OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
 	/* UART 4 cts */
 	OMAP3_MUX(SAD2D_MCAD3, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+
+	/* TTLIOs 1+2, not present in revision 0.1.0 */
+	OMAP3_MUX(GPMC_A3, OMAP_MUX_MODE7),
+	OMAP3_MUX(GPMC_A4, OMAP_MUX_MODE7),
+	OMAP3_MUX(GPMC_A5, OMAP_MUX_MODE7),
+	OMAP3_MUX(GPMC_A6, OMAP_MUX_MODE7),
 
 	/* TERMINATOR */
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
@@ -973,13 +979,35 @@ static void __init pia35x_init(void)
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
-	if (gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per")) {
+	/* EN_VCC_5V_PER  GPIO 028, low active */
+	omap_mux_init_gpio(GPIO_EN_VCC_5V_PER, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT );
+	if (gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per") != 0) {
 		pr_warning("pia35x: unable to request EN_VCC_5V_PER GPIO");
 	} else {
-		gpio_direction_output(GPIO_EN_VCC_5V_PER, 0);
+		gpio_direction_output(GPIO_EN_VCC_5V_PER, 1);
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
-		msleep(15);
-		gpio_set_value(GPIO_EN_VCC_5V_PER, 1);
+	}
+
+	omap_mux_init_gpio(GPIO_USB_SW, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_USB_SW, "usb.sw") != 0) {
+		pr_warning("pia35x: unable to request USB_SW");
+	} else {
+		gpio_direction_output(GPIO_USB_SW, 0);
+		gpio_export(GPIO_USB_SW, false);
+	}
+	omap_mux_init_gpio(GPIO_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_CAN_RES, "can.res") != 0) {
+		pr_warning("pia35x: unable to request CAN_RES");
+	} else {
+		gpio_direction_output(GPIO_CAN_RES, 1);
+		gpio_export(GPIO_CAN_RES, false);
+	}
+	omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	if (gpio_request(GPIO_RS485_RES, "rs485.res") != 0) {
+		pr_warning("pia35x: unable to request RS85_RES");
+	} else {
+		gpio_direction_output(GPIO_RS485_RES, 0);
+		gpio_export(GPIO_RS485_RES, false);
 	}
 	//platform_add_devices(pia35x_led_device, ARRAY_SIZE(pia35x_led_device));
 
