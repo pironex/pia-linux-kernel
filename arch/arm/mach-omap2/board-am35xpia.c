@@ -22,6 +22,7 @@
 #include <linux/clk.h>
 #include <linux/davinci_emac.h>
 #include <linux/gpio.h>
+#include <linux/leds.h>
 #include <linux/mfd/tps6507x.h>
 #include <linux/mmc/host.h>
 #include <linux/mtd/mtd.h>
@@ -265,6 +266,7 @@ static void __init pia35x_bt_init(void)
 #define GPIO_USB_SW        116
 #define GPIO_CAN_RES        26    /* resistor switch for CAN */
 #define GPIO_RS485_RES      27    /* resistor switch for RS485 */
+#define GPIO_STATUS_LED    117    /* Status LED with heartbeat functionality */
 
 /* Board initialization */
 static struct omap_board_config_kernel pia35x_config[] __initdata = {
@@ -952,6 +954,29 @@ static void __init pia35x_init_irq(void)
 	gpmc_init();
 }
 
+static struct gpio_led gpio_leds[] = {
+	{
+		.name			= "led1",
+		.default_trigger= "heartbeat",
+		.gpio			= 117,
+		.active_low		= false,
+	}
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds		= gpio_leds,
+	.num_leds	= ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_led_info,
+	},
+};
+
+
 /* base initialization function */
  * Add LED device to platform
  */
@@ -1018,6 +1043,9 @@ static void __init pia35x_init(void)
 
 	pr_info("pia35x_init: init serial ports\n");
 	omap_serial_init();
+
+	omap_mux_init_gpio(GPIO_STATUS_LED, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	platform_device_register(&leds_gpio);
 
 	pr_info("pia35x_init: init DSS LCD device\n");
 	pia35x_lcd_init();
