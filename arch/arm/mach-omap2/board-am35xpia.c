@@ -32,6 +32,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/wl12xx.h>
 #include <linux/can/platform/ti_hecc.h>
+#include <linux/leds.h>
 
 #include <mach/hardware.h>
 #include <mach/am35xx.h>
@@ -817,6 +818,46 @@ static void __init pia35x_flash_init(void)
 			PIA35X_NAND_CS, NAND_BUSWIDTH_16);
 }
 
+
+/*
+ * GPIO_LED
+ */
+//static struct gpio_led gpio_leds[];
+static struct gpio_led gpio_leds[] = {
+	{
+		.name                   = "pia35x::TTL0",
+		.default_trigger        = "heartbeat",
+		.gpio                   = 35,
+		.active_low             = true,
+	},
+	{
+		.name                   = "pia35x::TTL1",
+		.default_trigger        = "mmc0",
+		.gpio                   = 37,
+		.active_low             = true,
+	},
+	{
+		.name                   = "pia35x::TTL2",
+		.default_trigger        = "none",
+		.gpio                   = 39,
+		.active_low             = true,
+	},
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds           = gpio_leds,
+	.num_leds       = ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+	.name   = "leds-gpio",
+	.id     = -1,
+	.dev    = {
+			.platform_data  = &gpio_led_info,
+	},
+};
+
+
 /*
  * I2C
  */
@@ -868,6 +909,11 @@ static void __init pia35x_init_irq(void)
 }
 
 /* base initialization function */
+ * Add LED device to platform
+ */
+static struct platform_device *pia35x_led_device[] __initdata = {
+		&leds_gpio,
+};
 static void __init pia35x_init(void)
 {
 	int ret;
