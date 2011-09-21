@@ -97,15 +97,15 @@ static int __init pia35x_gsm_init(void)
 }
 
 /* piA PLUS LCD */
-#if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
-		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
+#if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
+		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
 static void __init pia35x_lcd_init(void)
 {
 	int ret;
-	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_OUTPUT);
-	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_OUTPUT);
+	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
 
 	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
 		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
@@ -131,12 +131,14 @@ static void __init pia35x_lcd_init(void) {}
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_DISP, 1);
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
 
 	return 0;
 }
 
 static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 {
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
 	gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
@@ -144,7 +146,7 @@ static struct omap_dss_device pia35x_lcd_device = {
 	.type               = OMAP_DISPLAY_TYPE_DPI,
 	.name               = "lcd",
 	.driver_name        = "sharp_lq_panel",
-	.phy.dpi.data_lines = 16,
+	.phy.dpi.data_lines = 24,
 	.platform_enable    = pia35x_lcd_enable,
 	.platform_disable   = pia35x_lcd_disable,
 };
