@@ -21,8 +21,10 @@
 #include <linux/init.h>
 #include <linux/clk.h>
 #include <linux/davinci_emac.h>
+#include <linux/irq.h>
 #include <linux/gpio.h>
 #include <linux/leds.h>
+#include <linux/i2c/tsc2007.h>
 #include <linux/mfd/tps6507x.h>
 #include <linux/mmc/host.h>
 #include <linux/mtd/mtd.h>
@@ -99,38 +101,15 @@ static int __init pia35x_gsm_init(void)
 /* piA PLUS LCD */
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
+
 #if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
 		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
-static void __init pia35x_lcd_init(void)
-{
-	int ret;
-	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
-	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
-
-	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
-		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
-		return;
-	}
-	gpio_direction_output(GPIO_LCD_DISP, 1);
-	gpio_export(GPIO_LCD_DISP, false);
-
-	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
-		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
-		gpio_free(GPIO_LCD_DISP);
-		return;
-	}
-	gpio_direction_output(GPIO_LCD_BACKLIGHT, 1);
-	gpio_export(GPIO_LCD_BACKLIGHT, false);
-
-	return;
-}
-#else
-static void __init pia35x_lcd_init(void) {}
-#endif
 
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
-	gpio_set_value(GPIO_LCD_DISP, 1);
+	//gpio_set_value(GPIO_LCD_DISP, 1);
+	//msleep(1000);
+	pr_info("pia35x: enabling LCD\n");
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
 
 	return 0;
@@ -139,7 +118,8 @@ static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
-	gpio_set_value(GPIO_LCD_DISP, 0);
+	pr_info("pia35x: disabling LCD\n");
+	//gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
 static struct omap_dss_device pia35x_lcd_device = {
@@ -168,6 +148,87 @@ static struct platform_device pia35x_dss_device = {
 		.platform_data = &pia35x_dss_data,
 	},
 };
+
+static void __init pia35x_lcd_init(void)
+{
+	int ret;
+	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
+		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_DISP);
+		return;
+	}
+	gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+	gpio_export(GPIO_LCD_BACKLIGHT, false);
+
+	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		return;
+	}
+	gpio_direction_output(GPIO_LCD_DISP, 1);
+	gpio_export(GPIO_LCD_DISP, false);
+
+	pr_info("pia35x_init: init LCD\n");
+	platform_device_register(&pia35x_dss_device);
+
+	return;
+}
+#else
+inline static void __init pia35x_lcd_init(void) { }
+#endif
+
+/* Touch interface */
+#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
+    defined(CONFIG_TOUCHSCREEN_TSC2007)
+/* Pen Down IRQ, low active */
+#define GPIO_LCD_PENDOWN 100
+static int pia35x_tsc2007_pendown(void)
+{
+	return !gpio_get_value(GPIO_LCD_PENDOWN);
+}
+
+static int pia35x_tsc2007_init_hw(void)
+{
+	int gpio = GPIO_LCD_PENDOWN;
+	int ret = 0;
+	pr_info("pia35x_init: init TSC2007\n");
+	ret = gpio_request(gpio, "tsc2007_pen_down");
+	if (ret < 0) {
+		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
+		return ret;
+	}
+	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
+	gpio_direction_input(gpio);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
+
+	return ret;
+}
+
+static struct tsc2007_platform_data tsc2007_info = {
+		.model = 2007,
+		.x_plate_ohms = 180,
+		.get_pendown_state = pia35x_tsc2007_pendown,
+		.init_platform_hw = pia35x_tsc2007_init_hw,
+};
+
+static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {
+		{
+				I2C_BOARD_INFO("tsc2007", 0x4B),
+				.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+				.platform_data = &tsc2007_info,
+		},
+};
+#else
+static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
+#endif
+
+static void __init pia35x_touch_init(void)
+{
+	pr_info("pia35x_init: init touchscreen TSC2007\n");
+	i2c_register_board_info(3, pia35x_i2c3_tsc2007,
+			ARRAY_SIZE(pia35x_i2c3_tsc2007));
+}
 
 /* piA PLUS Wireless */
 
@@ -579,7 +640,6 @@ static struct platform_device pia35x_vmmc1_device = {
 		.platform_data = &pia35x_vmmc1_config,
 	},
 };
-
 
 /*
  * Voltage Regulator
@@ -1041,8 +1101,6 @@ static void __init pia35x_init(void)
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
 
-	platform_device_register(&pia35x_dss_device);
-
 	pr_info("pia35x_init: init serial ports\n");
 	omap_serial_init();
 
@@ -1051,6 +1109,7 @@ static void __init pia35x_init(void)
 
 	pr_info("pia35x_init: init DSS LCD device\n");
 	pia35x_lcd_init();
+	pia35x_touch_init();
 
 	pr_info("pia35x_init: init NAND\n");
 	pia35x_flash_init();
