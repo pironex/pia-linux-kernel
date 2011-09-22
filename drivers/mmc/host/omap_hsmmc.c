@@ -1529,6 +1529,8 @@ static void set_data_timeout(struct omap_hsmmc_host *host,
 		if (dto > 14)
 			dto = 14;
 	}
+	// avoid timeouts, use maximum DTO
+	dto = 14;
 
 	reg &= ~DTO_MASK;
 	reg |= dto << DTO_SHIFT;
