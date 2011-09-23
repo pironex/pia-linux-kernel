@@ -236,7 +236,7 @@ static void __init pia35x_touch_init(void)
  */
 #define GPIO_WLAN_IRQ	137
 #define GPIO_WLAN_PMENA	139
-#define GPIO_BT_EN       138
+#define GPIO_BT_EN      138
 
 static struct regulator_consumer_supply pia35x_vmmc2_supply =
 	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
@@ -283,7 +283,7 @@ static struct wl12xx_platform_data pia35x_wlan_data __initdata = {
 static int __init pia35x_wlan_init(void)
 {
 	u32 reg;
-	int ret;
+	int ret = 0;
 
 	omap_mux_init_gpio(GPIO_WLAN_IRQ, OMAP_PIN_INPUT);
 	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_INPUT_PULLDOWN);
@@ -293,8 +293,8 @@ static int __init pia35x_wlan_init(void)
 	//gpio_direction_output(GPIO_WLAN_PMENA, 0);
 	//gpio_export(GPIO_WLAN_PMENA, false);
 
-	if (wl12xx_set_platform_data(&pia35x_wlan_data))
-		pr_err("%s: error setting wl12xx data\n", __func__);
+	if ((ret = wl12xx_set_platform_data(&pia35x_wlan_data)) != 0)
+		pr_err("%s: error setting wl12xx data: %d\n", __func__, ret);
 
 	// we need to enable the internal clock loopback on MMC2!
 	reg = omap_ctrl_readl(OMAP343X_CONTROL_DEVCONF1);
@@ -303,7 +303,7 @@ static int __init pia35x_wlan_init(void)
 
 	platform_device_register(&pia35x_vwlan_device);
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -511,16 +511,20 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	u32 regval, mac_lo, mac_hi;
 	int res;
 
-	omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_OUTPUT);
 	/* unset reset */
-	if ((res = gpio_request(GPIO_ETHERNET_NRST, "ethernet-nrst")) != 0) {
-		pr_warning("%s : Unable to request ETHERNET_nRST GPIO: %d\n",
-				__func__,
-				res);
+	if ((res = gpio_request_one(GPIO_ETHERNET_NRST,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "ethernet-nrst")) != 0) {
+		pr_warn("%s : Unable to request ETHERNET_nRST GPIO: %d\n",
+				__func__, res);
 	} else {
-		gpio_direction_output(GPIO_ETHERNET_NRST, 1);
+		omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_INPUT_PULLUP);
+		/* reset pulse to ethernet controller*/
+		usleep_range(150, 220);
+		gpio_set_value(GPIO_ETHERNET_NRST, 0);
+		usleep_range(150, 220);
+		gpio_set_value(GPIO_ETHERNET_NRST, 1);
 		gpio_export(GPIO_ETHERNET_NRST, false);
-		msleep(50);
+		usleep_range(1, 2);
 	}
 
 	mac_lo = omap_ctrl_readl(AM35XX_CONTROL_FUSE_EMAC_LSB);
@@ -558,19 +562,6 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 /*
  * CAN - HECC
  */
-//#define CAN_STB         214
-//static void hecc_phy_control(int on)
-//{
-//        int r;
-//
-//        r = gpio_request(CAN_STB, "can_stb");
-//        if (r) {
-//                printk(KERN_ERR "failed to get can_stb \n");
-//                return;
-//        }
-//
-//        gpio_direction_output(CAN_STB, (on==1)?0:1);
-//}
 static struct resource pia35x_hecc_resources[] = {
 	{
 		.start	= AM35XX_IPSS_HECC_BASE,
@@ -605,6 +596,14 @@ static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
 {
 	pia35x_hecc_device.dev.platform_data = pdata;
 	platform_device_register(&pia35x_hecc_device);
+
+	if (gpio_request_one(GPIO_CAN_RES,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "can.res") != 0) {
+		pr_warning("pia35x: unable to request CAN_RES");
+	} else {
+		omap_mux_init_gpio(GPIO_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_CAN_RES, false);
+	}
 }
 
 /*
@@ -832,9 +831,7 @@ static __init void pia35x_musb_init(void)
 {
 	u32 devconf2;
 
-	/*
-	 * Set up USB clock/mode in the DEVCONF2 register.
-	 */
+	/* Set up USB clock/mode in the DEVCONF2 register. */
 	devconf2 = omap_ctrl_readl(AM35XX_CONTROL_DEVCONF2);
 
 	/* USB2.0 PHY reference clock is 13 MHz */
@@ -845,6 +842,16 @@ static __init void pia35x_musb_init(void)
 	omap_ctrl_writel(devconf2, AM35XX_CONTROL_DEVCONF2);
 
 	usb_musb_init(&pia35x_musb_board_data);
+
+	/* set USB OTG-UMTS switch to OTG by default */
+	if (gpio_request_one(GPIO_USB_SW,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "usb.sw") != 0) {
+		pr_warning("pia35x: unable to request USB_SW");
+	} else {
+		omap_mux_init_gpio(GPIO_USB_SW,
+				OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_USB_SW, false);
+	}
 }
 
 /*
@@ -932,6 +939,21 @@ static struct platform_device leds_gpio = {
 
 
 /*
+ * Serial ports RS232/485
+ */
+static void __init pia35x_serial_init(void)
+{
+	if (gpio_request_one(GPIO_RS485_RES,
+			GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
+		pr_warning("pia35x: unable to request RS85_RES");
+	} else {
+		omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_RS485_RES, false);
+	}
+	omap_serial_init();
+}
+
+/*
  * I2C
  */
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
@@ -952,38 +974,27 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 };
 
 char expansionboard_name[16];
+
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
-
 static struct at24_platform_data m24c01 = {
 		.byte_len       = SZ_1K / 8,
 		.page_size      = 16,
 };
-
-static struct i2c_board_info __initdata pia35x_wifi_i2c2_info[] = {
-	/* temperature sensor LM75 */
-	{
-		I2C_BOARD_INFO("lm75", 0x48),
-	},
-	{
-		I2C_BOARD_INFO("24c01", 0x50),
-		.platform_data  = &m24c01,
-	},
-};
-#else
-static struct i2c_board_info __initdata pia35x_wifi_i2c2_info[] = {
-	/* temperature sensor LM75 */
-	{
-		I2C_BOARD_INFO("lm75", 0x48),
-	},
-};
-#endif
+#endif /* CONFIG_EEPROM_AT24 */
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
-	/* temperature sensor LM75 */
-	{
-		I2C_BOARD_INFO("lm75", 0x48),
-	},
+		/* temperature sensor LM75 */
+		{
+				I2C_BOARD_INFO("lm75", 0x48),
+		},
+#if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
+		/* expansion board eeprom */
+		{
+				I2C_BOARD_INFO("24c01", 0x50),
+				.platform_data  = &m24c01,
+		},
+#endif /* CONFIG_EEPROM_AT24 */
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
@@ -992,14 +1003,7 @@ static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 static int __init pia35x_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 400, pia35x_i2c1_info, ARRAY_SIZE(pia35x_i2c1_info));
-	if(strcmp(expansionboard_name, "pia_wifi") == 0)
-	{
-		pr_info("pia35x-expansionboard: registering i2c2 bus for pia_plus_wireless\n");
-		omap_register_i2c_bus(2, 400,  pia35x_wifi_i2c2_info,	ARRAY_SIZE(pia35x_wifi_i2c2_info));
-	}else
-	{
-		omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
-	}
+	omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
 	omap_register_i2c_bus(3, 400, pia35x_i2c3_info, ARRAY_SIZE(pia35x_i2c3_info));
 
 	return 0;
@@ -1076,43 +1080,24 @@ static void __init pia35x_init(void)
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
+
 	/* EN_VCC_5V_PER  GPIO 028, low active */
-	omap_mux_init_gpio(GPIO_EN_VCC_5V_PER, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT );
-	if (gpio_request(GPIO_EN_VCC_5V_PER, "vccen.per") != 0) {
+	if (gpio_request_one(GPIO_EN_VCC_5V_PER,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "vccen.per") != 0) {
 		pr_warning("pia35x: unable to request EN_VCC_5V_PER GPIO");
 	} else {
-		gpio_direction_output(GPIO_EN_VCC_5V_PER, 1);
+		omap_mux_init_gpio(GPIO_EN_VCC_5V_PER,
+				OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
 
-	omap_mux_init_gpio(GPIO_USB_SW, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-	if (gpio_request(GPIO_USB_SW, "usb.sw") != 0) {
-		pr_warning("pia35x: unable to request USB_SW");
-	} else {
-		gpio_direction_output(GPIO_USB_SW, 0);
-		gpio_export(GPIO_USB_SW, false);
-	}
-	omap_mux_init_gpio(GPIO_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-	if (gpio_request(GPIO_CAN_RES, "can.res") != 0) {
-		pr_warning("pia35x: unable to request CAN_RES");
-	} else {
-		gpio_direction_output(GPIO_CAN_RES, 1);
-		gpio_export(GPIO_CAN_RES, false);
-	}
-	omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-	if (gpio_request(GPIO_RS485_RES, "rs485.res") != 0) {
-		pr_warning("pia35x: unable to request RS85_RES");
-	} else {
-		gpio_direction_output(GPIO_RS485_RES, 0);
-		gpio_export(GPIO_RS485_RES, false);
-	}
 	//platform_add_devices(pia35x_led_device, ARRAY_SIZE(pia35x_led_device));
 
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
 
 	pr_info("pia35x_init: init serial ports\n");
-	omap_serial_init();
+	pia35x_serial_init();
 
 	omap_mux_init_gpio(GPIO_STATUS_LED, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
 	platform_device_register(&leds_gpio);
@@ -1171,7 +1156,6 @@ static void __init pia35x_init(void)
 
 	usb_ehci_init(&ehci_pdata);
 #endif
-
 }
 
 early_param("buddy", expansionboard_setup);
