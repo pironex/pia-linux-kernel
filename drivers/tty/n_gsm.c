@@ -2998,7 +2998,7 @@ static int gsmtty_tiocmset(struct tty_struct *tty, struct file *filp,
 	struct gsm_dlci *dlci = tty->driver_data;
 	unsigned int modem_tx = dlci->modem_tx;
 
-	modem_tx &= clear;
+	modem_tx &= ~clear;
 	modem_tx |= set;
 
 	if (modem_tx != dlci->modem_tx) {
