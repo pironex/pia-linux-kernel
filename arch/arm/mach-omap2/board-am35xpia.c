@@ -286,7 +286,7 @@ static int __init pia35x_wlan_init(void)
 	int ret = 0;
 
 	omap_mux_init_gpio(GPIO_WLAN_IRQ, OMAP_PIN_INPUT);
-	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_INPUT_PULLDOWN);
+	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_INPUT);
 
 	//if ((ret = gpio_request(GPIO_WLAN_PMENA, "wlan-power")))
 	//	pr_warning("%s: GPIO_WLAN_PMENA request failed: %d\n", __func__, ret);
@@ -311,7 +311,7 @@ static int __init pia35x_wlan_init(void)
  */
 static void __init pia35x_bt_init(void)
 {
-	omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT_PULLDOWN);
+	omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT);
 	//gpio_request(136, "bt.wu");
 	//gpio_direction_output(136, 0);
 	/* just enable the BT module */
