@@ -823,7 +823,8 @@ static void __init pia35x_mmc_init(void)
  */
 static struct omap_musb_board_data pia35x_musb_board_data = {
 	.interface_type         = MUSB_INTERFACE_ULPI,
-	.mode                   = MUSB_OTG,
+	/*.mode                   = MUSB_OTG,*/
+	.mode                   = MUSB_HOST,
 	.power                  = 500,
 };
 
