@@ -68,36 +68,43 @@
 static int __init pia35x_gsm_init(void)
 {
 	int ret;
-	/* GSM_nRESET     GPIO 126, low active */
-	//OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-	/* nGSM_ON/OFF    GPIO 127, low active */
-	//OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
 	/* GSM GPIOs are low active */
-	omap_mux_init_gpio(GPIO_EN_GSM_POWER, OMAP_PIN_OUTPUT);
-	// GPIO 126 is available on 2 pins
-	omap_mux_init_signal("sdmmc1_dat4.gpio_126", OMAP_PIN_OUTPUT);
-	//omap_mux_init_gpio(GPIO_GSM_NRESET,   OMAP_PIN_OUTPUT);
-	omap_mux_init_gpio(GPIO_GSM_ONOFF,    OMAP_PIN_OUTPUT);
-	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm-power")))
-		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
-	gpio_direction_output(GPIO_EN_GSM_POWER, 1);
-	gpio_export(GPIO_EN_GSM_POWER, false);
 
-	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm-reset")))
+	/* GSM_nRESET     GPIO 126, low active */
+	//OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm-reset"))) {
 		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
-	gpio_direction_output(GPIO_GSM_NRESET, 1);
-	gpio_export(GPIO_GSM_NRESET, false);
+	} else {
+		gpio_direction_output(GPIO_GSM_NRESET, 1);
+		// GPIO 126 is available on 2 pins
+		omap_mux_init_signal("sdmmc1_dat4.gpio_126", OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_GSM_NRESET, false);
+	}
 
-	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm-onoff")))
+
+	/* nGSM_ON/OFF    GPIO 127, low active */
+	//OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
+	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm-onoff"))) {
 		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
-	gpio_direction_output(GPIO_GSM_ONOFF, 1);
-	gpio_export(GPIO_GSM_ONOFF, false);
+	} else {
+		gpio_direction_output(GPIO_GSM_ONOFF, 1);
+		omap_mux_init_gpio(GPIO_GSM_ONOFF,    OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_GSM_ONOFF, false);
+	}
 
+	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm-power"))) {
+		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
+		return -1;
+	} else {
+		gpio_direction_output(GPIO_EN_GSM_POWER, 1);
+		omap_mux_init_gpio(GPIO_EN_GSM_POWER, OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_EN_GSM_POWER, false);
+	}
 	return 0;
 }
 
-/* piA PLUS LCD */
+/* piA-LCD */
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
 
@@ -151,22 +158,26 @@ static struct platform_device pia35x_dss_device = {
 static void __init pia35x_lcd_init(void)
 {
 	int ret;
-	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+
+	/* backlight GPIO */
 	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
 		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
 		gpio_free(GPIO_LCD_DISP);
 		return;
 	}
-	gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
-	gpio_export(GPIO_LCD_BACKLIGHT, false);
 
-	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+	gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+	gpio_export(GPIO_LCD_BACKLIGHT, true);
+
+	/* DISPLAY_EN GPIO */
 	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
 		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
 		return;
 	}
 	gpio_direction_output(GPIO_LCD_DISP, 1);
-	gpio_export(GPIO_LCD_DISP, false);
+	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+	gpio_export(GPIO_LCD_DISP, true);
 
 	pr_info("pia35x_init: init LCD\n");
 	platform_device_register(&pia35x_dss_device);
@@ -229,7 +240,9 @@ static void __init pia35x_touch_init(void)
 			ARRAY_SIZE(pia35x_i2c3_tsc2007));
 }
 
-/* piA PLUS Wireless */
+/* piA-Motor */
+
+/* piA-Wireless */
 
 /*
  * WIFI/BT: TiWi-R2 (WL1271)
@@ -238,8 +251,10 @@ static void __init pia35x_touch_init(void)
 #define GPIO_WLAN_PMENA	139
 #define GPIO_BT_EN      138
 
-static struct regulator_consumer_supply pia35x_vmmc2_supply =
-	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
+static struct regulator_consumer_supply pia35x_vmmc2_consumers[] = {
+	//REGULATOR_SUPPLY("vmmc2", "mmci-omap-hs.1");
+		REGULATOR_SUPPLY("vwl1271", "wl1271"),
+};
 
 static struct regulator_init_data pia35x_vmmc2_data = {
 	.constraints = {
@@ -250,8 +265,8 @@ static struct regulator_init_data pia35x_vmmc2_data = {
 		.apply_uV         = true,
 		.always_on        = true,
 	},
-	.num_consumer_supplies = 1, //ARRAY_SIZE(pia35x_vmmc2_consumers),
-	.consumer_supplies     = &pia35x_vmmc2_supply,
+	.num_consumer_supplies = ARRAY_SIZE(pia35x_vmmc2_consumers),
+	.consumer_supplies     = pia35x_vmmc2_consumers,
 };
 
 static struct fixed_voltage_config pia35x_vmmc2_config = {
@@ -266,7 +281,7 @@ static struct fixed_voltage_config pia35x_vmmc2_config = {
 
 static struct platform_device pia35x_vwlan_device = {
 	.name           = "reg-fixed-voltage",
-	.id             = 2,
+	.id             = -1,
 	.dev = {
 		.platform_data = &pia35x_vmmc2_config,
 	},
@@ -286,7 +301,7 @@ static int __init pia35x_wlan_init(void)
 	int ret = 0;
 
 	omap_mux_init_gpio(GPIO_WLAN_IRQ, OMAP_PIN_INPUT);
-	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_INPUT);
+	omap_mux_init_gpio(GPIO_WLAN_PMENA, OMAP_PIN_OUTPUT);
 
 	//if ((ret = gpio_request(GPIO_WLAN_PMENA, "wlan-power")))
 	//	pr_warning("%s: GPIO_WLAN_PMENA request failed: %d\n", __func__, ret);
@@ -300,6 +315,8 @@ static int __init pia35x_wlan_init(void)
 	reg = omap_ctrl_readl(OMAP343X_CONTROL_DEVCONF1);
 	reg |= OMAP2_MMCSDIO2ADPCLKISEL;
 	omap_ctrl_writel(reg, OMAP343X_CONTROL_DEVCONF1);
+
+	//pia35x_vmmc2_consumers[0].dev = mmc[1].dev;
 
 	platform_device_register(&pia35x_vwlan_device);
 
