@@ -111,7 +111,6 @@ static int __init pia35x_gsm_init(void)
 
 #if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
 		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
-
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
 	//gpio_set_value(GPIO_LCD_DISP, 1);
@@ -137,11 +136,40 @@ static struct omap_dss_device pia35x_lcd_device = {
 	.platform_enable    = pia35x_lcd_enable,
 	.platform_disable   = pia35x_lcd_disable,
 };
+#define PIA_LCD
+#endif /* CONFIG_PANEL_SHARP_LQ043T1DG01 */
+
+#if defined(CONFIG_PANEL_GENERIC) || defined(CONFIG_PANEL_GENERIC_MODULE)
+static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
+{
+	return 0;
+}
+static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
+{
+	return;
+}
+static struct omap_dss_device pia35x_dvi_device = {
+	.type = OMAP_DISPLAY_TYPE_DPI,
+	.name = "dvi",
+	.driver_name = "generic_panel",
+	.phy.dpi.data_lines = 24,
+	.reset_gpio = -EINVAL,
+	.platform_enable = pia35x_dvi_enable,
+	.platform_disable = pia35x_dvi_disable,
+};
+#define PIA_DVI
+#endif /* CONFIG_PANEL_GENERIC */
 
 static struct omap_dss_device *pia35x_dss_devices[] = {
+#ifdef PIA_LCD
 	&pia35x_lcd_device,
+#endif
+#ifdef PIA_DVI
+	&pia35x_dvi_device,
+#endif
 };
 
+#if defined(PIA_DVI) || defined(PIA_LCD)
 static struct omap_dss_board_info pia35x_dss_data = {
 	.num_devices     = ARRAY_SIZE(pia35x_dss_devices),
 	.devices         = pia35x_dss_devices,
@@ -156,7 +184,7 @@ static struct platform_device pia35x_dss_device = {
 	},
 };
 
-static void __init pia35x_lcd_init(void)
+static void __init pia35x_display_init(void)
 {
 	int ret;
 
@@ -186,8 +214,8 @@ static void __init pia35x_lcd_init(void)
 	return;
 }
 #else
-inline static void __init pia35x_lcd_init(void) { }
-#endif
+inline static void __init pia35x_display_init(void) { }
+#endif /* PIA_DVI || PIA_LCD */
 
 /* Touch interface */
 #if defined(CONFIG_INPUT_TOUCHSCREEN) && \
@@ -351,6 +379,7 @@ static inline void int __init pia35x_motorcontrol_init(void) { return; }
 /*
  * WIFI/BT: TiWi-R2 (WL1271)
  */
+#if defined(CONFIG_WL1271_SDIO) || defined(CONFIG_WL1271_SDIO_MODULE)
 #define GPIO_WLAN_IRQ	137
 #define GPIO_WLAN_PMENA	139
 #define GPIO_BT_EN      138
@@ -443,6 +472,10 @@ static void __init pia35x_bt_init(void)
 		gpio_export(GPIO_BT_EN, false);
 	}
 }
+#else
+static inline void __init pia35x_wlan_init(void) { return; }
+static inline void __init pia35x_bt_init(void) { return; }
+#endif /* CONFIG_WL1271_SDIO */
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
@@ -1225,7 +1258,7 @@ static void __init pia35x_init(void)
 	platform_device_register(&leds_gpio);
 
 	pr_info("pia35x_init: init DSS LCD device\n");
-	pia35x_lcd_init();
+	pia35x_display_init();
 	pia35x_touch_init();
 
 	pr_info("pia35x_init: init NAND\n");
@@ -1242,14 +1275,19 @@ static void __init pia35x_init(void)
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
 
-	pr_info("pia35x_init: init WLAN & BT\n");
-	pia35x_wlan_init();
-	pia35x_bt_init();
-
 	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
 
-	pia35x_init_sys_clkout2();
+	if (0 == strcmp(expansionboard_name, "pia_wifi")) {
+		pr_info("pia35x_init: init WLAN & BT\n");
+		pia35x_wlan_init();
+		pia35x_bt_init();
+	}
+
+#if 0 // FIXME remove when motorcontrol is done
+	if (0 == strcmp(expansionboard_name, "pia_motorcontrol"))
+#endif
+		pia35x_motorcontrol_init();
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
