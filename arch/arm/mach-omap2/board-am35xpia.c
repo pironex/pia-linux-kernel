@@ -1128,7 +1128,7 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 
 };
 
-char expansionboard_name[16];
+char expansionboard_name[32];
 
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
@@ -1203,7 +1203,7 @@ static int __init expansionboard_setup(char *str)
 		pr_info("pia35x: Expansion Board not found...");
 		return -EINVAL;
 	}
-	strncpy(expansionboard_name, str, 16);
+	strncpy(expansionboard_name, str, 32);
 	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
 	return 0;
 }
