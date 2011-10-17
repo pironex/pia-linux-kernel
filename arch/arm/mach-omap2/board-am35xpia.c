@@ -44,6 +44,7 @@
 #include <asm/mach/map.h>
 
 #include <plat/board.h>
+#include <plat/clock.h>
 #include <plat/common.h>
 #include <plat/display.h>
 #include <plat/gpmc.h>
@@ -1071,6 +1072,44 @@ static int __init expansionboard_setup(char *str)
 	return 0;
 }
 
+
+#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
+static int __init pia35x_init_sys_clkout2(void)
+{
+	struct clk *sys_clkout2;
+	struct clk *parent_clk;
+	struct clk *sys_clkout2_src;
+	pr_info("pia35x: Initializing SYS_CLKOUT2");
+	sys_clkout2_src = clk_get(NULL, "clkout2_src_ck");
+	if (IS_ERR(sys_clkout2_src)) {
+		pr_err("pia35x: Could not get clkout2_src_ck");
+		return -1;
+	}
+
+	sys_clkout2 = clk_get(NULL, "sys_clkout2");
+	if (IS_ERR(sys_clkout2)) {
+		pr_err("pia35x: Could not get sys_clkout2");
+		clk_put(sys_clkout2_src);
+	}
+
+	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
+	if (IS_ERR(parent_clk)) {
+		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
+		clk_put(sys_clkout2);
+		clk_put(sys_clkout2_src);
+	}
+
+	clk_set_parent(sys_clkout2_src, parent_clk);
+	clk_set_rate(sys_clkout2, 13250000);
+
+	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", cm_96m_clk->name);
+	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
+			clk_get_rate(sys_clkout2));
+	clk_enable(sys_clkout2);
+
+	return 0;
+}
+
 /* base initialization function */
  * Add LED device to platform
  */
@@ -1144,6 +1183,8 @@ static void __init pia35x_init(void)
 
 	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
+
+	pia35x_init_sys_clkout2();
 
 #ifdef NOT_USED
 	/* Configure GPIO for EHCI port */
