@@ -241,7 +241,110 @@ static void __init pia35x_touch_init(void)
 			ARRAY_SIZE(pia35x_i2c3_tsc2007));
 }
 
-/* piA-Motor */
+/*
+ * piA-MotorControl
+ */
+#if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
+#include <plat/mcspi.h>
+#include <linux/spi/spi.h>
+
+#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
+
+static struct omap2_mcspi_device_config pia35x_motor_x_cfg = {
+		.turbo_mode       = 0,
+		.single_channel   = 1,
+};
+static struct omap2_mcspi_device_config pia35x_motor_y_cfg = {
+		.turbo_mode       = 0,
+		.single_channel   = 1,
+};
+static struct omap2_mcspi_device_config pia35x_motor_z_cfg = {
+		.turbo_mode       = 0,
+		.single_channel   = 1,
+};
+static struct spi_board_info pia35x_spi_mc_info[] __initdata = {
+		/* Motor X */
+		{
+				.modalias        = "spidev",
+				.bus_num         = 1,
+				.chip_select     = 1,
+				.max_speed_hz    = 1000000, /* 1MHz */
+				.controller_data = &pia35x_motor_x_cfg,
+		},
+		/* Motor Y */
+		{
+				.modalias        = "spidev",
+				.bus_num         = 1,
+				.chip_select     = 2,
+				.max_speed_hz    = 1000000, /* 1MHz */
+				.controller_data = &pia35x_motor_y_cfg,
+		},
+		/* Motor Z */
+		{
+				.modalias        = "spidev",
+				.bus_num         = 1,
+				.chip_select     = 3,
+				.max_speed_hz    = 1000000, /* 1MHz */
+				.controller_data = &pia35x_motor_z_cfg,
+		},
+
+};
+
+static int __init pia35x_sys_clkout2_init(void)
+{
+	struct clk *sys_clkout2;
+	struct clk *parent_clk;
+	struct clk *sys_clkout2_src;
+	pr_info("pia35x: Initializing SYS_CLKOUT2");
+	sys_clkout2_src = clk_get(NULL, "clkout2_src_ck");
+	if (IS_ERR(sys_clkout2_src)) {
+		pr_err("pia35x: Could not get clkout2_src_ck");
+		return -1;
+	}
+
+	sys_clkout2 = clk_get(NULL, "sys_clkout2");
+	if (IS_ERR(sys_clkout2)) {
+		pr_err("pia35x: Could not get sys_clkout2");
+		clk_put(sys_clkout2_src);
+		return -2;
+	}
+
+	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
+	if (IS_ERR(parent_clk)) {
+		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
+		clk_put(sys_clkout2);
+		clk_put(sys_clkout2_src);
+		return -3;
+	}
+
+	clk_set_parent(sys_clkout2_src, parent_clk);
+	clk_set_rate(sys_clkout2, 13250000);
+
+	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
+	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
+			clk_get_rate(sys_clkout2));
+	clk_enable(sys_clkout2);
+
+	return 0;
+}
+
+static int __init pia35x_motorcontrol_init(void)
+{
+	pr_info("pia35x: initializng piA-MotorControl board");
+	if (0 != pia35x_sys_clkout2_init()) {
+		pr_warn("pia35x: Could not initialize MotorControl Clock!");
+		return -1;
+	}
+	/* GPIOs for EN/DIR/STEP/StallDetect */
+	spi_register_board_info(pia35x_spi_mc_info,
+			ARRAY_SIZE(pia35x_spi_mc_info));
+
+	return 0;
+}
+#else
+static inline void int __init pia35x_motorcontrol_init(void) { return; }
+#endif /* CONFIG_SPI_SPIDEV */
+
 
 /* piA-Wireless */
 
@@ -1069,44 +1172,6 @@ static int __init expansionboard_setup(char *str)
 	}
 	strncpy(expansionboard_name, str, 16);
 	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
-	return 0;
-}
-
-
-#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
-static int __init pia35x_init_sys_clkout2(void)
-{
-	struct clk *sys_clkout2;
-	struct clk *parent_clk;
-	struct clk *sys_clkout2_src;
-	pr_info("pia35x: Initializing SYS_CLKOUT2");
-	sys_clkout2_src = clk_get(NULL, "clkout2_src_ck");
-	if (IS_ERR(sys_clkout2_src)) {
-		pr_err("pia35x: Could not get clkout2_src_ck");
-		return -1;
-	}
-
-	sys_clkout2 = clk_get(NULL, "sys_clkout2");
-	if (IS_ERR(sys_clkout2)) {
-		pr_err("pia35x: Could not get sys_clkout2");
-		clk_put(sys_clkout2_src);
-	}
-
-	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
-	if (IS_ERR(parent_clk)) {
-		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
-		clk_put(sys_clkout2);
-		clk_put(sys_clkout2_src);
-	}
-
-	clk_set_parent(sys_clkout2_src, parent_clk);
-	clk_set_rate(sys_clkout2, 13250000);
-
-	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", cm_96m_clk->name);
-	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
-			clk_get_rate(sys_clkout2));
-	clk_enable(sys_clkout2);
-
 	return 0;
 }
 
