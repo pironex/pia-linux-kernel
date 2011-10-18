@@ -315,7 +315,6 @@ static struct spi_board_info pia35x_spi_mc_info[] __initdata = {
 				.max_speed_hz    = 1000000, /* 1MHz */
 				.controller_data = &pia35x_motor_z_cfg,
 		},
-
 };
 
 static int __init pia35x_sys_clkout2_init(void)
@@ -356,14 +355,64 @@ static int __init pia35x_sys_clkout2_init(void)
 	return 0;
 }
 
+#define GPIO_MOTOR_X_EN    12
+#define GPIO_MOTOR_X_DIR   14
+#define GPIO_MOTOR_X_STEP  13
+#define GPIO_MOTOR_X_SG    18
+#define GPIO_MOTOR_Y_EN    16
+#define GPIO_MOTOR_Y_DIR   21
+#define GPIO_MOTOR_Y_STEP  17
+#define GPIO_MOTOR_Y_SG    15
+#define GPIO_MOTOR_Z_EN   162
+#define GPIO_MOTOR_Z_DIR  160
+#define GPIO_MOTOR_Z_STEP 161
+#define GPIO_MOTOR_Z_SG   157
+static struct gpio pia35x_motorcontrol_gpios[] = {
+		/* X */
+		{ GPIO_MOTOR_X_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorX.nen"   },
+		{ GPIO_MOTOR_X_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.dir"  },
+		{ GPIO_MOTOR_X_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.step" },
+		{ GPIO_MOTOR_X_SG,  GPIOF_DIR_IN,                   "motorX.sg"   },
+		/* Y */
+		{ GPIO_MOTOR_Y_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorY.nen"   },
+		{ GPIO_MOTOR_Y_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.dir"  },
+		{ GPIO_MOTOR_Y_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.step" },
+		{ GPIO_MOTOR_Y_SG,  GPIOF_DIR_IN,                   "motorY.sg"   },
+		/* Z */
+		{ GPIO_MOTOR_Z_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorZ.nen"   },
+		{ GPIO_MOTOR_Z_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.dir"  },
+		{ GPIO_MOTOR_Z_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.step" },
+		{ GPIO_MOTOR_Z_SG,  GPIOF_DIR_IN,                   "motorZ.sg"   },
+};
+
 static int __init pia35x_motorcontrol_init(void)
 {
+	int err = 0, i;
+	unsigned int gpio;
+	unsigned long flags;
+
 	pr_info("pia35x: initializng piA-MotorControl board");
 	if (0 != pia35x_sys_clkout2_init()) {
 		pr_warn("pia35x: Could not initialize MotorControl Clock!");
 		return -1;
 	}
 	/* GPIOs for EN/DIR/STEP/StallDetect */
+	if (0 != (err = gpio_request_array(pia35x_motorcontrol_gpios,
+			ARRAY_SIZE(pia35x_motorcontrol_gpios)))) {
+		pr_warning("pia35x: unable to request MotorControl GPIOs: %d", err);
+		return -1;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_motorcontrol_gpios); i++) {
+		gpio  = pia35x_motorcontrol_gpios[i].gpio;
+		flags = pia35x_motorcontrol_gpios[i].flags;
+
+		/* GPIOF_DIR_IN is 1 */
+		omap_mux_init_gpio(gpio, OMAP_MUX_MODE4	| (flags & GPIOF_DIR_IN) ?
+						OMAP_PIN_INPUT_PULLDOWN : OMAP_PIN_OUTPUT);
+		gpio_export(gpio, false);
+	}
+
 	spi_register_board_info(pia35x_spi_mc_info,
 			ARRAY_SIZE(pia35x_spi_mc_info));
 
