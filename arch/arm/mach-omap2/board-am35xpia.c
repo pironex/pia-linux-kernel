@@ -343,7 +343,7 @@ static int __init pia35x_sys_clkout2_init(void)
 	}
 
 	clk_set_parent(sys_clkout2_src, parent_clk);
-	clk_set_rate(sys_clkout2, 13250000);
+	clk_set_rate(sys_clkout2, 13500000);
 
 	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
 	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
