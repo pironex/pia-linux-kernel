@@ -105,7 +105,7 @@ static int __init pia35x_gsm_init(void)
 	return 0;
 }
 
-/* piA-LCD */
+/** piA-LCD **/
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
 
@@ -269,9 +269,7 @@ static void __init pia35x_touch_init(void)
 			ARRAY_SIZE(pia35x_i2c3_tsc2007));
 }
 
-/*
- * piA-MotorControl
- */
+/** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
 #include <plat/mcspi.h>
 #include <linux/spi/spi.h>
@@ -423,11 +421,8 @@ static inline void int __init pia35x_motorcontrol_init(void) { return; }
 #endif /* CONFIG_SPI_SPIDEV */
 
 
-/* piA-Wireless */
-
-/*
- * WIFI/BT: TiWi-R2 (WL1271)
- */
+/** piA-Wireless **/
+/* WIFI/BT: TiWi-R2 (WL1271) */
 #if defined(CONFIG_WL1271_SDIO) || defined(CONFIG_WL1271_SDIO_MODULE)
 #define GPIO_WLAN_IRQ	137
 #define GPIO_WLAN_PMENA	139
@@ -505,9 +500,7 @@ static int __init pia35x_wlan_init(void)
 	return ret;
 }
 
-/*
- * BT
- */
+/* BlueTooth */
 static void __init pia35x_bt_init(void)
 {
 	omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT);
@@ -525,6 +518,7 @@ static void __init pia35x_bt_init(void)
 static inline void __init pia35x_wlan_init(void) { return; }
 static inline void __init pia35x_bt_init(void) { return; }
 #endif /* CONFIG_WL1271_SDIO */
+
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
