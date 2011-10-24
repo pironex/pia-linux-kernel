@@ -57,6 +57,12 @@
 #include "board-flash.h"
 
 
+static u8 pia35x_version;
+
+enum {
+	PIA_AM3505,
+	PIA_X_AM3517,
+};
 /** Expansion boards **/
 
 /*
