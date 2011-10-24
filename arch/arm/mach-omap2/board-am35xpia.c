@@ -108,6 +108,7 @@ static int __init pia35x_gsm_init(void)
 /** piA-LCD **/
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
+#define GPIO_LCDDVI_SWITCH 140 /* 1 = DVI, 0 = LCD */
 
 #if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
 		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
@@ -117,6 +118,7 @@ static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 	//msleep(1000);
 	pr_info("pia35x: enabling LCD\n");
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
 
 	return 0;
 }
@@ -124,6 +126,7 @@ static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
 	pr_info("pia35x: disabling LCD\n");
 	//gpio_set_value(GPIO_LCD_DISP, 0);
 }
@@ -142,10 +145,14 @@ static struct omap_dss_device pia35x_lcd_device = {
 #if defined(CONFIG_PANEL_GENERIC) || defined(CONFIG_PANEL_GENERIC_MODULE)
 static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
 {
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
+	pr_info("pia35x: enabling DVI\n");
 	return 0;
 }
 static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 {
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
+	pr_info("pia35x: disabling DVI\n");
 	return;
 }
 static struct omap_dss_device pia35x_dvi_device = {
@@ -187,6 +194,17 @@ static struct platform_device pia35x_dss_device = {
 static void __init pia35x_display_init(void)
 {
 	int ret;
+
+	/* LCD_DVI switch */
+	if ((ret = gpio_request(GPIO_LCDDVI_SWITCH, "lcddvi.switch"))) {
+		pr_err("%s: GPIO_LCDDVI_SWITCH request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCDDVI_SWITCH);
+		return;
+	}
+
+	gpio_direction_output(GPIO_LCDDVI_SWITCH, 0);
+	omap_mux_init_gpio(GPIO_LCDDVI_SWITCH, OMAP_PIN_OUTPUT);
+	gpio_export(GPIO_LCDDVI_SWITCH, true);
 
 	/* backlight GPIO */
 	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
