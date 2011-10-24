@@ -292,7 +292,8 @@ static void __init pia35x_touch_init(void)
 #include <plat/mcspi.h>
 #include <linux/spi/spi.h>
 
-#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
+//#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
+#define SYS_CLKOUT2_PARENT	"cm_96m_fck"
 
 static struct omap2_mcspi_device_config pia35x_motor_x_cfg = {
 		.turbo_mode       = 0,
@@ -361,7 +362,8 @@ static int __init pia35x_sys_clkout2_init(void)
 	}
 
 	clk_set_parent(sys_clkout2_src, parent_clk);
-	clk_set_rate(sys_clkout2, 13500000);
+	//clk_set_rate(sys_clkout2, 13500000);
+	clk_set_rate(sys_clkout2, 12000000);
 
 	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
 	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
