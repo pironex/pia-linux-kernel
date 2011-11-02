@@ -57,7 +57,11 @@
 #include "board-flash.h"
 
 
-static u8 pia35x_version;
+#define VERSION_PIA        0
+#define VERSION_PIAX       1
+#define VERSION_PIAUNKNOWN 0xff
+
+static u8 pia35x_version = VERSION_PIAUNKNOWN;
 
 enum {
 	PIA_AM3505,
@@ -1260,6 +1264,39 @@ static int __init pia35x_i2c_init(void)
 	return 0;
 }
 
+#define GPIO_VERSION_DETECT 151 /* GPIO 151 has an external pull-up on piA */
+static int __init pia35x_version_detect(void)
+{
+	int val  ;
+	if (gpio_request_one(GPIO_VERSION_DETECT,
+			GPIOF_DIR_IN, "gpio.vdetect") != 0) {
+		pr_warning("pia35x: unable to request VERSION_DETECT");
+		return -1;
+	} else {
+		omap_mux_init_gpio(GPIO_VERSION_DETECT, OMAP_MUX_MODE4 | OMAP_PIN_INPUT);
+	}
+	msleep(10);
+	val = gpio_get_value(GPIO_VERSION_DETECT);
+	if (val == 1) {
+		pia35x_version = VERSION_PIA;
+		pr_info("pia35x: piA with ");
+	} else {
+		pr_info("pia35x: piAx with ");
+		pia35x_version = VERSION_PIAX;
+	}
+	if (cpu_is_omap3505()) {
+		pr_info("TI AM3505\n");
+	} else {
+		pr_info("TI AM3517\n");
+	}
+
+	/* reset to mode 0 */
+	gpio_free(GPIO_VERSION_DETECT);
+	omap_mux_init_signal("uart1_rx.uart1_rx", OMAP_PIN_INPUT);
+
+	return pia35x_version;
+}
+
 static void __init pia35x_init_irq(void)
 {
 	omap_board_config = pia35x_config;
@@ -1342,7 +1379,8 @@ static void __init pia35x_init(void)
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
 
-	//platform_add_devices(pia35x_led_device, ARRAY_SIZE(pia35x_led_device));
+	pr_info("pia35x_init: detecting piA version\n");
+	pia35x_version_detect();
 
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
