@@ -146,11 +146,39 @@ static struct omap_dss_device pia35x_lcd_device = {
 	.name               = "lcd",
 	.driver_name        = "sharp_lq_panel",
 	.phy.dpi.data_lines = 24,
+	.reset_gpio         = -EINVAL,
 	.platform_enable    = pia35x_lcd_enable,
 	.platform_disable   = pia35x_lcd_disable,
 };
 #define PIA_LCD
+#else
+static struct omap_dss_device pia35x_lcd_device = {
+		.type = OMAP_DISLAY_TYPE_NONE,
+		.name = "lcd",
+		.reset_gpio = -EINVAL,
+};
 #endif /* CONFIG_PANEL_SHARP_LQ043T1DG01 */
+
+static int pia35x_tv_enable(struct omap_dss_device *dssdev)
+{
+	pr_info("pia35x: enabling TV: no tv-out\n");
+	return 0;
+}
+
+static void pia35x_tv_disable(struct omap_dss_device *dssdev)
+{
+	pr_info("pia35x: disabling TV: no tv-out\n");
+}
+
+static struct omap_dss_device pia35x_tv_device = {
+	.type               = OMAP_DISPLAY_TYPE_VENC,
+	.name               = "tv",
+	.driver_name		= "venc",
+	.phy.venc.type		= OMAP_DSS_VENC_TYPE_SVIDEO,
+	.platform_enable	= pia35x_tv_enable,
+	.platform_disable	= pia35x_tv_disable,
+};
+
 
 #if defined(CONFIG_PANEL_GENERIC) || defined(CONFIG_PANEL_GENERIC_MODULE)
 static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
@@ -165,25 +193,28 @@ static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 	pr_info("pia35x: disabling DVI\n");
 	return;
 }
-static struct omap_dss_device pia35x_dvi_device = {
-	.type = OMAP_DISPLAY_TYPE_DPI,
-	.name = "dvi",
-	.driver_name = "generic_panel",
-	.phy.dpi.data_lines = 24,
-	.reset_gpio = -EINVAL,
-	.platform_enable = pia35x_dvi_enable,
-	.platform_disable = pia35x_dvi_disable,
-};
 #define PIA_DVI
+static struct omap_dss_device pia35x_dvi_device = {
+		.type               = OMAP_DISPLAY_TYPE_DPI,
+		.name               = "dvi",
+		.driver_name        = "generic_panel",
+		.phy.dpi.data_lines = 24,
+		.reset_gpio         = -EINVAL,
+		.platform_enable    = pia35x_dvi_enable,
+		.platform_disable   = pia35x_dvi_disable,
+};
+#else
+static struct omap_dss_device pia35x_dvi_device = {
+		.type = OMAP_DISLAY_TYPE_NONE,
+		.name = "dvi",
+		.reset_gpio = -EINVAL,
+};
 #endif /* CONFIG_PANEL_GENERIC */
 
 static struct omap_dss_device *pia35x_dss_devices[] = {
-#ifdef PIA_LCD
 	&pia35x_lcd_device,
-#endif
-#ifdef PIA_DVI
+	&pia35x_tv_device,
 	&pia35x_dvi_device,
-#endif
 };
 
 #if defined(PIA_DVI) || defined(PIA_LCD)
