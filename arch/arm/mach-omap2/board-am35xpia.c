@@ -588,6 +588,7 @@ static inline void __init pia35x_bt_init(void) { return; }
 #define GPIO_RS485_RES      27    /* resistor switch for RS485 */
 #define GPIO_RS232_RXEN    144    /* enable RS232/RS485 receiver */
 #define GPIO_STATUS_LED    117    /* Status LED with heartbeat functionality */
+#define GPIOX_STATUS_LED    26
 #define GPIOX_RS232_RXEN    34
 #define GPIOX_RS232_DEN     35
 
