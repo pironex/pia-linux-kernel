@@ -57,16 +57,13 @@
 #include "board-flash.h"
 
 
-#define VERSION_PIA        0
-#define VERSION_PIAX       1
-#define VERSION_PIAUNKNOWN 0xff
-
-static u8 pia35x_version = VERSION_PIAUNKNOWN;
 
 enum {
 	PIA_AM3505,
 	PIA_X_AM3517,
+	PIA_UNKNOWN = 0xff,
 };
+static u8 pia35x_version = PIA_UNKNOWN;
 /** Expansion boards **/
 
 /*
@@ -80,6 +77,8 @@ static int __init pia35x_gsm_init(void)
 {
 	int ret;
 
+	/* piAx doesn't have a GSM socket */
+	if (pia35x_version == PIA_X_AM3517) return 0;
 	/* GSM GPIOs are low active */
 
 	/* GSM_nRESET     GPIO 126, low active */
@@ -1299,7 +1298,10 @@ static int __init pia35x_i2c_init(void)
 #define GPIO_VERSION_DETECT 151 /* GPIO 151 has an external pull-up on piA */
 static int __init pia35x_version_detect(void)
 {
-	int val  ;
+	int val;
+
+	pr_info("pia35x_init: detecting piA version\n");
+
 	if (gpio_request_one(GPIO_VERSION_DETECT,
 			GPIOF_DIR_IN, "gpio.vdetect") != 0) {
 		pr_warning("pia35x: unable to request VERSION_DETECT");
@@ -1310,11 +1312,11 @@ static int __init pia35x_version_detect(void)
 	msleep(10);
 	val = gpio_get_value(GPIO_VERSION_DETECT);
 	if (val == 1) {
-		pia35x_version = VERSION_PIA;
+		pia35x_version = PIA_AM3505;
 		pr_info("pia35x: piA with ");
 	} else {
 		pr_info("pia35x: piAx with ");
-		pia35x_version = VERSION_PIAX;
+		pia35x_version = PIA_X_AM3517;
 	}
 	if (cpu_is_omap3505()) {
 		pr_info("TI AM3505\n");
@@ -1401,6 +1403,8 @@ static void __init pia35x_init(void)
 	if (ret)
 		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
 
+	pia35x_version_detect();
+
 	/* EN_VCC_5V_PER  GPIO 028, low active */
 	if (gpio_request_one(GPIO_EN_VCC_5V_PER,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "vccen.per") != 0) {
@@ -1410,9 +1414,6 @@ static void __init pia35x_init(void)
 				OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
-
-	pr_info("pia35x_init: detecting piA version\n");
-	pia35x_version_detect();
 
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
