@@ -593,12 +593,8 @@ static inline void __init pia35x_bt_init(void) { return; }
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
 #define GPIO_USB_SW        116
 #define GPIO_CAN_RES        26    /* resistor switch for CAN */
-#define GPIO_RS485_RES      27    /* resistor switch for RS485 */
-#define GPIO_RS232_RXEN    144    /* enable RS232/RS485 receiver */
 #define GPIO_STATUS_LED    117    /* Status LED with heartbeat functionality */
 #define GPIOX_STATUS_LED    26
-#define GPIOX_RS232_RXEN    34
-#define GPIOX_RS232_DEN     35
 
 /* Board initialization */
 static struct omap_board_config_kernel pia35x_config[] __initdata = {
@@ -624,7 +620,7 @@ static struct omap_board_mux board_mux[] __initdata = {
 	/*        GPIO 136 */
 	//FIXME OMAP3_MUX(SDMMC2_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
-	/* UART 4 tx - should be output only but works better with IE */
+	/* UART 4 tx */
 	OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
 	/* UART 4 rx */
 	OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
@@ -1215,39 +1211,62 @@ static struct platform_device leds_gpio = {
 /*
  * Serial ports RS232/485
  */
+#define GPIO_RS485_RES      27    /* resistor switch for RS485 */
+#define GPIO_RS232_RXEN    144    /* enable RS232/RS485 receiver */
+#define GPIO_RS232_DEN     145    /* driver enable for RS485, low for RS232 */
+#define GPIOX_RS485_RES     42
+#define GPIOX_RS232_RXEN    34
+#define GPIOX_RS232_DEN     35
 static void __init pia35x_serial_init(void)
 {
-	if (gpio_request_one(GPIO_RS485_RES,
-			GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
-		pr_warning("pia35x: unable to request RS85_RES");
-	} else {
-		omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_export(GPIO_RS485_RES, false);
-	}
-	if (gpio_request_one(GPIO_RS232_RXEN,
-			GPIOF_DIR_OUT | GPIOF_OUT_INIT_HIGH, "rs232.rxen") != 0) {
-		pr_warning("pia35x: unable to request RS232_RXEN");
-	} else {
-		omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_export(GPIO_RS232_RXEN, false);
-	}
+	pr_info("pia35x_init: init serial ports\n");
 
-	/* piAx */
-	if (gpio_request_one(GPIOX_RS232_RXEN,
-			GPIOF_DIR_OUT | GPIOF_OUT_INIT_HIGH, "rs232x.rxen") != 0) {
-		pr_warning("pia35x: unable to request piAx RS232_RXEN");
-	} else {
-		omap_mux_init_gpio(GPIOX_RS232_RXEN, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_export(GPIOX_RS232_RXEN, false);
+	if (pia35x_version == PIA_AM3505) {
+		if (gpio_request_one(GPIO_RS485_RES,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
+			pr_warning("pia35x: unable to request RS85_RES");
+		} else {
+			omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIO_RS485_RES, false);
+		}
+		if (gpio_request_one(GPIOX_RS232_DEN,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs232x.den") != 0) {
+			pr_warning("pia35x: unable to request piAx RS232_DEN");
+		} else {
+			omap_mux_init_gpio(GPIOX_RS232_DEN, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIOX_RS232_DEN, false);
+		}
+		if (gpio_request_one(GPIO_RS232_RXEN,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_HIGH, "rs232.rxen") != 0) {
+			pr_warning("pia35x: unable to request RS232_RXEN");
+		} else {
+			omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIO_RS232_RXEN, false);
+		}
+	} else if (pia35x_version == PIA_X_AM3517) {
+		/* piAx */
+		if (gpio_request_one(GPIOX_RS485_RES,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
+			pr_warning("pia35x: unable to request RS85_RES");
+		} else {
+			omap_mux_init_gpio(GPIOX_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIOX_RS485_RES, false);
+		}
+		if (gpio_request_one(GPIOX_RS232_RXEN,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_HIGH, "rs232x.rxen") != 0) {
+			pr_warning("pia35x: unable to request piAx RS232_RXEN");
+		} else {
+			omap_mux_init_gpio(GPIOX_RS232_RXEN, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIOX_RS232_RXEN, false);
+		}
+		if (gpio_request_one(GPIOX_RS232_DEN,
+				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs232x.den") != 0) {
+			pr_warning("pia35x: unable to request piAx RS232_DEN");
+		} else {
+			omap_mux_init_gpio(GPIOX_RS232_DEN, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIOX_RS232_DEN, false);
+		}
 	}
-	if (gpio_request_one(GPIOX_RS232_DEN,
-			GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs232x.den") != 0) {
-		pr_warning("pia35x: unable to request piAx RS232_DEN");
-	} else {
-		omap_mux_init_gpio(GPIOX_RS232_DEN, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_export(GPIOX_RS232_DEN, false);
-	}
-
 	omap_serial_init();
 }
 
@@ -1463,7 +1482,6 @@ static void __init pia35x_init(void)
 	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
 
-	pr_info("pia35x_init: init serial ports\n");
 	pia35x_serial_init();
 	pia35x_status_led_init();
 
