@@ -1051,9 +1051,21 @@ static struct tps6507x_board pia35x_tps_board = {
 #endif /* CONFIG_REGULATOR_TPS6507X */
 
 /*
- * MMC1
+ * MMC
  */
 static struct omap2_hsmmc_info mmc[] = {
+	/* first MMC port used for system MMC modules */
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = 41,
+		.gpio_wp        = -EINVAL, /* we don't have a WP pin connected, was: 40 */
+		//.ocr_mask       = MMC_VDD_33_34,
+	},
+	{}/* Terminator */
+};
+
+static struct omap2_hsmmc_info mmc_wlan[] = {
 	/* first MMC port used for system MMC modules */
 	{
 		.mmc            = 1,
@@ -1079,9 +1091,10 @@ static struct omap2_hsmmc_info mmc[] = {
 
 static void __init pia35x_mmc_init(void)
 {
-	pr_info("piA-am35x: registering VMMC1 platform device\n");
+	pr_info("pia35x_init: init MMC\n");
+
 	/* handling of different MMC2 expansions here */
-	omap2_hsmmc_init(mmc);
+	omap2_hsmmc_init(mmc_wlan);
 	/* link regulator to on-board MMC adapter */
 	//TODO pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
 	platform_device_register(&pia35x_vmmc1_device);
@@ -1497,8 +1510,6 @@ static void __init pia35x_init(void)
 	pia35x_ethernet_init(&pia35x_emac_pdata);
 	pr_info("pia35x_init: init CAN\n");
 	pia35x_can_init(&pia35x_hecc_pdata);
-
-	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
 
 	pia35x_gsm_init();
