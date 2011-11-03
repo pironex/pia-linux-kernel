@@ -182,14 +182,18 @@ static struct omap_dss_device pia35x_tv_device = {
 #if defined(CONFIG_PANEL_GENERIC) || defined(CONFIG_PANEL_GENERIC_MODULE)
 static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
 {
-	gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
-	pr_info("pia35x: enabling DVI\n");
+	if (dssdev->reset_gpio != -1)
+		gpio_set_value(dssdev->reset_gpio, 1);
+	//gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
+	pr_info("pia35x: enabling DVI");
 	return 0;
 }
 static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 {
-	gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
-	pr_info("pia35x: disabling DVI\n");
+	if (dssdev->reset_gpio != -1)
+		gpio_set_value(dssdev->reset_gpio, 0);
+	//gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
+	pr_info("pia35x: disabling DVI");
 	return;
 }
 #define PIA_DVI
@@ -198,7 +202,7 @@ static struct omap_dss_device pia35x_dvi_device = {
 		.name               = "dvi",
 		.driver_name        = "generic_panel",
 		.phy.dpi.data_lines = 24,
-		.reset_gpio         = -EINVAL,
+		.reset_gpio         = GPIO_LCDDVI_SWITCH,
 		.platform_enable    = pia35x_dvi_enable,
 		.platform_disable   = pia35x_dvi_disable,
 };
@@ -235,36 +239,42 @@ static void __init pia35x_display_init(void)
 {
 	int ret;
 
+	pr_info("pia35x_init: init DSS LCD device");
+
 	/* LCD_DVI switch */
-	if ((ret = gpio_request(GPIO_LCDDVI_SWITCH, "lcddvi.switch"))) {
+	if ((ret = gpio_request_one(GPIO_LCDDVI_SWITCH,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcddvi.switch")) != 0) {
 		pr_err("%s: GPIO_LCDDVI_SWITCH request failed: %d\n", __func__, ret);
 		gpio_free(GPIO_LCDDVI_SWITCH);
 		return;
+	} else {
+		//gpio_direction_output(GPIO_LCDDVI_SWITCH, 1);
+		omap_mux_init_gpio(GPIO_LCDDVI_SWITCH, OMAP_PIN_OUTPUT);
+		gpio_export(GPIO_LCDDVI_SWITCH, true);
 	}
 
-	gpio_direction_output(GPIO_LCDDVI_SWITCH, 0);
-	omap_mux_init_gpio(GPIO_LCDDVI_SWITCH, OMAP_PIN_OUTPUT);
-	gpio_export(GPIO_LCDDVI_SWITCH, true);
-
 	/* backlight GPIO */
-	if ((ret = gpio_request(GPIO_LCD_BACKLIGHT, "lcd-backlight"))) {
+	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
 		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
 		gpio_free(GPIO_LCD_DISP);
 		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+		omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_BACKLIGHT, true);
 	}
-
-	gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
-	omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
-	gpio_export(GPIO_LCD_BACKLIGHT, true);
 
 	/* DISPLAY_EN GPIO */
-	if ((ret = gpio_request(GPIO_LCD_DISP, "lcd-disp"))) {
+	if ((ret = gpio_request_one(GPIO_LCD_DISP,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
 		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
 		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_DISP, 1);
+		omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_DISP, true);
 	}
-	gpio_direction_output(GPIO_LCD_DISP, 1);
-	omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
-	gpio_export(GPIO_LCD_DISP, true);
 
 	pr_info("pia35x_init: init LCD\n");
 	platform_device_register(&pia35x_dss_device);
@@ -1455,7 +1465,6 @@ static void __init pia35x_init(void)
 	pia35x_serial_init();
 	pia35x_status_led_init();
 
-	pr_info("pia35x_init: init DSS LCD device\n");
 	pia35x_display_init();
 	pia35x_touch_init();
 
