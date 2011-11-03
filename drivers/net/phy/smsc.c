@@ -188,7 +188,7 @@ static struct phy_driver lan8710_driver = {
 	/* basic functions */
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
-	.config_init	= smsc_phy_config_init,
+	.config_init	= lan911x_config_init,
 
 	/* IRQ related */
 	.ack_interrupt	= smsc_phy_ack_interrupt,
