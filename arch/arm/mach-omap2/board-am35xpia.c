@@ -781,22 +781,16 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	u32 regval, mac_lo, mac_hi;
 	int res;
 
+	pr_info("pia35x_init: init ETH\n");
 	/* unset reset */
 	if ((res = gpio_request_one(GPIO_ETHERNET_NRST,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "ethernet-nrst")) != 0) {
 		pr_warn("%s : Unable to request ETHERNET_nRST GPIO: %d\n",
 				__func__, res);
 	} else {
-		omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_INPUT_PULLUP);
-		/* reset pulse to ethernet controller*/
-		usleep_range(150, 220);
-		gpio_set_value(GPIO_ETHERNET_NRST, 0);
-		usleep_range(150, 220);
-		gpio_set_value(GPIO_ETHERNET_NRST, 1);
+		omap_mux_init_gpio(GPIO_ETHERNET_NRST, OMAP_PIN_OUTPUT);
 		gpio_export(GPIO_ETHERNET_NRST, false);
-		usleep_range(1, 2);
 	}
-
 	mac_lo = omap_ctrl_readl(AM35XX_CONTROL_FUSE_EMAC_LSB);
 	mac_hi = omap_ctrl_readl(AM35XX_CONTROL_FUSE_EMAC_MSB);
 
@@ -825,6 +819,15 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	regval = regval & (~(AM35XX_CPGMACSS_SW_RST));
 	omap_ctrl_writel(regval, AM35XX_CONTROL_IP_SW_RESET);
 	regval = omap_ctrl_readl(AM35XX_CONTROL_IP_SW_RESET);
+
+	/* reset phy - not anymore */
+#if 0
+	usleep_range(150, 220);
+	gpio_set_value(GPIO_ETHERNET_NRST, 0);
+	usleep_range(250, 220);
+	gpio_set_value(GPIO_ETHERNET_NRST, 1);
+	usleep_range(1, 2);
+#endif
 
 	return ;
 }
@@ -1473,7 +1476,6 @@ static void __init pia35x_init(void)
 	pr_info("pia35x_init: init USB OTG\n");
 	pia35x_musb_init();
 
-	pr_info("pia35x_init: init ETH\n");
 	pia35x_ethernet_init(&pia35x_emac_pdata);
 	pr_info("pia35x_init: init CAN\n");
 	pia35x_can_init(&pia35x_hecc_pdata);
