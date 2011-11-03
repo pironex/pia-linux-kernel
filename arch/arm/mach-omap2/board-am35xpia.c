@@ -70,23 +70,22 @@ static u8 pia35x_version = PIA_UNKNOWN;
  * GSM: Telit GE864 Quad-V2
  */
 #define GPIO_EN_GSM_POWER   29    /* GSM power supply voltage */
-#define GPIO_GSM_NRESET    126
-#define GPIO_GSM_ONOFF     127
-
+#define GPIO_GSM_NRESET    126    /* GSM reset low active */
+#define GPIO_GSM_ONOFF     127    /* GSM on/off low active*/
 static int __init pia35x_gsm_init(void)
 {
 	int ret;
 
 	/* piAx doesn't have a GSM socket */
 	if (pia35x_version == PIA_X_AM3517) return 0;
-	/* GSM GPIOs are low active */
 
+	pr_info("pia35x_init: init GSM\n");
+	/* GSM GPIOs are low active */
 	/* GSM_nRESET     GPIO 126, low active */
-	//OMAP3_MUX(SDMMC1_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-	if ((ret = gpio_request(GPIO_GSM_NRESET, "gsm-reset"))) {
+	if ((ret = gpio_request_one(GPIO_GSM_NRESET,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "gsm-reset")) != 0) {
 		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
 	} else {
-		gpio_direction_output(GPIO_GSM_NRESET, 1);
 		// GPIO 126 is available on 2 pins
 		omap_mux_init_signal("sdmmc1_dat4.gpio_126", OMAP_PIN_OUTPUT);
 		gpio_export(GPIO_GSM_NRESET, false);
@@ -94,23 +93,23 @@ static int __init pia35x_gsm_init(void)
 
 
 	/* nGSM_ON/OFF    GPIO 127, low active */
-	//OMAP3_MUX(SDMMC1_DAT5, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
-	if ((ret = gpio_request(GPIO_GSM_ONOFF, "gsm-onoff"))) {
+	if ((ret = gpio_request_one(GPIO_GSM_ONOFF,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"gsm-onoff")) != 0) {
 		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
 	} else {
-		gpio_direction_output(GPIO_GSM_ONOFF, 1);
 		omap_mux_init_gpio(GPIO_GSM_ONOFF,    OMAP_PIN_OUTPUT);
 		gpio_export(GPIO_GSM_ONOFF, false);
 	}
 
-	if ((ret = gpio_request(GPIO_EN_GSM_POWER, "gsm-power"))) {
+	if ((ret = gpio_request_one(GPIO_EN_GSM_POWER,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"gsm-power")) != 0) {
 		pr_warning("%s: GPIO_EN_GSM_POWER request failed: %d\n", __func__, ret);
 		return -1;
 	} else {
-		gpio_direction_output(GPIO_EN_GSM_POWER, 1);
 		omap_mux_init_gpio(GPIO_EN_GSM_POWER, OMAP_PIN_OUTPUT);
 		gpio_export(GPIO_EN_GSM_POWER, false);
 	}
+
 	return 0;
 }
 
@@ -1482,7 +1481,6 @@ static void __init pia35x_init(void)
 	pr_info("pia35x_init: init MMC\n");
 	pia35x_mmc_init();
 
-	pr_info("pia35x_init: init GSM\n");
 	pia35x_gsm_init();
 
 	if (0 == strcmp(expansionboard_name, "pia_wifi")) {
