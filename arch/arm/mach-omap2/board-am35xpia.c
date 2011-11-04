@@ -591,8 +591,10 @@ static inline void __init pia35x_bt_init(void) { return; }
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
-#define GPIO_USB_SW        116
+#define GPIO_USB_SW        116    /* USB switch OTG/GSM-UMTS, piA only */
 #define GPIO_STATUS_LED    117    /* Status LED with heartbeat functionality */
+/** same for piAx variant */
+#define GPIOX_EN_VCC_5V_PER 28    /* expansion supply voltage */
 #define GPIOX_STATUS_LED    26
 
 /* Board initialization */
@@ -1143,14 +1145,16 @@ static __init void pia35x_musb_init(void)
 
 	usb_musb_init(&pia35x_musb_board_data);
 
-	/* set USB OTG-UMTS switch to OTG by default */
-	if (gpio_request_one(GPIO_USB_SW,
-			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "usb.sw") != 0) {
-		pr_warning("pia35x: unable to request USB_SW");
-	} else {
-		omap_mux_init_gpio(GPIO_USB_SW,
-				OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
-		gpio_export(GPIO_USB_SW, false);
+	if (pia35x_version == PIA_AM3505) {
+		/* set USB OTG-UMTS switch to OTG by default */
+		if (gpio_request_one(GPIO_USB_SW,
+				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "usb.sw") != 0) {
+			pr_warning("pia35x: unable to request USB_SW");
+		} else {
+			omap_mux_init_gpio(GPIO_USB_SW,
+					OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
+			gpio_export(GPIO_USB_SW, false);
+		}
 	}
 }
 
