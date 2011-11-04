@@ -1462,6 +1462,28 @@ static void __init pia35x_status_led_init(void)
 	platform_device_register(&leds_gpio);
 }
 
+static int __init pia35x_expansion_init(void)
+{
+	int ret = 0;
+
+	if (0 == strcmp(expansionboard_name, "pia_wifi")) {
+		pr_info("pia35x_init: init WLAN & BT\n");
+		pia35x_wlan_init();
+		pia35x_bt_init();
+		ret++;
+	}
+#if 0 // FIXME remove when motorcontrol is done
+	else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
+#endif
+		pia35x_motorcontrol_init();
+		ret++;
+#if 0
+	}
+#endif
+
+	return ret;
+}
+
 static int __init expansionboard_setup(char *str)
 {
 	if (!str){
@@ -1528,18 +1550,9 @@ static void __init pia35x_init(void)
 
 	pia35x_gsm_init();
 
-	if (0 == strcmp(expansionboard_name, "pia_wifi")) {
-		pr_info("pia35x_init: init WLAN & BT\n");
-		pia35x_wlan_init();
-		pia35x_bt_init();
-	}
+	pia35x_expansion_init();
 
-#if 0 // FIXME remove when motorcontrol is done
-	if (0 == strcmp(expansionboard_name, "pia_motorcontrol"))
-#endif
-		pia35x_motorcontrol_init();
-
-#ifdef NOT_USED
+#if 0
 	/* Configure GPIO for EHCI port */
 	if (omap_mux_init_gpio(GPIO_USB_NRESET, OMAP_PIN_OUTPUT)) {
 		pr_err("Can not configure mux for GPIO_USB_NRESET %d\n",
