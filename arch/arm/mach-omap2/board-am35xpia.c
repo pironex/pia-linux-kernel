@@ -64,7 +64,6 @@ enum {
 	PIA_UNKNOWN = 0xff,
 };
 static u8 pia35x_version = PIA_UNKNOWN;
-/** Expansion boards **/
 
 /*
  * GSM: Telit GE864 Quad-V2
@@ -457,7 +456,7 @@ static int __init pia35x_motorcontrol_init(void)
 	unsigned int gpio;
 	unsigned long flags;
 
-	pr_info("pia35x: initializng piA-MotorControl board");
+	pr_info("pia35x: Initializing piA-MotorControl board");
 	if (0 != pia35x_sys_clkout2_init()) {
 		pr_warn("pia35x: Could not initialize MotorControl Clock!");
 		return -1;
@@ -1260,7 +1259,7 @@ static void __init pia35x_serial_init(void)
 	if (pia35x_version == PIA_AM3505) {
 		if (gpio_request_one(GPIO_RS485_RES,
 				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
-			pr_warning("pia35x: unable to request RS85_RES");
+			pr_warning("pia35x: unable to request RS485_RES");
 		} else {
 			omap_mux_init_gpio(GPIO_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
 			gpio_export(GPIO_RS485_RES, false);
@@ -1283,7 +1282,7 @@ static void __init pia35x_serial_init(void)
 		/* piAx */
 		if (gpio_request_one(GPIOX_RS485_RES,
 				GPIOF_DIR_OUT | GPIOF_OUT_INIT_LOW, "rs485.res") != 0) {
-			pr_warning("pia35x: unable to request RS85_RES");
+			pr_warning("pia35x: unable to request RS485_RES");
 		} else {
 			omap_mux_init_gpio(GPIOX_RS485_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
 			gpio_export(GPIOX_RS485_RES, false);
