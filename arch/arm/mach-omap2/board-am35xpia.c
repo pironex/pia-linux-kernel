@@ -159,13 +159,13 @@ static struct omap_dss_device pia35x_lcd_device = {
 
 static int pia35x_tv_enable(struct omap_dss_device *dssdev)
 {
-	pr_info("pia35x: enabling TV: no tv-out\n");
+	pr_info("pia35x: enabling TV: no tv-out");
 	return 0;
 }
 
 static void pia35x_tv_disable(struct omap_dss_device *dssdev)
 {
-	pr_info("pia35x: disabling TV: no tv-out\n");
+	pr_info("pia35x: disabling TV: no tv-out");
 }
 
 static struct omap_dss_device pia35x_tv_device = {
@@ -299,13 +299,12 @@ static int pia35x_tsc2007_init_hw(void)
 	int gpio = GPIO_LCD_PENDOWN;
 	int ret = 0;
 	pr_info("pia35x_init: init TSC2007\n");
-	ret = gpio_request(gpio, "tsc2007_pen_down");
+	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "tsc2007_pen_down");
 	if (ret < 0) {
 		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
 		return ret;
 	}
 	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-	gpio_direction_input(gpio);
 	set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
 
 	return ret;
@@ -572,14 +571,15 @@ static int __init pia35x_wlan_init(void)
 /* BlueTooth */
 static void __init pia35x_bt_init(void)
 {
-	omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT);
+	int ret = 0;
 	//gpio_request(136, "bt.wu");
 	//gpio_direction_output(136, 0);
 	/* just enable the BT module */
-	if (gpio_request(GPIO_BT_EN, "bt-en")) {
+	if ((ret = gpio_request_one(GPIO_BT_EN,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "bt-en")) != 0) {
 		pr_warning("GPIO 138 (BT.EN) request failed\n");
 	} else {
-		gpio_direction_output(GPIO_BT_EN, 1);
+		omap_mux_init_gpio(GPIO_BT_EN, OMAP_PIN_INPUT);
 		gpio_export(GPIO_BT_EN, false);
 	}
 }
@@ -602,7 +602,8 @@ static struct omap_board_config_kernel pia35x_config[] __initdata = {
 
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux[] __initdata = {
-	/* only fixed MUXes here, don't add anything on expansions */
+	/* only fixed MUXes for all board variants here,
+	   don't add anything on expansions */
 
 	/* MMC1_CD        GPIO 041, low == card in slot */
 	OMAP3_MUX(GPMC_A8, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP),
@@ -1114,6 +1115,7 @@ static __init void pia35x_musb_init(void)
 {
 	u32 devconf2;
 
+	pr_info("pia35x_init: init USB OTG\n");
 	/* Set up USB clock/mode in the DEVCONF2 register. */
 	devconf2 = omap_ctrl_readl(AM35XX_CONTROL_DEVCONF2);
 
@@ -1176,6 +1178,8 @@ static struct mtd_partition pia35x_nand_partitions[] = {
 
 static void __init pia35x_flash_init(void)
 {
+	pr_info("pia35x_init: init NAND\n");
+
 	board_nand_init(pia35x_nand_partitions,
 			ARRAY_SIZE(pia35x_nand_partitions),
 			PIA35X_NAND_CS, NAND_BUSWIDTH_16);
@@ -1332,6 +1336,8 @@ static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 
 static int __init pia35x_i2c_init(void)
 {
+	pr_info("pia35x_init: init I2C busses\n");
+
 	omap_register_i2c_bus(1, 400, pia35x_i2c1_info, ARRAY_SIZE(pia35x_i2c1_info));
 	omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
 	omap_register_i2c_bus(3, 400, pia35x_i2c3_info, ARRAY_SIZE(pia35x_i2c3_info));
@@ -1492,23 +1498,16 @@ static void __init pia35x_init(void)
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
 
-	pr_info("pia35x_init: init I2C busses\n");
 	pia35x_i2c_init();
-
 	pia35x_serial_init();
 	pia35x_status_led_init();
 
 	pia35x_display_init();
 	pia35x_touch_init();
 
-	pr_info("pia35x_init: init NAND\n");
 	pia35x_flash_init();
-
-	pr_info("pia35x_init: init USB OTG\n");
 	pia35x_musb_init();
-
 	pia35x_ethernet_init(&pia35x_emac_pdata);
-	pr_info("pia35x_init: init CAN\n");
 	pia35x_can_init(&pia35x_hecc_pdata);
 	pia35x_mmc_init();
 
@@ -1539,13 +1538,14 @@ static void __init pia35x_init(void)
 		return;
 	}
 
-	ret = gpio_request(GPIO_USB_POWER, "usb_ehci_enable");
+	ret = gpio_request_one(GPIO_USB_POWER,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "usb_ehci_enable");
 	if (ret < 0) {
 		pr_err("Can not request GPIO %d\n", GPIO_USB_POWER);
 		return;
 	}
 
-	ret = gpio_direction_output(GPIO_USB_POWER, 1);
+	//ret = gpio_direction_output(GPIO_USB_POWER, 1);
 	if (ret < 0) {
 		gpio_free(GPIO_USB_POWER);
 		pr_err("Unable to initialize EHCI power\n");
