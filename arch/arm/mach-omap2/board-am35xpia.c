@@ -592,7 +592,6 @@ static inline void __init pia35x_bt_init(void) { return; }
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
 #define GPIO_USB_SW        116
-#define GPIO_CAN_RES        26    /* resistor switch for CAN */
 #define GPIO_STATUS_LED    117    /* Status LED with heartbeat functionality */
 #define GPIOX_STATUS_LED    26
 
@@ -862,17 +861,33 @@ static struct ti_hecc_platform_data pia35x_hecc_pdata = {
 	//.transceiver_switch     = hecc_phy_control,
 };
 
+#define GPIO_CAN_RES        26    /* resistor switch for CAN */
+#define GPIOX_CAN_RES       36
 static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
 {
+	pr_info("pia35x_init: init CAN");
+
 	pia35x_hecc_device.dev.platform_data = pdata;
 	platform_device_register(&pia35x_hecc_device);
 
-	if (gpio_request_one(GPIO_CAN_RES,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "can.res") != 0) {
-		pr_warning("pia35x: unable to request CAN_RES");
+	if (pia35x_version == PIA_AM3505) {
+		if (gpio_request_one(GPIO_CAN_RES,
+				GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "can.res") != 0) {
+			pr_warning("pia35x: unable to request CAN_RES");
+		} else {
+			omap_mux_init_gpio(GPIO_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIO_CAN_RES, false);
+		}
+	} else if (pia35x_version == PIA_X_AM3517) {
+		if (gpio_request_one(GPIOX_CAN_RES,
+				GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "can.res") != 0) {
+			pr_warning("pia35x: unable to request CAN_RES");
+		} else {
+			omap_mux_init_gpio(GPIOX_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+			gpio_export(GPIOX_CAN_RES, false);
+		}
 	} else {
-		omap_mux_init_gpio(GPIO_CAN_RES, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_export(GPIO_CAN_RES, false);
+		pr_warn("pia35x_init: CAN resistor uninitialized: unknown piA version");
 	}
 }
 
