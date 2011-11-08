@@ -26,6 +26,7 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/pm.h>
+#include <linux/watchdog.h>
 
 #define DS1374_REG_TOD0		0x00 /* Time of Day */
 #define DS1374_REG_TOD1		0x01
@@ -42,6 +43,11 @@
 #define DS1374_REG_SR_OSF	0x80 /* Oscillator Stop Flag */
 #define DS1374_REG_SR_AF	0x01 /* Alarm Flag */
 #define DS1374_REG_TCR		0x09 /* Trickle Charge */
+
+#define DS1374_WDT_ON         _IO(WATCHDOG_IOCTL_BASE, 100)
+#define DS1374_WDT_OFF        _IO(WATCHDOG_IOCTL_BASE, 101)
+#define DS1374_WDT_SETTIMEOUT _IOW(WATCHDOG_IOCTL_BASE, 102, int)
+#define DS1374_WDT_PING       _IO(WATCHDOG_IOCTL_BASE, 103)
 
 static const struct i2c_device_id ds1374_id[] = {
 	{ "ds1374", 0 },
@@ -313,8 +319,71 @@ static int ds1374_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct ds1374 *ds1374 = i2c_get_clientdata(client);
 	int ret;
+	int new_margin;
 
 	mutex_lock(&ds1374->mutex);
+
+	//pr_info("DS1374 ioctl: %0X\n", cmd);
+	case DS1374_WDT_ON:	//0x00005764
+		ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
+		if (ret < 0)
+			goto out;
+
+		ret |= DS1374_REG_CR_WACE | DS1374_REG_CR_WDALM;
+
+		ret = i2c_smbus_write_byte_data(client, DS1374_REG_CR, ret);
+		if (ret < 0)
+			goto out;
+
+		break;
+
+	case DS1374_WDT_OFF: //0x00005765
+		ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
+		if (ret < 0)
+			goto out;
+
+		ret &= ~(DS1374_REG_CR_WACE | DS1374_REG_CR_WDALM);
+
+		ret = i2c_smbus_write_byte_data(client, DS1374_REG_CR, ret);
+		if (ret < 0)
+			goto out;
+
+		break;
+
+	case DS1374_WDT_SETTIMEOUT: //0x40045766
+		if (get_user(new_margin, (int __user *)arg)){
+			ret = -EFAULT;
+			goto out;
+		}
+
+		ret = i2c_smbus_write_byte_data(client, DS1374_REG_WDALM0, new_margin & 0xFF);
+		if (ret < 0)
+			goto out;
+
+		ret = i2c_smbus_write_byte_data(client, DS1374_REG_WDALM1, ((new_margin >> 8) & 0xFF));
+		if (ret < 0)
+			goto out;
+
+		ret = i2c_smbus_write_byte_data(client, DS1374_REG_WDALM2, ((new_margin >> 16) & 0xFF));
+		if (ret < 0)
+			goto out;
+
+		break;
+
+	case DS1374_WDT_PING: //0x00005767
+		ret = i2c_smbus_read_byte_data(client, DS1374_REG_WDALM0);
+		if (ret < 0)
+			goto out;
+
+		ret = i2c_smbus_read_byte_data(client, DS1374_REG_WDALM1);
+		if (ret < 0)
+			goto out;
+
+		ret = i2c_smbus_read_byte_data(client, DS1374_REG_WDALM2);
+		if (ret < 0)
+			goto out;
+
+		break;
 
 	ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
 	if (ret < 0)
