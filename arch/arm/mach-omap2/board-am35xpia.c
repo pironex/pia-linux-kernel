@@ -656,6 +656,60 @@ static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 #endif
 
 /*
+ * Audio TLV320AIC3204IRHB
+ */
+#if defined(CONFIG_SND_SOC_TLV320AIC32X4) || \
+	defined(CONFIG_SND_SOC_TLV320AIC32X4_MODULE)
+#include <sound/tlv320aic32x4.h>
+static struct aic32x4_pdata pia35x_aic320_data __initdata = {
+	.power_cfg = 0x00,
+};
+
+static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {
+		{
+				I2C_BOARD_INFO("tlv320aic32x4", 0x18),
+				.platform_data = &pia35x_aic320_data,
+		},
+};
+#else
+static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {};
+#endif /* CONFIG_SND_SOC_TLV320AIC23 */
+
+#ifdef CONFIG_OMAP_MUX
+static struct omap_board_mux board_mux_audio[] __initdata = {
+	/* I2S codec port pins for McBSP block */
+		/* SYS_CLKOUT1 connected to SYS_CLKOUT2 */
+		OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
+		OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+		OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+		OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+		OMAP3_MUX(MCBSP2_DX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
+		{ .reg_offset = OMAP_MUX_TERMINATOR },
+};
+#else
+#define board_mux_audio NULL
+#endif /* CONFIG_OMAP_MUX */
+
+static int __init pia35x_audio_init(void)
+{
+	int ret = 0;
+
+	if (pia35x_version == PIA_AM3505) return 0;
+
+	pr_info("pia35x: init audio device TLV320-AIC3204");
+
+	if ((ret = omap3_mux_init(board_mux_audio, OMAP_PACKAGE_CBB)) != 0) {
+		pr_warn("pia35x: failed to init audio mux!");
+		return ret;
+	}
+
+	i2c_register_board_info(2, pia35x_i2c2_aic3x,
+			ARRAY_SIZE(pia35x_i2c2_aic3x));
+
+	return ret;
+}
+
+/*
  * Ethernet (internal) & PHY (SMSC LAN8720A-CP)
  */
 #define GPIO_ETHERNET_NRST  65    /* Ethernet RESET */
@@ -1499,6 +1553,7 @@ static void __init pia35x_init(void)
 	pia35x_can_init(&pia35x_hecc_pdata);
 	pia35x_mmc_init();
 
+	pia35x_audio_init();
 	pia35x_gsm_init();
 
 	pia35x_expansion_init();
