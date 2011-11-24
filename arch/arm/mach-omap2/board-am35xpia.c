@@ -121,7 +121,7 @@ static int __init pia35x_gsm_init(void)
 		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
-	//gpio_set_value(GPIO_LCD_DISP, 1);
+	gpio_set_value(GPIO_LCD_DISP, 1);
 	//msleep(1000);
 	pr_info("pia35x: enabling LCD\n");
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
@@ -135,7 +135,7 @@ static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
 	gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
 	pr_info("pia35x: disabling LCD\n");
-	//gpio_set_value(GPIO_LCD_DISP, 0);
+	gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
 static struct omap_dss_device pia35x_lcd_device = {
@@ -243,7 +243,6 @@ static void __init pia35x_display_init(void)
 	if ((ret = gpio_request_one(GPIO_LCDDVI_SWITCH,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcddvi.switch")) != 0) {
 		pr_err("%s: GPIO_LCDDVI_SWITCH request failed: %d\n", __func__, ret);
-		gpio_free(GPIO_LCDDVI_SWITCH);
 		return;
 	} else {
 		//gpio_direction_output(GPIO_LCDDVI_SWITCH, 1);
@@ -255,7 +254,6 @@ static void __init pia35x_display_init(void)
 	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
 			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
 		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
-		gpio_free(GPIO_LCD_DISP);
 		return;
 	} else {
 		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
@@ -267,6 +265,7 @@ static void __init pia35x_display_init(void)
 	if ((ret = gpio_request_one(GPIO_LCD_DISP,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
 		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_BACKLIGHT);
 		return;
 	} else {
 		//gpio_direction_output(GPIO_LCD_DISP, 1);
@@ -303,6 +302,7 @@ static int pia35x_tsc2007_init_hw(void)
 		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
 		return ret;
 	}
+	gpio_set_debounce(gpio, 0xa);
 	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
 	set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
 
