@@ -159,7 +159,7 @@ static struct snd_soc_ops am35xpia_ops = {
 
 /* am3517evm machine dapm widgets */
 static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
-	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	/*SND_SOC_DAPM_SPK("Ext Spk", NULL),*/
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	/*SND_SOC_DAPM_MIC("DMic", NULL),*/
 };
@@ -168,8 +168,8 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"Headphone Jack", NULL, "HPL"},
 	{"Headphone Jack", NULL, "HPR"},
 
-	{"Ext Spk", NULL, "LLOUT"},
-	{"Ext Spk", NULL, "RLOUT"},
+	/*{"Ext Spk", NULL, "LLOUT"},
+	{"Ext Spk", NULL, "RLOUT"},*/
 
 	/*{"DMic Rate 64", NULL, "Mic Bias"},*/
 	/*{"Mic Bias 2V", NULL, "DMic"},*/
@@ -185,19 +185,20 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_nc_pin(codec, "IN2_L"); /* IN2_L */
 	snd_soc_dapm_nc_pin(codec, "IN2_R"); /* IN2_R */
 	snd_soc_dapm_nc_pin(codec, "IN3_L");  /* IN3_L */
-	//snd_soc_dapm_nc_pin(codec, "LOL");  /* just tp */
-	//snd_soc_dapm_nc_pin(codec, "LOR");  /* just tp */
+	snd_soc_dapm_nc_pin(codec, "LOL");  /* just tp */
+	snd_soc_dapm_nc_pin(codec, "LOR");  /* just tp */
 
 	/* Add piAx AM3517 specific widgets */
-//	snd_soc_dapm_new_controls(codec, aic32x4_dapm_widgets,
-//				  ARRAY_SIZE(aic32x4_dapm_widgets));
+	snd_soc_dapm_new_controls(codec, aic32x4_dapm_widgets,
+				  ARRAY_SIZE(aic32x4_dapm_widgets));
 
 	/* Set up davinci-evm specific audio path audio_map */
 	snd_soc_dapm_add_routes(codec, audio_map, ARRAY_SIZE(audio_map));
 
 	/* always connected */
-//	snd_soc_dapm_enable_pin(codec, "HPL");
-//	snd_soc_dapm_enable_pin(codec, "HPR");
+	snd_soc_dapm_enable_pin(codec, "Headphone Jack");
+	//snd_soc_dapm_enable_pin(codec, "HPL");
+	//snd_soc_dapm_enable_pin(codec, "HPR");
 //	snd_soc_dapm_enable_pin(codec, "LOL");
 //	snd_soc_dapm_enable_pin(codec, "LOR");
 	//snd_soc_dapm_enable_pin(codec, "Mic In");

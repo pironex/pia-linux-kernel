@@ -532,6 +532,7 @@ static int aic32x4_set_bias_level(struct snd_soc_codec *codec,
 
 	switch (level) {
 	case SND_SOC_BIAS_ON:
+		printk(KERN_WARNING "aic32x4: SND_SOC_BIAS_ON\n");
 		if (aic32x4->master) {
 			/* Switch on PLL */
 			snd_soc_update_bits(codec, AIC32X4_PLLPR,
@@ -559,8 +560,10 @@ static int aic32x4_set_bias_level(struct snd_soc_codec *codec,
 		}
 		break;
 	case SND_SOC_BIAS_PREPARE:
+		printk(KERN_WARNING "aic32x4: SND_SOC_BIAS_PREPARE\n");
 		break;
 	case SND_SOC_BIAS_STANDBY:
+		printk(KERN_WARNING "aic32x4: SND_SOC_BIAS_STANDBY\n");
 		if (aic32x4->master) {
 			/* Switch off PLL */
 			snd_soc_update_bits(codec, AIC32X4_PLLPR,
@@ -588,6 +591,7 @@ static int aic32x4_set_bias_level(struct snd_soc_codec *codec,
 		}
 		break;
 	case SND_SOC_BIAS_OFF:
+		printk(KERN_WARNING "aic32x4: SND_SOC_BIAS_OFF\n");
 		break;
 	}
 	codec->dapm.bias_level = level;
