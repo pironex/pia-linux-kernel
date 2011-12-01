@@ -1219,7 +1219,7 @@ static int soc_bind_dai_link(struct snd_soc_card *card, int num)
 
 	if (rtd->complete)
 		return 1;
-	dev_dbg(card->dev, "binding %s at idx %d\n", dai_link->name, num);
+	dev_warn(card->dev, "binding %s at idx %d\n", dai_link->name, num);
 
 	/* do we already have the CPU DAI for this link ? */
 	if (rtd->cpu_dai) {
@@ -1236,7 +1236,7 @@ static int soc_bind_dai_link(struct snd_soc_card *card, int num)
 			goto find_codec;
 		}
 	}
-	dev_dbg(card->dev, "CPU DAI %s not registered\n",
+	dev_warn(card->dev, "CPU DAI %s not registered\n",
 			dai_link->cpu_dai_name);
 
 find_codec:
@@ -1261,13 +1261,13 @@ find_codec:
 					goto find_platform;
 				}
 			}
-			dev_dbg(card->dev, "CODEC DAI %s not registered\n",
+			dev_warn(card->dev, "CODEC DAI %s not registered\n",
 					dai_link->codec_dai_name);
 
 			goto find_platform;
 		}
 	}
-	dev_dbg(card->dev, "CODEC %s not registered\n",
+	dev_warn(card->dev, "CODEC %s not registered\n",
 			dai_link->codec_name);
 
 find_platform:
@@ -1287,7 +1287,7 @@ find_platform:
 		}
 	}
 
-	dev_dbg(card->dev, "platform %s not registered\n",
+	dev_warn(card->dev, "platform %s not registered\n",
 			dai_link->platform_name);
 	return 0;
 

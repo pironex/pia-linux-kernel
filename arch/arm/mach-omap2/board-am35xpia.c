@@ -662,7 +662,11 @@ static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 	defined(CONFIG_SND_SOC_TLV320AIC32X4_MODULE)
 #include <sound/tlv320aic32x4.h>
 static struct aic32x4_pdata pia35x_aic320_data __initdata = {
-	.power_cfg = 0x00,
+	.power_cfg = (
+			AIC32X4_PWR_CMMODE_LDOIN_RANGE_18_36 |
+			AIC32X4_PWR_CMMODE_HP_LDOIN_POWERED |
+			AIC32X4_PWR_AVDD_DVDD_WEAK_DISABLE |
+			AIC32X4_PWR_AIC32X4_LDO_ENABLE ),
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {
