@@ -140,4 +140,7 @@
 #define AIC32X4_MUTEON			0x0C
 #define	AIC32X4_DACMOD2BCLK		0x01
 
+/* 8 bit mask value */
+#define AIC32x4_8BITS_MASK              0xFF
+
 #endif				/* _TLV320AIC32X4_H */
