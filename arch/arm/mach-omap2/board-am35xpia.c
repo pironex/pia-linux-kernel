@@ -1423,7 +1423,7 @@ static int __init pia35x_i2c_init(void)
 
 	omap_register_i2c_bus(1, 400, pia35x_i2c1_info, ARRAY_SIZE(pia35x_i2c1_info));
 	omap_register_i2c_bus(2, 400, pia35x_i2c2_info, ARRAY_SIZE(pia35x_i2c2_info));
-	omap_register_i2c_bus(3, 400, pia35x_i2c3_info, ARRAY_SIZE(pia35x_i2c3_info));
+	omap_register_i2c_bus(3, 100, pia35x_i2c3_info, ARRAY_SIZE(pia35x_i2c3_info));
 
 	return 0;
 }
