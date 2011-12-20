@@ -4,6 +4,7 @@
  * Copyright 2011 Vista Silicon S.L.
  *
  * Author: Javier Martin <javier.martin@vista-silicon.com>
+ *         Bjoern Krombholz <b.krombholz@pironex.de>
  *
  * Based on sound/soc/codecs/wm8974 and TI driver for kernel 2.6.27.
  *
@@ -69,18 +70,33 @@ struct aic32x4_priv {
 	bool swapdacs;
 };
 
-/* 0dB min, 1dB steps */
-static DECLARE_TLV_DB_SCALE(tlv_step_1, 0, 100, 0);
 /* 0dB min, 0.5dB steps */
 static DECLARE_TLV_DB_SCALE(tlv_step_0_5, 0, 50, 0);
 
+#define SOC_DOUBLE_R_AIC32x4(xname, reg_left, reg_right, shift, mask, invert) \
+	{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),   \
+		.info = snd_soc_info_volsw_2r_aic32x4,          \
+		.get = snd_soc_get_volsw_2r_aic32x4, .put = snd_soc_put_volsw_2r_aic32x4, \
+		.private_value = (reg_left) | ((shift) << 8)  | \
+			((mask) << 12) | ((invert) << 20) | ((reg_right) << 24) }
+
+static int snd_soc_info_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+                                         struct snd_ctl_elem_info *uinfo);
+static int snd_soc_get_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol);
+static int snd_soc_put_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol);
+
 static const struct snd_kcontrol_new aic32x4_snd_controls[] = {
-	SOC_DOUBLE_R_TLV("PCM Playback Volume", AIC32X4_LDACVOL,
-			AIC32X4_RDACVOL, 0, 0x30, 0, tlv_step_0_5),
-	SOC_DOUBLE_R_TLV("HP Driver Gain Volume", AIC32X4_HPLGAIN,
-			AIC32X4_HPRGAIN, 0, 0x1D, 0, tlv_step_1),
-	SOC_DOUBLE_R_TLV("LO Driver Gain Volume", AIC32X4_LOLGAIN,
-			AIC32X4_LORGAIN, 0, 0x1D, 0, tlv_step_1),
+	/* Left/Right DAC Digital Volume Control, -63.5 .. 24 dB */
+	SOC_DOUBLE_R_AIC32x4("PCM Playback Volume",
+			AIC32X4_LDACVOL, AIC32X4_RDACVOL, 0, 0xAF, 0),
+	/*HP Driver Gain Control, -6 .. 29 dB */
+	SOC_DOUBLE_R_AIC32x4("HP Driver Gain", AIC32X4_HPLGAIN,
+			AIC32X4_HPRGAIN, 0, 0x23, 0),
+	/* LO Driver Gain Control, -6 .. 29 dB */
+	SOC_DOUBLE_R_AIC32x4("LO Driver Gain", AIC32X4_LOLGAIN,
+			AIC32X4_LORGAIN, 0, 0x23 , 0),
 	SOC_DOUBLE_R("HP DAC Playback Switch", AIC32X4_HPLGAIN,
 			AIC32X4_HPRGAIN, 6, 0x01, 1),
 	SOC_DOUBLE_R("LO DAC Playback Switch", AIC32X4_LOLGAIN,
@@ -221,6 +237,120 @@ static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("IN3_L"),
 	SND_SOC_DAPM_INPUT("IN3_R"),
 };
+
+/*
+ * Callback to get the info of the value of a double mixer control
+ * that spans two registers.
+ */
+static int snd_soc_info_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+                                         struct snd_ctl_elem_info *uinfo)
+{
+        int mask = (kcontrol->private_value >> 12) & 0xff;
+
+        uinfo->type =
+                mask == 1 ? SNDRV_CTL_ELEM_TYPE_BOOLEAN : SNDRV_CTL_ELEM_TYPE_INTEGER;
+        uinfo->count = 2;
+        uinfo->value.integer.min = 0;
+        uinfo->value.integer.max = mask;
+        return 0;
+}
+
+/*
+ * Callback to get the value of a double mixer control that spans
+ * two registers.
+ */
+static int snd_soc_get_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	int reg = kcontrol->private_value & AIC32x4_8BITS_MASK;
+	int reg2 = (kcontrol->private_value >> 24) & AIC32x4_8BITS_MASK;
+	int mask;
+	int shift;
+	unsigned short val, val2;
+
+
+	if (strcmp (kcontrol->id.name, "PCM Playback Volume") == 0) {
+		mask = AIC32x4_8BITS_MASK;
+		shift = 0;
+	} else if (strcmp (kcontrol->id.name, "Left/Right ADC Volume Control") == 0) {
+		mask = 0x7F;
+		shift = 0;
+	} else if ((!strcmp(kcontrol->id.name, "HP Driver Gain")) ||
+			(!strcmp(kcontrol->id.name, "LO Driver Gain"))) {
+		mask = 0x3F;
+		shift = 0;
+	} else {
+		printk("Invalid kcontrol name\n");
+		return -1;
+	}
+
+	val = (snd_soc_read(codec, reg) >> shift) & mask;
+	val2 = (snd_soc_read(codec, reg2) >> shift) & mask;
+
+	if (strcmp (kcontrol->id.name, "PCM Playback Volume") == 0) {
+		ucontrol->value.integer.value[0] =
+				(val <= 48) ? (val + 127) : (val - 129);
+		ucontrol->value.integer.value[1] =
+				(val2 <= 48) ? (val2 + 127) : (val2 - 129);
+	} else if (strcmp (kcontrol->id.name, "Left/Right ADC Volume Control") == 0) {
+		ucontrol->value.integer.value[0] =
+				(val <= 38) ? (val + 25) : (val - 103);
+		ucontrol->value.integer.value[1] =
+				(val2 <= 38) ? (val2 + 25) : (val2 - 103);
+	} else if ((!strcmp(kcontrol->id.name, "HP Driver Gain"))
+			|| (!strcmp(kcontrol->id.name, "LO Driver Gain"))) {
+		ucontrol->value.integer.value[0] =
+				(val <= 29) ? (val + 6) : (val - 58);
+		ucontrol->value.integer.value[1] =
+				(val2 <= 29) ? (val2 + 6) : (val2 - 58);
+	}
+	return 0;
+}
+
+/*
+ * Callback to set the value of a double mixer control that spans
+ * two registers.
+ */
+static int snd_soc_put_volsw_2r_aic32x4(struct snd_kcontrol *kcontrol,
+                                 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	int reg = kcontrol->private_value & AIC32x4_8BITS_MASK;
+	int reg2 = (kcontrol->private_value >> 24) & AIC32x4_8BITS_MASK;
+	int err;
+	unsigned short val, val2, val_mask;
+
+	val = ucontrol->value.integer.value[0];
+	val2 = ucontrol->value.integer.value[1];
+
+
+	if (strcmp (kcontrol->id.name, "PCM Playback Volume") == 0) {
+		val = (val >= 127) ? (val - 127) : (val + 129);
+		val2 = (val2 >= 127) ? (val2 - 127) : (val2 + 129);
+		val_mask = 0xFF;          /* 8 bits */
+	} else if (strcmp (kcontrol->id.name, "Left/Right ADC Volume Control") == 0) {
+		val = (val >= 25) ? (val - 25) : (val + 103);
+		val2 = (val2 >= 25) ? (val2 - 25) : (val2 + 103);
+		val_mask = 0x7F;          /* 7 bits */
+	} else if ((!strcmp(kcontrol->id.name, "HP Driver Gain")) ||
+			(!strcmp(kcontrol->id.name, "LO Driver Gain"))) {
+		val = (val >= 6) ? (val - 6) : (val + 58);
+		val2 = (val2 >= 6) ? (val2 - 6) : (val2 + 58);
+		val_mask = 0x3F;	/* 6 bits */
+	} else {
+		printk("Invalid control name\n");
+		return -1;
+	}
+
+	if ((err = snd_soc_update_bits(codec, reg, val_mask, val)) < 0) {
+		printk("Error while updating bits\n");
+		return err;
+	}
+
+	err = snd_soc_update_bits(codec, reg2, val_mask, val2);
+	return err;
+}
 
 static const struct snd_soc_dapm_route aic32x4_dapm_routes[] = {
 	/* Left Output */
