@@ -105,8 +105,6 @@ static int am35xpia_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* Set the codec system clock for DAC and ADC */
-//	ret = snd_soc_dai_set_sysclk(codec_dai, 0,
-//			CODEC_CLOCK, SND_SOC_CLOCK_IN);
 	ret = snd_soc_dai_set_sysclk(codec_dai, 0,
 			CODEC_CLOCK, SND_SOC_CLOCK_IN);
 	if (ret < 0) {
@@ -126,40 +124,6 @@ static int am35xpia_hw_params(struct snd_pcm_substream *substream,
 		printk(KERN_ERR "can't set CPU system clock OMAP_MCBSP_FSR_SRC_FSX\n");
 		return ret;
 	}
-//	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_MCBSP_SYSCLK_CLKX_EXT, 0,
-//				SND_SOC_CLOCK_IN);
-//	if (ret < 0) {
-//		printk(KERN_ERR "can't set CPU system clock OMAP_MCBSP_CLKR_SRC_CLKX\n");
-//		return ret;
-//	}
-//	snd_soc_dai_set_sysclk(cpu_dai, OMAP_MCBSP_FSR_SRC_FSX, 0,
-//			SND_SOC_CLOCK_IN);
-//	if (ret < 0) {
-//		printk(KERN_ERR "can't set CPU system clock OMAP_MCBSP_FSR_SRC_FSX\n");
-//		return ret;
-//	}
-	/* use internal McBSP CLKS 96MHz */
-//	ret = snd_soc_dai_set_sysclk(cpu_dai, OMAP_MCBSP_SYSCLK_CLKS_FCLK,
-//			96000000, SND_SOC_CLOCK_IN);
-//	if (ret < 0) {
-//		printk(KERN_ERR "can't set CPU system clock OMAP_MCBSP_SYSCLK_CLKS_FCLK\n");
-//		return ret;
-//	}
-
-	reg = snd_soc_read(codec_dai->codec, 27);
-	pr_info("aic3204: reg27: %x", reg);
-	reg = snd_soc_read(codec_dai->codec, 28);
-	pr_info("aic3204: reg28: %x", reg);
-	reg = snd_soc_read(codec_dai->codec, 29);
-	pr_info("aic3204: reg29: %x", reg);
-	reg = snd_soc_read(codec_dai->codec, 31);
-	pr_info("aic3204: reg31: %x", reg);
-	reg = snd_soc_read(codec_dai->codec, 32);
-	pr_info("aic3204: reg32: %x", reg);
-	reg = snd_soc_read(codec_dai->codec, 33);
-	pr_info("aic3204: reg33: %x", reg);
-
-
 #endif
 
 	return 0;
@@ -210,16 +174,20 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* always connected */
 	snd_soc_dapm_enable_pin(codec, "Headphone Jack");
-	//snd_soc_dapm_enable_pin(codec, "HPL");
-	//snd_soc_dapm_enable_pin(codec, "HPR");
-//	snd_soc_dapm_enable_pin(codec, "LOL");
-//	snd_soc_dapm_enable_pin(codec, "LOR");
+	//snd_soc_dapm_enable_pin(codec, "LOL");
+	//snd_soc_dapm_enable_pin(codec, "LOR");
 	//snd_soc_dapm_enable_pin(codec, "Mic In");
+	pr_info("%s: pins & routing enabled\n", __func__);
+
 	/* we need to enable/unmute DAC, otherwise playback times out
 	 * as the AIC doesn't generate clocks when no DAC is enabled */
 	reg = snd_soc_read(codec, AIC32X4_DACMUTE);
 	reg |= 0x2;
 	snd_soc_write(codec, AIC32X4_DACMUTE, reg);
+	reg = 0xC0;
+	/* enable class d */
+	//snd_soc_write(codec, AIC32X4_PAGE1 + 3, reg);
+	//snd_soc_write(codec, AIC32X4_PAGE1 + 4, reg);
 
 	snd_soc_dapm_sync(codec);
 
@@ -255,7 +223,7 @@ static int __init am35xpia_soc_init(void)
 	if (!machine_is_pia_am35x())
 		return -ENODEV;
 
-	pr_info("piA AM3517 SoC init\n");
+	pr_debug("%s: piA AM3517 SoC init\n", __func__);
 
 	am35xpia_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!am35xpia_snd_device) {
@@ -268,19 +236,6 @@ static int __init am35xpia_soc_init(void)
 	ret = platform_device_add(am35xpia_snd_device);
 	if (ret)
 		goto err1;
-
-//	dev = &am35xpia_snd_device->dev;
-//	pr_info("piA AM3517 SoC: Initializing SYS_CLKOUT1");
-//	sys_clkout1 = clk_get(dev, "sys_clkout1");
-//	if (IS_ERR(sys_clkout1)) {
-//		pr_err("pia35x: Could not get sys_clkout1");
-//		return -2;
-//	}
-//
-//	pr_info("pia35x: CLK - enabling SYS_CLKOUT1 with %lu MHz",
-//			clk_get_rate(sys_clkout1));
-//	clk_enable(sys_clkout1);
-
 
 	return 0;
 
