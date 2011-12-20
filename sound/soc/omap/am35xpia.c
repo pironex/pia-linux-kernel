@@ -178,6 +178,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
+	u8 reg;
 
 	/* not connected or unused */
 	snd_soc_dapm_nc_pin(codec, "IN1_L"); /* IN1_L */
@@ -202,6 +203,11 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 //	snd_soc_dapm_enable_pin(codec, "LOL");
 //	snd_soc_dapm_enable_pin(codec, "LOR");
 	//snd_soc_dapm_enable_pin(codec, "Mic In");
+	/* we need to enable/unmute DAC, otherwise playback times out
+	 * as the AIC doesn't generate clocks when no DAC is enabled */
+	reg = snd_soc_read(codec, AIC32X4_DACMUTE);
+	reg |= 0x2;
+	snd_soc_write(codec, AIC32X4_DACMUTE, reg);
 
 	snd_soc_dapm_sync(codec);
 
