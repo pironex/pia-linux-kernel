@@ -456,7 +456,8 @@ void __init omap_sdrc_init(struct omap_sdrc_params *sdrc_cs0,
 
 	if (cpu_is_omap24xx() || omap3_has_sdrc()) {
 		omap2_sdrc_init(sdrc_cs0, sdrc_cs1);
-		_omap2_init_reprogram_sdrc();
+		if (!cpu_is_omap3505() && !cpu_is_omap3517())
+				_omap2_init_reprogram_sdrc();
 	}
 }
 
