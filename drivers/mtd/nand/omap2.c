@@ -1129,6 +1129,9 @@ static int __devinit omap_nand_probe(struct platform_device *pdev)
 		}
 	}
 
+	dev_err(&pdev->dev,
+				"ECC MODE: %d\n", info->nand.ecc.mode);
+
 	/* select ecc lyout */
 	if (info->nand.ecc.mode != NAND_ECC_SOFT) {
 
@@ -1170,6 +1173,10 @@ static int __devinit omap_nand_probe(struct platform_device *pdev)
 		info->nand.ecc.layout = &omap_oobinfo;
 
 	}
+	dev_err(&pdev->dev,
+				"ECC Bytes: %d, pos0: %d, freeof: %d, len: %d \n",
+				omap_oobinfo.eccbytes, omap_oobinfo.eccpos[0],
+				omap_oobinfo.oobfree->offset, omap_oobinfo.oobfree->length);
 
 	/* second phase scan */
 	if (nand_scan_tail(&info->mtd)) {
