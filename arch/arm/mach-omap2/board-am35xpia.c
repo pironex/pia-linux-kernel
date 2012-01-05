@@ -1539,15 +1539,10 @@ static int __init pia35x_expansion_init(void)
 		pia35x_wlan_init();
 		pia35x_bt_init();
 		ret++;
-	}
-#if 0 // FIXME remove when motorcontrol is done
-	else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
-#endif
+	} else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
 		pia35x_motorcontrol_init();
 		ret++;
-#if 0
 	}
-#endif
 
 	return ret;
 }
