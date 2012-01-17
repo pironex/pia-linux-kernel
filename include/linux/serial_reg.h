@@ -363,5 +363,7 @@
 #define UART_OMAP_MDR1_CIR_MODE		0x06	/* CIR mode */
 #define UART_OMAP_MDR1_DISABLE		0x07	/* Disable (default state) */
 
+#define UART_OMAP_SCR_TX_EMPTY_CTL_IT  0x04    /* TX Empty IRQ mode */
+
 #endif /* _LINUX_SERIAL_REG_H */
 
