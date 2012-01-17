@@ -164,9 +164,9 @@ static inline void serial_omap_update_rts(struct uart_omap_port *up)
 	unsigned char mcr = up->mcr;
 
 	if (up->tx_in_progress)
-		mcr |= UART_MCR_RTS;
-	else
 		mcr &= ~UART_MCR_RTS;
+	else
+		mcr |= UART_MCR_RTS;
 
 	serial_out(up, UART_MCR, mcr);
 }
@@ -194,8 +194,6 @@ static void serial_omap_stop_tx(struct uart_port *port)
 		serial_omap_disable_ier_thri(up);
 	else {
 		up->tx_in_progress = 0;
-		if (rts_on_send(up))
-			serial_omap_update_rts(up);
 		up->tx_wait_end = 1;
 		serial_omap_thri_mode(up);
 		serial_omap_enable_ier_thri(up);
@@ -458,7 +456,7 @@ static inline irqreturn_t serial_omap_irq(int irq, void *dev_id)
 		serial_out(up, UART_IER, up->ier);
 		serial_out(up, UART_OMAP_SCR, 0);
 		if (rts_on_send(up))
-			serial_out(up, UART_MCR, up->mcr | UART_MCR_RTS);
+			serial_omap_update_rts(up);
 		spin_unlock_irqrestore(&up->port.lock, flags);
 		return IRQ_HANDLED;
 	}
