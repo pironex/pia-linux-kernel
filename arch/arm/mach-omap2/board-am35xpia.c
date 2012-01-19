@@ -586,6 +586,47 @@ static inline void __init pia35x_wlan_init(void) { return; }
 static inline void __init pia35x_bt_init(void) { return; }
 #endif /* CONFIG_WL1271_SDIO */
 
+#if defined(CONFIG_AD799X) || defined(CONFIG_AD799X_MODULE)
+#include "../../../drivers/staging/iio/adc/ad799x.h"
+static struct ad799x_platform_data pia35x_ad799x_info = {
+		.vref_mv = 3000,
+};
+
+static struct i2c_board_info __initdata pia35x_i2c2_ad799x[] = {
+		{
+				I2C_BOARD_INFO("ad7994", 0x20),
+				.platform_data = &pia35x_ad799x_info,
+		},
+};
+
+static char * pia35x_trigger_data[2] = { "rtc0", NULL };
+
+#if defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER) || \
+		defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER_MODULE)
+static struct platform_device pia35x_iio_rtc_trigger = {
+		.name = "iio_prtc_trigger",
+		.dev = {
+				.platform_data = &pia35x_trigger_data,
+		},
+};
+#endif
+
+#else
+static struct i2c_board_info __initdata pia35x_i2c2_ad799x[] = {};
+#endif
+
+
+static void __init pia35x_ad799x_init(void)
+{
+	pr_info("pia35x_init: init AD converter AD799x\n");
+#if defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER) || \
+		defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER_MODULE)
+	platform_device_register(&pia35x_iio_rtc_trigger);
+#endif
+	i2c_register_board_info(2, pia35x_i2c2_ad799x,
+			ARRAY_SIZE(pia35x_i2c2_ad799x));
+}
+
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
@@ -1498,6 +1539,7 @@ static int __init pia35x_expansion_init(void)
 		pr_info("pia35x_init: init WLAN & BT\n");
 		pia35x_wlan_init();
 		pia35x_bt_init();
+		pia35x_ad799x_init();
 		ret++;
 	} else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
 		pia35x_motorcontrol_init();
