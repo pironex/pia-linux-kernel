@@ -1403,12 +1403,13 @@ static int __init pia35x_version_detect(void)
 	}
 	msleep(10);
 	val = gpio_get_value(GPIO_VERSION_DETECT);
-	if (val == 1) {
-		pia35x_version = PIA_AM3505;
-		pr_info("pia35x: piA with ");
-	} else {
+	if (val == 0 && cpu_is_omap3517()) {
+		/* piAx hat AM3517, but never GSM module */
 		pr_info("pia35x: piAx with ");
 		pia35x_version = PIA_X_AM3517;
+	} else {
+		pia35x_version = PIA_AM3505;
+		pr_info("pia35x: piA with ");
 	}
 	if (cpu_is_omap3505()) {
 		pr_info("TI AM3505\n");
