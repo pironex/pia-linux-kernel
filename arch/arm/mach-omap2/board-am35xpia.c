@@ -743,6 +743,11 @@ static int __init pia35x_audio_init(void)
 
 	pr_info("pia35x: init audio device TLV320-AIC3204");
 
+	if (0 != pia35x_sys_clkout2_init()) {
+		pr_warn("pia35x: Could not initialize Audio Clock!");
+		return -1;
+	}
+
 	if ((ret = omap3_mux_init(board_mux_audio, OMAP_PACKAGE_CBB)) != 0) {
 		pr_warn("pia35x: failed to init audio mux!");
 		return ret;
