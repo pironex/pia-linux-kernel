@@ -137,7 +137,7 @@ static struct snd_soc_ops am35xpia_ops = {
 static const struct snd_soc_dapm_widget aic32x4_dapm_widgets[] = {
 	/*SND_SOC_DAPM_SPK("Ext Spk", NULL),*/
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	/*SND_SOC_DAPM_MIC("DMic", NULL),*/
+	SND_SOC_DAPM_MIC("DMic", NULL),
 };
 
 static const struct snd_soc_dapm_route audio_map[] = {
@@ -146,9 +146,9 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	/*{"Ext Spk", NULL, "LLOUT"},
 	{"Ext Spk", NULL, "RLOUT"},*/
-
+	{"Mic In", NULL, "IN3_R"},
 	/*{"DMic Rate 64", NULL, "Mic Bias"},*/
-	/*{"Mic Bias 2V", NULL, "DMic"},*/
+	{"Mic Bias 2V", NULL, "Mic Bias"},
 };
 
 static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
@@ -176,7 +176,8 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(codec, "Headphone Jack");
 	//snd_soc_dapm_enable_pin(codec, "LOL");
 	//snd_soc_dapm_enable_pin(codec, "LOR");
-	//snd_soc_dapm_enable_pin(codec, "Mic In");
+	snd_soc_dapm_enable_pin(codec, "IN3_R");
+	snd_soc_dapm_enable_pin(codec, "Mic Bias");
 	pr_info("%s: pins & routing enabled\n", __func__);
 
 	/* we need to enable/unmute DAC, otherwise playback times out
@@ -186,8 +187,26 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_write(codec, AIC32X4_DACMUTE, reg);
 	reg = 0xC0;
 	/* enable class d */
-	//snd_soc_write(codec, AIC32X4_PAGE1 + 3, reg);
-	//snd_soc_write(codec, AIC32X4_PAGE1 + 4, reg);
+	snd_soc_write(codec, AIC32X4_PAGE1 + 3, reg);
+	snd_soc_write(codec, AIC32X4_PAGE1 + 4, reg);
+
+	/* enable mic bias 2.075V */
+	reg = 0x68;
+	snd_soc_write(codec, AIC32X4_MICBIAS, reg);
+	/* route IN3R to right MICPGA 20 kOhm */
+
+	reg = 0x04;
+	//snd_soc_write(codec, AIC32X4_LMICPGANIN, reg);
+	snd_soc_write(codec, AIC32X4_RMICPGAPIN, reg);
+	/* unmute right MICPGA */
+	reg = 0x0c;
+	snd_soc_write(codec, AIC32X4_RMICPGAVOL, reg);
+	/* power up right ADC */
+	reg = 0x40;
+	snd_soc_write(codec, AIC32X4_ADCSETUP, reg);
+	/* unmute ADC */
+	reg = 0x00;
+	snd_soc_write(codec, AIC32X4_ADCFGA, reg);
 
 	snd_soc_dapm_sync(codec);
 
