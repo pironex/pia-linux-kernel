@@ -181,7 +181,7 @@ static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
 {
 	if (dssdev->reset_gpio != -1)
 		gpio_set_value(dssdev->reset_gpio, 1);
-	//gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 1);
 	pr_info("pia35x: enabling DVI");
 	return 0;
 }
@@ -189,7 +189,7 @@ static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 {
 	if (dssdev->reset_gpio != -1)
 		gpio_set_value(dssdev->reset_gpio, 0);
-	//gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
+	gpio_set_value(GPIO_LCDDVI_SWITCH, 0);
 	pr_info("pia35x: disabling DVI");
 	return;
 }
