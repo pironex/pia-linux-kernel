@@ -164,6 +164,7 @@ static struct omap_hwmod omap3xxx_uart1_hwmod;
 static struct omap_hwmod omap3xxx_uart2_hwmod;
 static struct omap_hwmod omap3xxx_uart3_hwmod;
 static struct omap_hwmod omap3xxx_uart4_hwmod;
+static struct omap_hwmod am35xx_uart4_hwmod;
 static struct omap_hwmod omap3xxx_usbhsotg_hwmod;
 
 /* l3_core -> usbhsotg interface */
@@ -313,7 +314,6 @@ static struct omap_hwmod_ocp_if am35xx_l4_core__uart4 = {
 	.slave		= &am35xx_uart4_hwmod,
 	.clk		= "uart4_ick",
 	.addr		= am35xx_uart4_addr_space,
-	.addr_cnt	= ARRAY_SIZE(am35xx_uart4_addr_space),
 	.user		= OCP_USER_MPU | OCP_USER_SDMA,
 };
 
@@ -1325,6 +1325,40 @@ static struct omap_hwmod omap3xxx_uart4_hwmod = {
 	},
 	.slaves		= omap3xxx_uart4_slaves,
 	.slaves_cnt	= ARRAY_SIZE(omap3xxx_uart4_slaves),
+	.class		= &omap2_uart_class,
+};
+
+/* UART4 on AM35XX */
+
+static struct omap_hwmod_irq_info am35xx_uart4_mpu_irqs[] = {
+	{ .irq = INT_35XX_UART4_IRQ, },
+};
+
+static struct omap_hwmod_dma_info am35xx_uart4_sdma_reqs[] = {
+	{ .name = "rx",	.dma_req = AM35XX_DMA_UART4_RX, },
+	{ .name = "tx",	.dma_req = AM35XX_DMA_UART4_TX, },
+};
+
+static struct omap_hwmod_ocp_if *am35xx_uart4_slaves[] = {
+	&am35xx_l4_core__uart4,
+};
+
+static struct omap_hwmod am35xx_uart4_hwmod = {
+	.name		= "uart4",
+	.mpu_irqs	= am35xx_uart4_mpu_irqs,
+	.sdma_reqs	= am35xx_uart4_sdma_reqs,
+	.main_clk	= "uart4_fck",
+	.prcm		= {
+		.omap2 = {
+			.module_offs = CORE_MOD,
+			.prcm_reg_id = 1,
+			.module_bit = AM35XX_EN_UART4_SHIFT,
+			.idlest_reg_id = 1,
+			.idlest_idle_bit = AM35XX_EN_UART4_SHIFT,
+		},
+	},
+	.slaves		= am35xx_uart4_slaves,
+	.slaves_cnt	= ARRAY_SIZE(am35xx_uart4_slaves),
 	.class		= &omap2_uart_class,
 };
 
@@ -3301,6 +3335,7 @@ static __initdata struct omap_hwmod *omap36xx_hwmods[] = {
 static __initdata struct omap_hwmod *am35xx_hwmods[] = {
 	&omap3xxx_dss_core_hwmod, /* XXX ??? */
 	&am35xx_usbhsotg_hwmod,
+	&am35xx_uart4_hwmod,
 	NULL
 };
 

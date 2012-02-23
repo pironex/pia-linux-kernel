@@ -92,7 +92,7 @@ struct ad799x_state;
  * @default_config:	device default configuration
  * @event_attrs:	pointer to the monitor event attribute group
  */
-
+#include "../iio.h"
 struct ad799x_chip_info {
 	struct iio_chan_spec		channel[9];
 	int				num_channels;

@@ -20,6 +20,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <linux/davinci_emac.h>
 #include <linux/irq.h>
 #include <linux/gpio.h>
@@ -46,10 +47,12 @@
 #include <plat/board.h>
 #include <plat/clock.h>
 #include <plat/common.h>
-#include <plat/display.h>
 #include <plat/gpmc.h>
 #include <plat/nand.h>
 #include <plat/usb.h>
+#include <video/omapdss.h>
+#include <video/omap-panel-generic-dpi.h>
+#include <video/omap-panel-dvi.h>
 
 #include "mux.h"
 #include "control.h"
@@ -79,8 +82,8 @@ static int __init pia35x_gsm_init(void)
 	if (pia35x_version == PIA_X_AM3517) return 0;
 
 	pr_info("pia35x_init: init GSM\n");
+
 	/* GSM GPIOs are low active */
-	/* GSM_nRESET     GPIO 126, low active */
 	if ((ret = gpio_request_one(GPIO_GSM_NRESET,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "gsm-reset")) != 0) {
 		pr_warning("%s: GPIO 126 request failed: %d\n", __func__, ret);
@@ -90,8 +93,6 @@ static int __init pia35x_gsm_init(void)
 		gpio_export(GPIO_GSM_NRESET, false);
 	}
 
-
-	/* nGSM_ON/OFF    GPIO 127, low active */
 	if ((ret = gpio_request_one(GPIO_GSM_ONOFF,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"gsm-onoff")) != 0) {
 		pr_warning("%s: GPIO 127 request failed, %d\n", __func__, ret);
@@ -117,8 +118,8 @@ static int __init pia35x_gsm_init(void)
 #define GPIO_LCD_BACKLIGHT 101
 #define GPIO_LCDDVI_SWITCH 140 /* 1 = DVI, 0 = LCD */
 
-#if defined(CONFIG_PANEL_SHARP_LQ043T1DG01) || \
-		defined(CONFIG_PANEL_SHARP_LQ043T1DG01_MODULE)
+#if defined(CONFIG_PANEL_GENERIC_DPI) || \
+		defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_DISP, 1);
@@ -138,46 +139,31 @@ static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 	gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
+static struct panel_generic_dpi_data pia35x_lcd_panel = {
+	.name				= "sharp_lq",
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+
 static struct omap_dss_device pia35x_lcd_device = {
 	.type               = OMAP_DISPLAY_TYPE_DPI,
 	.name               = "lcd",
-	.driver_name        = "sharp_lq_panel",
+	.driver_name        = "generic_dpi_panel",
 	.phy.dpi.data_lines = 24,
 	.reset_gpio         = -EINVAL,
-	.platform_enable    = pia35x_lcd_enable,
-	.platform_disable   = pia35x_lcd_disable,
+	.data				= &pia35x_lcd_panel,
 };
 #define PIA_LCD
 #else
 static struct omap_dss_device pia35x_lcd_device = {
-		.type = OMAP_DISLAY_TYPE_NONE,
+		.type = OMAP_DISPLAY_TYPE_NONE,
 		.name = "lcd",
+		.driver_name = "none",
 		.reset_gpio = -EINVAL,
 };
 #endif /* CONFIG_PANEL_SHARP_LQ043T1DG01 */
 
-static int pia35x_tv_enable(struct omap_dss_device *dssdev)
-{
-	pr_info("pia35x: enabling TV: no tv-out");
-	return 0;
-}
-
-static void pia35x_tv_disable(struct omap_dss_device *dssdev)
-{
-	pr_info("pia35x: disabling TV: no tv-out");
-}
-
-static struct omap_dss_device pia35x_tv_device = {
-	.type               = OMAP_DISPLAY_TYPE_VENC,
-	.name               = "tv",
-	.driver_name		= "venc",
-	.phy.venc.type		= OMAP_DSS_VENC_TYPE_SVIDEO,
-	.platform_enable	= pia35x_tv_enable,
-	.platform_disable	= pia35x_tv_disable,
-};
-
-
-#if defined(CONFIG_PANEL_GENERIC) || defined(CONFIG_PANEL_GENERIC_MODULE)
+#if defined(CONFIG_PANEL_DVI) || defined(CONFIG_PANEL_DVI_MODULE)
 static int pia35x_dvi_enable(struct omap_dss_device *dssdev)
 {
 	if (dssdev->reset_gpio != -1)
@@ -195,44 +181,42 @@ static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 	return;
 }
 #define PIA_DVI
+
+static struct panel_dvi_platform_data dvi_panel = {
+	.platform_enable    = pia35x_dvi_enable,
+	.platform_disable   = pia35x_dvi_disable,
+	.i2c_bus_num		= 3,
+};
+
 static struct omap_dss_device pia35x_dvi_device = {
-		.type               = OMAP_DISPLAY_TYPE_DPI,
-		.name               = "dvi",
-		.driver_name        = "generic_panel",
-		.phy.dpi.data_lines = 24,
-		.reset_gpio         = GPIO_LCDDVI_SWITCH,
-		.platform_enable    = pia35x_dvi_enable,
-		.platform_disable   = pia35x_dvi_disable,
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "dvi",
+	.driver_name        = "dvi",
+	.phy.dpi.data_lines = 24,
+	.reset_gpio         = GPIO_LCDDVI_SWITCH,
+	.data				= &dvi_panel,
 };
 #else
 static struct omap_dss_device pia35x_dvi_device = {
-		.type = OMAP_DISLAY_TYPE_NONE,
+		.type = OMAP_DISPLAY_TYPE_NONE,
 		.name = "dvi",
+		.driver_name = "none",
 		.reset_gpio = -EINVAL,
 };
 #endif /* CONFIG_PANEL_GENERIC */
 
 static struct omap_dss_device *pia35x_dss_devices[] = {
 	&pia35x_lcd_device,
-	&pia35x_tv_device,
 	&pia35x_dvi_device,
 };
 
-#if defined(PIA_DVI) || defined(PIA_LCD)
 static struct omap_dss_board_info pia35x_dss_data = {
 	.num_devices     = ARRAY_SIZE(pia35x_dss_devices),
 	.devices         = pia35x_dss_devices,
 	.default_device  = &pia35x_lcd_device,
 };
 
-static struct platform_device pia35x_dss_device = {
-	.name   = "omapdss",
-	.id     = -1,
-	.dev    = {
-		.platform_data = &pia35x_dss_data,
-	},
-};
-
+#if defined(PIA_LCD) || defined(PIA_DVI)
 static void __init pia35x_display_init(void)
 {
 	int ret;
@@ -274,7 +258,6 @@ static void __init pia35x_display_init(void)
 	}
 
 	pr_info("pia35x_init: init LCD\n");
-	platform_device_register(&pia35x_dss_device);
 
 	return;
 }
@@ -304,24 +287,24 @@ static int pia35x_tsc2007_init_hw(void)
 	}
 	gpio_set_debounce(gpio, 0xa);
 	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
 
 	return ret;
 }
 
 static struct tsc2007_platform_data tsc2007_info = {
-		.model = 2007,
-		.x_plate_ohms = 180,
-		.get_pendown_state = pia35x_tsc2007_pendown,
-		.init_platform_hw = pia35x_tsc2007_init_hw,
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = pia35x_tsc2007_pendown,
+	.init_platform_hw = pia35x_tsc2007_init_hw,
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {
-		{
-				I2C_BOARD_INFO("tsc2007", 0x4B),
-				.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
-				.platform_data = &tsc2007_info,
-		},
+	{
+		I2C_BOARD_INFO("tsc2007", 0x4B),
+		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.platform_data = &tsc2007_info,
+	},
 };
 #else
 static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
@@ -343,42 +326,42 @@ static void __init pia35x_touch_init(void)
 #define SYS_CLKOUT2_PARENT	"cm_96m_fck"
 
 static struct omap2_mcspi_device_config pia35x_motor_x_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct omap2_mcspi_device_config pia35x_motor_y_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct omap2_mcspi_device_config pia35x_motor_z_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct spi_board_info pia35x_spi_mc_info[] __initdata = {
-		/* Motor X */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 1,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_x_cfg,
-		},
-		/* Motor Y */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 2,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_y_cfg,
-		},
-		/* Motor Z */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 3,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_z_cfg,
-		},
+	/* Motor X */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 1,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_x_cfg,
+	},
+	/* Motor Y */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 2,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_y_cfg,
+	},
+	/* Motor Z */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 3,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_z_cfg,
+	},
 };
 
 static int __init pia35x_sys_clkout2_init(void)
@@ -433,21 +416,21 @@ static int __init pia35x_sys_clkout2_init(void)
 #define GPIO_MOTOR_Z_STEP 161
 #define GPIO_MOTOR_Z_SG   157
 static struct gpio pia35x_motorcontrol_gpios[] = {
-		/* X */
-		{ GPIO_MOTOR_X_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorX.nen"   },
-		{ GPIO_MOTOR_X_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.dir"  },
-		{ GPIO_MOTOR_X_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.step" },
-		{ GPIO_MOTOR_X_SG,  GPIOF_DIR_IN,                   "motorX.sg"   },
-		/* Y */
-		{ GPIO_MOTOR_Y_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorY.nen"   },
-		{ GPIO_MOTOR_Y_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.dir"  },
-		{ GPIO_MOTOR_Y_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.step" },
-		{ GPIO_MOTOR_Y_SG,  GPIOF_DIR_IN,                   "motorY.sg"   },
-		/* Z */
-		{ GPIO_MOTOR_Z_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorZ.nen"   },
-		{ GPIO_MOTOR_Z_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.dir"  },
-		{ GPIO_MOTOR_Z_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.step" },
-		{ GPIO_MOTOR_Z_SG,  GPIOF_DIR_IN,                   "motorZ.sg"   },
+	/* X */
+	{ GPIO_MOTOR_X_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorX.nen"   },
+	{ GPIO_MOTOR_X_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.dir"  },
+	{ GPIO_MOTOR_X_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.step" },
+	{ GPIO_MOTOR_X_SG,  GPIOF_DIR_IN,                   "motorX.sg"   },
+	/* Y */
+	{ GPIO_MOTOR_Y_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorY.nen"   },
+	{ GPIO_MOTOR_Y_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.dir"  },
+	{ GPIO_MOTOR_Y_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.step" },
+	{ GPIO_MOTOR_Y_SG,  GPIOF_DIR_IN,                   "motorY.sg"   },
+	/* Z */
+	{ GPIO_MOTOR_Z_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorZ.nen"   },
+	{ GPIO_MOTOR_Z_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.dir"  },
+	{ GPIO_MOTOR_Z_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.step" },
+	{ GPIO_MOTOR_Z_SG,  GPIOF_DIR_IN,                   "motorZ.sg"   },
 };
 
 static int __init pia35x_motorcontrol_init(void)
@@ -705,17 +688,18 @@ static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 #include <sound/tlv320aic32x4.h>
 static struct aic32x4_pdata pia35x_aic320_data __initdata = {
 	.power_cfg = (
-			AIC32X4_PWR_CMMODE_LDOIN_RANGE_18_36 |
-			AIC32X4_PWR_CMMODE_HP_LDOIN_POWERED |
-			AIC32X4_PWR_AVDD_DVDD_WEAK_DISABLE |
-			AIC32X4_PWR_AIC32X4_LDO_ENABLE ),
+		AIC32X4_PWR_CMMODE_LDOIN_RANGE_18_36 |
+		AIC32X4_PWR_CMMODE_HP_LDOIN_POWERED |
+		AIC32X4_PWR_AVDD_DVDD_WEAK_DISABLE |
+		AIC32X4_PWR_AIC32X4_LDO_ENABLE
+	),
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {
-		{
-				I2C_BOARD_INFO("tlv320aic32x4", 0x18),
-				.platform_data = &pia35x_aic320_data,
-		},
+	{
+		I2C_BOARD_INFO("tlv320aic32x4", 0x18),
+		.platform_data = &pia35x_aic320_data,
+	},
 };
 #else
 static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {};
@@ -724,13 +708,13 @@ static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {};
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux_audio[] __initdata = {
 	/* I2S codec port pins for McBSP block */
-		/* SYS_CLKOUT1 connected to SYS_CLKOUT2 */
-		OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_DX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
-		{ .reg_offset = OMAP_MUX_TERMINATOR },
+	/* FIXME SYS_CLKOUT1 connected to SYS_CLKOUT2 on prototype */
+	OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_DX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
 #define board_mux_audio NULL
@@ -920,17 +904,6 @@ static void __init pia35x_ethernet_init(struct emac_platform_data *pdata)
 	regval = regval & (~(AM35XX_CPGMACSS_SW_RST));
 	omap_ctrl_writel(regval, AM35XX_CONTROL_IP_SW_RESET);
 	regval = omap_ctrl_readl(AM35XX_CONTROL_IP_SW_RESET);
-
-	/* reset phy - not anymore */
-#if 0
-	usleep_range(150, 220);
-	gpio_set_value(GPIO_ETHERNET_NRST, 0);
-	usleep_range(250, 220);
-	gpio_set_value(GPIO_ETHERNET_NRST, 1);
-	usleep_range(1, 2);
-#endif
-
-	return ;
 }
 
 /*
@@ -1001,7 +974,7 @@ static void __init pia35x_can_init(struct ti_hecc_platform_data *pdata)
  */
 /* MMC1 has fixed power supply */
 static struct regulator_consumer_supply pia35x_vmmc1_consumers[] = {
-		REGULATOR_SUPPLY("vmmc1", "mmci-omap-hs.0"),
+	REGULATOR_SUPPLY("vmmc1", "mmci-omap-hs.0"),
 };
 
 static struct regulator_init_data pia35x_vmmc1_data = {
@@ -1165,9 +1138,9 @@ static struct regulator_init_data pia35x_tps_regulator_data[] = {
 };
 
 static struct tps6507x_board pia35x_tps_board = {
-		/* regulator */
-		.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
-		.tps6507x_ts_init_data   = 0,   /* no touchscreen */
+	/* regulator */
+	.tps6507x_pmic_init_data = &pia35x_tps_regulator_data[0],
+	.tps6507x_ts_init_data   = 0,   /* no touchscreen */
 };
 #endif /* CONFIG_REGULATOR_TPS6507X */
 
@@ -1175,18 +1148,6 @@ static struct tps6507x_board pia35x_tps_board = {
  * MMC
  */
 static struct omap2_hsmmc_info mmc[] = {
-	/* first MMC port used for system MMC modules */
-	{
-		.mmc            = 1,
-		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = 41,
-		.gpio_wp        = -EINVAL, /* we don't have a WP pin connected, was: 40 */
-		//.ocr_mask       = MMC_VDD_33_34,
-	},
-	{}/* Terminator */
-};
-
-static struct omap2_hsmmc_info mmc_wlan[] = {
 	/* first MMC port used for system MMC modules */
 	{
 		.mmc            = 1,
@@ -1206,7 +1167,7 @@ static struct omap2_hsmmc_info mmc_wlan[] = {
 		.ext_clock      = false,
 		//.ocr_mask       = MMC_VDD_165_195 | MMC_VDD_33_34,
 	},
-#endif /* CONFIG_WL12XX_PLATFORM_DATA */
+#endif /* CONFIG_WL12XX */
 	{}/* Terminator */
 };
 
@@ -1214,8 +1175,8 @@ static void __init pia35x_mmc_init(void)
 {
 	pr_info("pia35x_init: init MMC\n");
 
-	/* handling of different MMC2 expansions here */
-	omap2_hsmmc_init(mmc_wlan);
+	/* TODO handling of different MMC2 expansions here */
+	omap2_hsmmc_init(mmc);
 	/* link regulator to on-board MMC adapter */
 	//TODO pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
 	platform_device_register(&pia35x_vmmc1_device);
@@ -1226,14 +1187,18 @@ static void __init pia35x_mmc_init(void)
  */
 static struct omap_musb_board_data pia35x_musb_board_data = {
 	.interface_type         = MUSB_INTERFACE_ULPI,
-	/*.mode                   = MUSB_OTG,*/
-	.mode                   = MUSB_HOST,
+	.mode                   = MUSB_UNDEFINED,
 	.power                  = 500,
+	.set_phy_power		= am35x_musb_phy_power,
+	.clear_irq		= am35x_musb_clear_irq,
+	.set_mode		= am35x_set_mode,
+	.reset			= am35x_musb_reset,
 };
 
 static __init void pia35x_musb_init(void)
 {
 	u32 devconf2;
+	int err;
 
 	pr_info("pia35x_init: init USB OTG\n");
 	/* Set up USB clock/mode in the DEVCONF2 register. */
@@ -1246,19 +1211,29 @@ static __init void pia35x_musb_init(void)
 
 	omap_ctrl_writel(devconf2, AM35XX_CONTROL_DEVCONF2);
 
-	usb_musb_init(&pia35x_musb_board_data);
-
-	if (pia35x_version == PIA_AM3505) {
+	switch (pia35x_version) {
+	case PIA_AM3505:
 		/* set USB OTG-UMTS switch to OTG by default */
-		if (gpio_request_one(GPIO_USB_SW,
-				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "usb.sw") != 0) {
+		err = gpio_request_one(GPIO_USB_SW,
+				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "usb.sw");
+		if (err != 0) {
 			pr_warning("pia35x: unable to request USB_SW");
 		} else {
 			omap_mux_init_gpio(GPIO_USB_SW,
 					OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
 			gpio_export(GPIO_USB_SW, false);
 		}
+		/* automatical detection in OTG mode doesn't work atm */
+		pia35x_musb_board_data.mode = MUSB_HOST;
+
+		break;
+	case PIA_X_AM3517:
+		pia35x_musb_board_data.mode = MUSB_HOST;
+
+		break;
 	}
+
+	usb_musb_init(&pia35x_musb_board_data);
 }
 
 /*
@@ -1306,45 +1281,6 @@ static void __init pia35x_flash_init(void)
 			ARRAY_SIZE(pia35x_nand_partitions),
 			PIA35X_NAND_CS, NAND_BUSWIDTH_16);
 }
-
-
-/*
- * GPIO_LED
- */
-//static struct gpio_led gpio_leds[];
-static struct gpio_led gpio_leds[] = {
-	{
-		.name                   = "pia35x::TTL0",
-		.default_trigger        = "heartbeat",
-		.gpio                   = 35,
-		.active_low             = true,
-	},
-	{
-		.name                   = "pia35x::TTL1",
-		.default_trigger        = "mmc0",
-		.gpio                   = 37,
-		.active_low             = true,
-	},
-	{
-		.name                   = "pia35x::TTL2",
-		.default_trigger        = "none",
-		.gpio                   = 39,
-		.active_low             = true,
-	},
-};
-
-static struct gpio_led_platform_data gpio_led_info = {
-	.leds           = gpio_leds,
-	.num_leds       = ARRAY_SIZE(gpio_leds),
-};
-
-static struct platform_device leds_gpio = {
-	.name   = "leds-gpio",
-	.id     = -1,
-	.dev    = {
-			.platform_data  = &gpio_led_info,
-	},
-};
 
 
 /*
@@ -1414,19 +1350,16 @@ static void __init pia35x_serial_init(void)
  */
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 #if defined(CONFIG_REGULATOR_TPS6507X)
-	/* power regulator TPS650732 */
-	{
+	{ /* power regulator TPS650732 */
 		I2C_BOARD_INFO("tps6507x", 0x48),
 		.flags = I2C_CLIENT_WAKE,
 		.irq = INT_34XX_SYS_NIRQ,
 		.platform_data = &pia35x_tps_board,
 	},
 #endif /* CONFIG_REGULATOR_TPS6507X */
-	/* RTC + WDOG */
-	{
+	{ /* RTC + WDOG */
 		I2C_BOARD_INFO("ds1374", 0x68),
 	},
-
 };
 
 char expansionboard_name[32];
@@ -1434,32 +1367,30 @@ char expansionboard_name[32];
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
 static struct at24_platform_data m24c01 = {
-		.byte_len       = SZ_1K / 8,
-		.page_size      = 16,
+	.byte_len       = SZ_1K / 8,
+	.page_size      = 16,
 };
 #endif /* CONFIG_EEPROM_AT24 */
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
-		/* temperature sensor LM75 */
-		{
-				I2C_BOARD_INFO("lm75", 0x48),
-		},
+	{ /* temperature sensor LM75 */
+		I2C_BOARD_INFO("lm75", 0x48),
+	},
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
-		/* expansion board eeprom */
-		{
-				I2C_BOARD_INFO("24c01", 0x50),
-				.platform_data  = &m24c01,
-		},
+	{ /* expansion board eeprom */
+			I2C_BOARD_INFO("24c01", 0x50),
+			.platform_data  = &m24c01,
+	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
-		/* expansion board eeprom */
-		{
-				I2C_BOARD_INFO("24c01", 0x50),
-				.platform_data  = &m24c01,
-		},
+
+	{ /* expansion board eeprom */
+		I2C_BOARD_INFO("24c01", 0x50),
+		.platform_data  = &m24c01,
+	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
 
@@ -1511,17 +1442,7 @@ static int __init pia35x_version_detect(void)
 	return pia35x_version;
 }
 
-static void __init pia35x_init_irq(void)
-{
-	omap_board_config = pia35x_config;
-	omap_board_config_size = ARRAY_SIZE(pia35x_config);
-
-	omap2_init_common_infrastructure();
-	omap2_init_common_devices(NULL, NULL);
-	omap_init_irq();
-	gpmc_init();
-}
-
+/* Status LED */
 static struct gpio_led gpio_leds_pia[] = {
 	{
 		.name			= "led1",
@@ -1581,6 +1502,8 @@ static int __init pia35x_expansion_init(void)
 {
 	int ret = 0;
 
+	pia35x_gsm_init();
+
 	if (0 == strcmp(expansionboard_name, "pia_wifi")) {
 		pr_info("pia35x_init: init WLAN & BT\n");
 		pia35x_wlan_init();
@@ -1595,24 +1518,7 @@ static int __init pia35x_expansion_init(void)
 	return ret;
 }
 
-static int __init expansionboard_setup(char *str)
-{
-	if (!str){
-		pr_info("pia35x: Expansion Board not found...");
-		return -EINVAL;
-	}
-	strncpy(expansionboard_name, str, 32);
-	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
-	return 0;
-}
-
 /* base initialization function */
- * Add LED device to platform
- */
-static struct platform_device *pia35x_led_device[] __initdata = {
-		&leds_gpio,
-};
-
 static int __init expansionboard_setup(char *str)
 {
 	if (!str){
@@ -1624,21 +1530,22 @@ static int __init expansionboard_setup(char *str)
 	return 0;
 }
 
-/*
 static void __init pia35x_init(void)
 {
 	int ret;
 
-	pr_info("pia35x_init: init pin mux\n");
+	omap_board_config = pia35x_config;
+	omap_board_config_size = ARRAY_SIZE(pia35x_config);
+	pia35x_version_detect();
+	pr_info("pia35x: init pin mux\n");
 	ret = omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	if (ret)
-		pr_warning("pia35x_init: MUX init failed: %d\n", ret);
-
-	pia35x_version_detect();
+		pr_warning("pia35x: MUX init failed: %d\n", ret);
 
 	/* EN_VCC_5V_PER  GPIO 028, low active */
-	if (gpio_request_one(GPIO_EN_VCC_5V_PER,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "vccen.per") != 0) {
+	ret = gpio_request_one(GPIO_EN_VCC_5V_PER, GPIOF_OUT_INIT_HIGH,
+			"vccen.per");
+	if ( ret != 0) {
 		pr_warning("pia35x: unable to request EN_VCC_5V_PER GPIO");
 	} else {
 		omap_mux_init_gpio(GPIO_EN_VCC_5V_PER,
@@ -1647,7 +1554,9 @@ static void __init pia35x_init(void)
 	}
 
 	pia35x_i2c_init();
+	omap_display_init(&pia35x_dss_data);
 	pia35x_serial_init();
+	omap_sdrc_init(NULL, NULL);
 	pia35x_status_led_init();
 
 	pia35x_display_init();
@@ -1660,49 +1569,24 @@ static void __init pia35x_init(void)
 	pia35x_mmc_init();
 
 	pia35x_audio_init();
-	pia35x_gsm_init();
 
 	pia35x_expansion_init();
-
-#if 0
-	/* Configure GPIO for EHCI port */
-	if (omap_mux_init_gpio(GPIO_USB_NRESET, OMAP_PIN_OUTPUT)) {
-		pr_err("Can not configure mux for GPIO_USB_NRESET %d\n",
-			GPIO_USB_NRESET);
-		return;
-	}
-
-	if (omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT)) {
-		pr_err("Can not configure mux for GPIO_USB_POWER %d\n",
-			GPIO_USB_POWER);
-		return;
-	}
-
-	ret = gpio_request_one(GPIO_USB_POWER,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "usb_ehci_enable");
-	if (ret < 0) {
-		pr_err("Can not request GPIO %d\n", GPIO_USB_POWER);
-		return;
-	}
-
-	//ret = gpio_direction_output(GPIO_USB_POWER, 1);
-	if (ret < 0) {
-		gpio_free(GPIO_USB_POWER);
-		pr_err("Unable to initialize EHCI power\n");
-		return;
-	}
-
-	usb_ehci_init(&ehci_pdata);
-#endif
 }
 
 early_param("buddy", expansionboard_setup);
 
+//FIXME where do I cal gpmc_init?
+//static void __init pia35x_init_irq(void)
+//{
+//	gpmc_init();
+//}
+
 MACHINE_START(PIA_AM35X, "PIA AM35X")
-	.boot_params  = 0x80000100,
+	.atag_offset  = 0x100,
 	.map_io       = omap3_map_io,
+	.init_early   = am35xx_init_early,
 	.reserve      = omap_reserve,
-	.init_irq     = pia35x_init_irq,
+	.init_irq     = omap3_init_irq,
 	.init_machine = pia35x_init,
-	.timer		  = &omap_timer,
+	.timer        = &omap3_timer,
 MACHINE_END

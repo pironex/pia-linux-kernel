@@ -2470,6 +2470,16 @@ static struct clk uart3_fck = {
 	.recalc		= &followparent_recalc,
 };
 
+static struct clk uart4_fck_am35xx = {
+	.name           = "uart4_fck",
+	.ops            = &clkops_omap2_dflt_wait,
+	.parent         = &per_48m_fck,
+	.enable_reg     = OMAP_CM_REGADDR(CORE_MOD, CM_FCLKEN1),
+	.enable_bit     = AM35XX_EN_UART4_SHIFT,
+	.clkdm_name     = "core_l4_clkdm",
+	.recalc         = &followparent_recalc,
+};
+
 static struct clk uart4_fck = {
 	.name		= "uart4_fck",
 	.ops		= &clkops_omap2_dflt_wait,
@@ -3402,7 +3412,7 @@ static struct omap_clk omap3xxx_clks[] = {
 	CLK(NULL,	"per_96m_fck",	&per_96m_fck,	CK_3XXX),
 	CLK(NULL,	"per_48m_fck",	&per_48m_fck,	CK_3XXX),
 	CLK(NULL,	"uart3_fck",	&uart3_fck,	CK_3XXX),
-	/*CLK(NULL,	"uart4_fck",	&uart4_fck,	CK_36XX), FIXME testing*/
+	CLK(NULL,	"uart4_fck",	&uart4_fck_am35xx, CK_AM35XX),
 	CLK(NULL,	"uart4_fck",	&uart4_fck,	CK_36XX),
 	CLK(NULL,	"gpt2_fck",	&gpt2_fck,	CK_3XXX),
 	CLK(NULL,	"gpt3_fck",	&gpt3_fck,	CK_3XXX),
@@ -3427,7 +3437,6 @@ static struct omap_clk omap3xxx_clks[] = {
 	CLK(NULL,	"gpio2_ick",	&gpio2_ick,	CK_3XXX),
 	CLK(NULL,	"wdt3_ick",	&wdt3_ick,	CK_3XXX),
 	CLK(NULL,	"uart3_ick",	&uart3_ick,	CK_3XXX),
-	/*CLK(NULL,	"uart4_ick",	&uart4_ick,	CK_36XX),*/
 	CLK(NULL,	"uart4_ick",	&uart4_ick,	CK_36XX),
 	CLK(NULL,	"gpt9_ick",	&gpt9_ick,	CK_3XXX),
 	CLK(NULL,	"gpt8_ick",	&gpt8_ick,	CK_3XXX),
@@ -3458,8 +3467,8 @@ static struct omap_clk omap3xxx_clks[] = {
 	CLK(NULL,	"ipss_ick",	&ipss_ick,	CK_AM35XX),
 	CLK(NULL,	"rmii_ck",	&rmii_ck,	CK_AM35XX),
 	CLK(NULL,	"pclk_ck",	&pclk_ck,	CK_AM35XX),
-	CLK("davinci_emac",	"emac_clk",	&emac_ick,	CK_AM35XX),
-	CLK("davinci_emac",	"phy_clk",	&emac_fck,	CK_AM35XX),
+	CLK("davinci_emac",	NULL,	&emac_ick,	CK_AM35XX),
+	CLK("davinci_mdio.0",	NULL,	&emac_fck,	CK_AM35XX),
 	CLK("vpfe-capture",	"master",	&vpfe_ick,	CK_AM35XX),
 	CLK("vpfe-capture",	"slave",	&vpfe_fck,	CK_AM35XX),
 	CLK("musb-am35x",	"ick",		&hsotgusb_ick_am35xx,	CK_AM35XX),

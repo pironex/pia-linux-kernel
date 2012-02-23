@@ -19,6 +19,7 @@
 
 #include <linux/clk.h>
 #include <linux/platform_device.h>
+#include <linux/module.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -46,8 +47,8 @@ static int am35xpia_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	int ret;
 	unsigned int fmt;
-	u8 reg;
 #if 0
+	u8 reg;
 	/* codec is slave */
 	fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS;
 
@@ -154,30 +155,31 @@ static const struct snd_soc_dapm_route audio_map[] = {
 static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	u8 reg;
 
 	/* not connected or unused */
-	snd_soc_dapm_nc_pin(codec, "IN1_L"); /* IN1_L */
-	snd_soc_dapm_nc_pin(codec, "IN1_R"); /* IN1_R */
-	snd_soc_dapm_nc_pin(codec, "IN2_L"); /* IN2_L */
-	snd_soc_dapm_nc_pin(codec, "IN2_R"); /* IN2_R */
-	snd_soc_dapm_nc_pin(codec, "IN3_L");  /* IN3_L */
-	snd_soc_dapm_nc_pin(codec, "LOL");  /* just tp */
-	snd_soc_dapm_nc_pin(codec, "LOR");  /* just tp */
+	snd_soc_dapm_nc_pin(dapm, "IN1_L"); /* IN1_L */
+	snd_soc_dapm_nc_pin(dapm, "IN1_R"); /* IN1_R */
+	snd_soc_dapm_nc_pin(dapm, "IN2_L"); /* IN2_L */
+	snd_soc_dapm_nc_pin(dapm, "IN2_R"); /* IN2_R */
+	snd_soc_dapm_nc_pin(dapm, "IN3_L");  /* IN3_L */
+	snd_soc_dapm_nc_pin(dapm, "LOL");  /* just tp */
+	snd_soc_dapm_nc_pin(dapm, "LOR");  /* just tp */
 
 	/* Add piAx AM3517 specific widgets */
-	snd_soc_dapm_new_controls(codec, aic32x4_dapm_widgets,
+	snd_soc_dapm_new_controls(dapm, aic32x4_dapm_widgets,
 				  ARRAY_SIZE(aic32x4_dapm_widgets));
 
 	/* Set up davinci-evm specific audio path audio_map */
-	snd_soc_dapm_add_routes(codec, audio_map, ARRAY_SIZE(audio_map));
+	snd_soc_dapm_add_routes(dapm, audio_map, ARRAY_SIZE(audio_map));
 
 	/* always connected */
-	snd_soc_dapm_enable_pin(codec, "Headphone Jack");
+	snd_soc_dapm_enable_pin(dapm, "Headphone Jack");
 	//snd_soc_dapm_enable_pin(codec, "LOL");
 	//snd_soc_dapm_enable_pin(codec, "LOR");
-	snd_soc_dapm_enable_pin(codec, "IN3_R");
-	snd_soc_dapm_enable_pin(codec, "Mic Bias");
+	snd_soc_dapm_enable_pin(dapm, "IN3_R");
+	snd_soc_dapm_enable_pin(dapm, "Mic Bias");
 	pr_info("%s: pins & routing enabled\n", __func__);
 
 	/* we need to enable/unmute DAC, otherwise playback times out
@@ -208,7 +210,7 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 	reg = 0x00;
 	snd_soc_write(codec, AIC32X4_ADCFGA, reg);
 
-	snd_soc_dapm_sync(codec);
+	snd_soc_dapm_sync(dapm);
 
 	return 0;
 }

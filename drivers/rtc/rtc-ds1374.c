@@ -319,11 +319,36 @@ static int ds1374_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	struct i2c_client *client = to_i2c_client(dev);
 	struct ds1374 *ds1374 = i2c_get_clientdata(client);
 	int ret;
-	int new_margin;
 
 	mutex_lock(&ds1374->mutex);
 
-	//pr_info("DS1374 ioctl: %0X\n", cmd);
+	ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
+	if (ret < 0)
+		goto out;
+
+	if (enabled) {
+		ret |= DS1374_REG_CR_WACE | DS1374_REG_CR_AIE;
+		ret &= ~DS1374_REG_CR_WDALM;
+	} else {
+		ret &= ~DS1374_REG_CR_WACE;
+	}
+	ret = i2c_smbus_write_byte_data(client, DS1374_REG_CR, ret);
+
+out:
+	mutex_unlock(&ds1374->mutex);
+	return ret;
+}
+
+static int ds1374_ioctl(struct device *dev, unsigned int cmd, unsigned long arg)
+{
+	int ret;
+	int new_margin;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ds1374 *ds1374 = i2c_get_clientdata(client);
+
+	mutex_lock(&ds1374->mutex);
+
+	switch (cmd) {
 	case DS1374_WDT_ON:	//0x00005764
 		ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
 		if (ret < 0)
@@ -385,29 +410,23 @@ static int ds1374_alarm_irq_enable(struct device *dev, unsigned int enabled)
 
 		break;
 
-	ret = i2c_smbus_read_byte_data(client, DS1374_REG_CR);
-	if (ret < 0)
-		goto out;
+	default:
+		ret = -ENOIOCTLCMD;
 
-	if (enabled) {
-		ret |= DS1374_REG_CR_WACE | DS1374_REG_CR_AIE;
-		ret &= ~DS1374_REG_CR_WDALM;
-	} else {
-		ret &= ~DS1374_REG_CR_WACE;
+		break;
 	}
-	ret = i2c_smbus_write_byte_data(client, DS1374_REG_CR, ret);
 
 out:
 	mutex_unlock(&ds1374->mutex);
 	return ret;
 }
-
 static const struct rtc_class_ops ds1374_rtc_ops = {
 	.read_time = ds1374_read_time,
 	.set_time = ds1374_set_time,
 	.read_alarm = ds1374_read_alarm,
 	.set_alarm = ds1374_set_alarm,
 	.alarm_irq_enable = ds1374_alarm_irq_enable,
+	.ioctl = ds1374_ioctl,
 };
 
 static int ds1374_probe(struct i2c_client *client,
