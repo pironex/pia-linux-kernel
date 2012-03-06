@@ -154,8 +154,9 @@ __init board_nand_init(struct mtd_partition *nand_parts,
 		board_nand_data.ecc_opt = OMAP_ECC_HAMMING_CODE_HW;
 
 	if (cpu_is_omap3517() || cpu_is_omap3505()) {
-		board_nand_data.ecc_opt   = OMAP_ECC_HAMMING_CODE_DEFAULT;
-		board_nand_data.xfer_type = NAND_OMAP_POLLED, /* disable prefetch */
+		//board_nand_data.ecc_opt   = OMAP_ECC_HAMMING_CODE_DEFAULT;
+		board_nand_data.ecc_opt   = OMAP_ECC_HAMMING_CODE_HW;
+		board_nand_data.xfer_type = NAND_OMAP_PREFETCH_DMA,
 		board_nand_data.gpmc_t    = NULL;
 	}
 
