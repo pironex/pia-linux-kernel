@@ -1658,19 +1658,10 @@ static void __init pia35x_init_irq(void)
 
 static struct gpio_led gpio_leds_pia[] = {
 	{
-		.name			= "led1",
-		.default_trigger= "heartbeat",
-		.gpio			= GPIO_STATUS_LED,
-		.active_low		= false,
-	}
-};
-
-static struct gpio_led gpio_leds_piax[] = {
-	{
-		.name			= "led1",
-		.default_trigger= "heartbeat",
-		.gpio			= GPIOX_STATUS_LED,
-		.active_low		= false,
+		.name				= "led1",
+		.default_trigger	= "heartbeat",
+		.gpio				= GPIO_STATUS_LED,
+		.active_low			= false,
 	}
 };
 
@@ -1681,7 +1672,7 @@ static struct gpio_led_platform_data gpio_led_info = {
 
 static struct platform_device leds_gpio = {
 	.name	= "leds-gpio",
-	.id	= -1,
+	.id		= -1,
 	.dev	= {
 		.platform_data	= &gpio_led_info,
 	},
@@ -1689,25 +1680,17 @@ static struct platform_device leds_gpio = {
 
 static void __init pia35x_status_led_init(void)
 {
+	if (pia35x_version == PIA_X_AM3517)
+		gpio_leds_pia[0].gpio = GPIOX_STATUS_LED;
 
-	if (pia35x_version == PIA_AM3505) {
-		pr_info("pia35x_init: activating status heart beat on GPIO %d",
-				GPIO_STATUS_LED);
-		omap_mux_init_gpio(GPIO_STATUS_LED, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_led_info.leds = gpio_leds_pia;
-		gpio_led_info.num_leds = ARRAY_SIZE(gpio_leds_pia);
-	} else if (pia35x_version == PIA_X_AM3517) {
-		pr_info("pia35x_init: activating status heart beat on GPIO %d",
-				GPIOX_STATUS_LED);
-		omap_mux_init_gpio(GPIOX_STATUS_LED, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-		gpio_led_info.leds = gpio_leds_piax;
-		gpio_led_info.num_leds = ARRAY_SIZE(gpio_leds_piax);
-	} else {
-		/* unknown pia version */
-		pr_warning("pia35x_init: Couldn't initialize status heart beat, "
-				" unknown piA version!");
-		return;
-	}
+	pr_info("pia35x_init: activating status heart beat on GPIO %d",
+			gpio_leds_pia[0].gpio);
+
+	omap_mux_init_gpio(gpio_leds_pia[0].gpio,
+			OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	gpio_led_info.leds = gpio_leds_pia;
+	gpio_led_info.num_leds = ARRAY_SIZE(gpio_leds_pia);
+
 	platform_device_register(&leds_gpio);
 }
 
