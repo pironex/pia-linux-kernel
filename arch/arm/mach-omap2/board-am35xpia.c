@@ -237,11 +237,23 @@ static struct platform_device pia35x_dss_device = {
 static void __init pia35x_display_init(void)
 {
 	int ret;
+	int use_lcd = 0;
 
-	pr_info("pia35x_init: init DSS LCD device");
+	if (0 == strcmp(lcdboard_name, "pia_lcd"))
+		use_lcd = 1;
+
+	if (0 == use_lcd)
+		pia35x_dss_data.default_device = &pia35x_dvi_device;
+
+	/* don't initialize DSS on piA-AM3505 when no piA-LCD attached */
+	if ((pia35x_version == PIA_AM3505) && (0 == use_lcd))
+		return;
+
+	pr_info("pia35x_init: init DSS\n");
 
 	/* LCD_DVI switch */
-	if ((ret = gpio_request_one(GPIO_LCDDVI_SWITCH,
+	if (pia35x_version == PIA_X_AM3517 &&
+			(ret = gpio_request_one(GPIO_LCDDVI_SWITCH,
 			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcddvi.switch")) != 0) {
 		pr_err("%s: GPIO_LCDDVI_SWITCH request failed: %d\n", __func__, ret);
 		return;
