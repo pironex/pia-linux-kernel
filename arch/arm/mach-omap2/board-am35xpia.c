@@ -196,13 +196,13 @@ static void pia35x_dvi_disable(struct omap_dss_device *dssdev)
 }
 #define PIA_DVI
 static struct omap_dss_device pia35x_dvi_device = {
-		.type               = OMAP_DISPLAY_TYPE_DPI,
-		.name               = "dvi",
-		.driver_name        = "generic_panel",
-		.phy.dpi.data_lines = 24,
-		.reset_gpio         = GPIO_LCDDVI_SWITCH,
-		.platform_enable    = pia35x_dvi_enable,
-		.platform_disable   = pia35x_dvi_disable,
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "dvi",
+	.driver_name        = "generic_panel",
+	.phy.dpi.data_lines = 24,
+	.reset_gpio         = GPIO_LCDDVI_SWITCH,
+	.platform_enable    = pia35x_dvi_enable,
+	.platform_disable   = pia35x_dvi_disable,
 };
 #else
 static struct omap_dss_device pia35x_dvi_device = {
@@ -310,18 +310,18 @@ static int pia35x_tsc2007_init_hw(void)
 }
 
 static struct tsc2007_platform_data tsc2007_info = {
-		.model = 2007,
-		.x_plate_ohms = 180,
-		.get_pendown_state = pia35x_tsc2007_pendown,
-		.init_platform_hw = pia35x_tsc2007_init_hw,
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = pia35x_tsc2007_pendown,
+	.init_platform_hw = pia35x_tsc2007_init_hw,
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {
-		{
-				I2C_BOARD_INFO("tsc2007", 0x4B),
-				.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
-				.platform_data = &tsc2007_info,
-		},
+	{
+		I2C_BOARD_INFO("tsc2007", 0x4B),
+		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.platform_data = &tsc2007_info,
+	},
 };
 #else
 static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
@@ -343,42 +343,42 @@ static void __init pia35x_touch_init(void)
 #define SYS_CLKOUT2_PARENT	"cm_96m_fck"
 
 static struct omap2_mcspi_device_config pia35x_motor_x_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct omap2_mcspi_device_config pia35x_motor_y_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct omap2_mcspi_device_config pia35x_motor_z_cfg = {
-		.turbo_mode       = 0,
-		.single_channel   = 1,
+	.turbo_mode       = 0,
+	.single_channel   = 1,
 };
 static struct spi_board_info pia35x_spi_mc_info[] __initdata = {
-		/* Motor X */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 1,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_x_cfg,
-		},
-		/* Motor Y */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 2,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_y_cfg,
-		},
-		/* Motor Z */
-		{
-				.modalias        = "spidev",
-				.bus_num         = 1,
-				.chip_select     = 3,
-				.max_speed_hz    = 1000000, /* 1MHz */
-				.controller_data = &pia35x_motor_z_cfg,
-		},
+	/* Motor X */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 1,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_x_cfg,
+	},
+	/* Motor Y */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 2,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_y_cfg,
+	},
+	/* Motor Z */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 3,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_motor_z_cfg,
+	},
 };
 
 static int __init pia35x_sys_clkout2_init(void)
@@ -433,21 +433,21 @@ static int __init pia35x_sys_clkout2_init(void)
 #define GPIO_MOTOR_Z_STEP 161
 #define GPIO_MOTOR_Z_SG   157
 static struct gpio pia35x_motorcontrol_gpios[] = {
-		/* X */
-		{ GPIO_MOTOR_X_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorX.nen"   },
-		{ GPIO_MOTOR_X_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.dir"  },
-		{ GPIO_MOTOR_X_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.step" },
-		{ GPIO_MOTOR_X_SG,  GPIOF_DIR_IN,                   "motorX.sg"   },
-		/* Y */
-		{ GPIO_MOTOR_Y_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorY.nen"   },
-		{ GPIO_MOTOR_Y_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.dir"  },
-		{ GPIO_MOTOR_Y_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.step" },
-		{ GPIO_MOTOR_Y_SG,  GPIOF_DIR_IN,                   "motorY.sg"   },
-		/* Z */
-		{ GPIO_MOTOR_Z_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorZ.nen"   },
-		{ GPIO_MOTOR_Z_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.dir"  },
-		{ GPIO_MOTOR_Z_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.step" },
-		{ GPIO_MOTOR_Z_SG,  GPIOF_DIR_IN,                   "motorZ.sg"   },
+	/* X */
+	{ GPIO_MOTOR_X_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorX.nen"   },
+	{ GPIO_MOTOR_X_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.dir"  },
+	{ GPIO_MOTOR_X_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorX.step" },
+	{ GPIO_MOTOR_X_SG,  GPIOF_DIR_IN,                   "motorX.sg"   },
+	/* Y */
+	{ GPIO_MOTOR_Y_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorY.nen"   },
+	{ GPIO_MOTOR_Y_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.dir"  },
+	{ GPIO_MOTOR_Y_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorY.step" },
+	{ GPIO_MOTOR_Y_SG,  GPIOF_DIR_IN,                   "motorY.sg"   },
+	/* Z */
+	{ GPIO_MOTOR_Z_EN,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"motorZ.nen"   },
+	{ GPIO_MOTOR_Z_DIR, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.dir"  },
+	{ GPIO_MOTOR_Z_STEP,GPIOF_DIR_OUT | GPIOF_INIT_LOW, "motorZ.step" },
+	{ GPIO_MOTOR_Z_SG,  GPIOF_DIR_IN,                   "motorZ.sg"   },
 };
 
 static int __init pia35x_motorcontrol_init(void)
@@ -590,14 +590,14 @@ static inline void __init pia35x_bt_init(void) { return; }
 #if defined(CONFIG_AD799X) || defined(CONFIG_AD799X_MODULE)
 #include "../../../drivers/staging/iio/adc/ad799x.h"
 static struct ad799x_platform_data pia35x_ad799x_info = {
-		.vref_mv = 3000,
+	.vref_mv = 3000,
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_ad799x[] = {
-		{
-				I2C_BOARD_INFO("ad7994", 0x20),
-				.platform_data = &pia35x_ad799x_info,
-		},
+	{
+		I2C_BOARD_INFO("ad7994", 0x20),
+		.platform_data = &pia35x_ad799x_info,
+	},
 };
 
 static char * pia35x_trigger_data[2] = { "rtc0", NULL };
@@ -605,10 +605,10 @@ static char * pia35x_trigger_data[2] = { "rtc0", NULL };
 #if defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER) || \
 		defined(CONFIG_IIO_PERIODIC_RTC_TRIGGER_MODULE)
 static struct platform_device pia35x_iio_rtc_trigger = {
-		.name = "iio_prtc_trigger",
-		.dev = {
-				.platform_data = &pia35x_trigger_data,
-		},
+	.name = "iio_prtc_trigger",
+	.dev = {
+		.platform_data = &pia35x_trigger_data,
+	},
 };
 #endif
 
@@ -640,34 +640,34 @@ static void __init pia35x_ad799x_init(void)
 #define GPIO_IO_IN_RESET	16
 #define GPIO_IO_IN_INT		17
 static struct gpio pia35x_io_gpios[] = {
-		{ GPIO_IO_OUT_RESET, GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
-				"piaio.out_reset" },
-		{ GPIO_IO_OUT_INT,   GPIOF_DIR_IN | GPIOF_INIT_HIGH,
-				"piaio.out_int"  },
-		{ GPIO_IO_IN_RESET,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
-				"piaio.in_reset"},
-		{ GPIO_IO_IN_INT,    GPIOF_DIR_IN | GPIOF_INIT_HIGH,
-				"piaio.in_int"  },
+	{ GPIO_IO_OUT_RESET, GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
+			"piaio.out_reset" },
+	{ GPIO_IO_OUT_INT,   GPIOF_DIR_IN | GPIOF_INIT_HIGH,
+			"piaio.out_int"  },
+	{ GPIO_IO_IN_RESET,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
+			"piaio.in_reset"},
+	{ GPIO_IO_IN_INT,    GPIOF_DIR_IN | GPIOF_INIT_HIGH,
+			"piaio.in_int"  },
 };
 static char *piaio_names[16] = {
-		/* first expander, outputs */
-		0,
-		"piaio.out6",
-		"piaio.out5",
-		"piaio.out4",
-		"piaio.out1",
-		"piaio.out2",
-		"piaio.out3",
-		0,
-		/* second expander, inputs */
-		0,
-		"piaio.in6",
-		"piaio.in5",
-		"piaio.in4",
-		"piaio.in3",
-		"piaio.in2",
-		"piaio.in1",
-		0,
+	/* first expander, outputs */
+	0,
+	"piaio.out6",
+	"piaio.out5",
+	"piaio.out4",
+	"piaio.out1",
+	"piaio.out2",
+	"piaio.out3",
+	0,
+	/* second expander, inputs */
+	0,
+	"piaio.in6",
+	"piaio.in5",
+	"piaio.in4",
+	"piaio.in3",
+	"piaio.in2",
+	"piaio.in1",
+	0,
 };
 
 static int pia35x_io_out_setup(
@@ -881,13 +881,13 @@ static struct i2c_board_info __initdata pia35x_i2c2_aic3x[] = {};
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux_audio[] __initdata = {
 	/* I2S codec port pins for McBSP block */
-		/* SYS_CLKOUT1 connected to SYS_CLKOUT2 */
-		OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
-		OMAP3_MUX(MCBSP2_DX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
-		{ .reg_offset = OMAP_MUX_TERMINATOR },
+	/* SYS_CLKOUT1 connected to SYS_CLKOUT2 */
+	OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
+	OMAP3_MUX(MCBSP2_DX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
 #define board_mux_audio NULL
@@ -1538,19 +1538,19 @@ static void __init pia35x_serial_init(void)
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
 static struct at24_platform_data m24c01_exp = {
-		.byte_len       = SZ_1K / 8,
-		.page_size      = 16,
+	.byte_len       = SZ_1K / 8,
+	.page_size      = 16,
 };
 
 static struct at24_platform_data m24c01_lcd = {
-		.byte_len       = SZ_1K / 8,
-		.page_size      = 16,
+	.byte_len       = SZ_1K / 8,
+	.page_size      = 16,
 };
 
 static struct at24_platform_data eeprom_piax_data = {
-		.byte_len       = SZ_2K / 8, /* 128 bytes */
-		.page_size      = 8,         /* 8 bytes pages */
-		.flags          = AT24_FLAG_TAKE8ADDR, /* no addr pins */
+	.byte_len       = SZ_2K / 8, /* 128 bytes */
+	.page_size      = 8,         /* 8 bytes pages */
+	.flags          = AT24_FLAG_TAKE8ADDR, /* no addr pins */
 };
 #endif /* CONFIG_EEPROM_AT24 */
 
@@ -1567,8 +1567,8 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 	/* piAx only 24AA02E48 on board eeprom with node ID */
 	{
-			I2C_BOARD_INFO("24c01", 0x50),
-			.platform_data  = &eeprom_piax_data,
+		I2C_BOARD_INFO("24c01", 0x50),
+		.platform_data  = &eeprom_piax_data,
 	},
 #endif /* CONFIG_EEPROM_AT24 */
 	/* RTC + WDOG */
@@ -1579,26 +1579,26 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 };
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
-		/* temperature sensor LM75 */
-		{
-				I2C_BOARD_INFO("lm75", 0x48),
-		},
+	/* temperature sensor LM75 */
+	{
+		I2C_BOARD_INFO("lm75", 0x48),
+	},
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
-		/* expansion board eeprom */
-		{
-				I2C_BOARD_INFO("24c01", 0x50),
-				.platform_data  = &m24c01_exp,
-		},
+	/* expansion board eeprom */
+	{
+		I2C_BOARD_INFO("24c01", 0x50),
+		.platform_data  = &m24c01_exp,
+	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
 
 static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
-		/* expansion board eeprom */
-		{
-				I2C_BOARD_INFO("24c01", 0x51),
-				.platform_data  = &m24c01_lcd,
-		},
+	/* expansion board eeprom */
+	{
+		I2C_BOARD_INFO("24c01", 0x51),
+		.platform_data  = &m24c01_lcd,
+	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
 
