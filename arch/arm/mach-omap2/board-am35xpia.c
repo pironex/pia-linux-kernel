@@ -67,6 +67,7 @@ enum {
 	PIA_UNKNOWN = 0xff,
 };
 static u8 pia35x_version = PIA_UNKNOWN;
+static char expansionboard_name[32];
 
 /*
  * GSM: Telit GE864 Quad-V2
@@ -1304,7 +1305,19 @@ static struct tps6507x_board pia35x_tps_board = {
 /*
  * MMC
  */
-static struct omap2_hsmmc_info mmc[] = {
+static struct omap2_hsmmc_info mmc_single[] = {
+	/* first MMC port used for system MMC modules */
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = 41,
+		.gpio_wp        = -EINVAL, /* we don't have a WP pin connected, was: 40 */
+		//.ocr_mask       = MMC_VDD_33_34,
+	},
+	{}/* Terminator */
+};
+
+static struct omap2_hsmmc_info mmc_wlan[] = {
 	/* first MMC port used for system MMC modules */
 	{
 		.mmc            = 1,
@@ -1327,12 +1340,18 @@ static struct omap2_hsmmc_info mmc[] = {
 #endif /* CONFIG_WL12XX */
 	{}/* Terminator */
 };
+static struct omap2_hsmmc_info *mmc;
 
 static void __init pia35x_mmc_init(void)
 {
 	pr_info("pia35x_init: init MMC\n");
 
-	/* TODO handling of different MMC2 expansions here */
+	/* predefined mmc configs depending on expansion board */
+	if (0 == strcmp(expansionboard_name, "pia_wifi"))
+		mmc = mmc_wlan;
+	else
+		mmc = mmc_single;
+
 	omap2_hsmmc_init(mmc);
 	/* link regulator to on-board MMC adapter */
 	//TODO pia35x_vmmc1_consumers[0].dev = mmc[0].dev;
@@ -1518,8 +1537,6 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 		I2C_BOARD_INFO("ds1374", 0x68),
 	},
 };
-
-char expansionboard_name[32];
 
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
