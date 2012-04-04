@@ -1578,7 +1578,7 @@ static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 		/* expansion board eeprom */
 		{
-				I2C_BOARD_INFO("24c01", 0x50),
+				I2C_BOARD_INFO("24c01", 0x51),
 				.platform_data  = &m24c01,
 		},
 #endif /* CONFIG_EEPROM_AT24 */
