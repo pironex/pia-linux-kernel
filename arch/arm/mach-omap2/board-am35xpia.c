@@ -1524,6 +1524,25 @@ static void __init pia35x_serial_init(void)
 /*
  * I2C
  */
+#if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
+#include <linux/i2c/at24.h>
+static struct at24_platform_data m24c01_exp = {
+		.byte_len       = SZ_1K / 8,
+		.page_size      = 16,
+};
+
+static struct at24_platform_data m24c01_lcd = {
+		.byte_len       = SZ_1K / 8,
+		.page_size      = 16,
+};
+
+static struct at24_platform_data eeprom_piax_data = {
+		.byte_len       = SZ_2K / 8, /* 128 bytes */
+		.page_size      = 8,         /* 8 bytes pages */
+		.flags          = AT24_FLAG_TAKE8ADDR, /* no addr pins */
+};
+#endif /* CONFIG_EEPROM_AT24 */
+
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 #if defined(CONFIG_REGULATOR_TPS6507X)
 	{ /* power regulator TPS650732 */
@@ -1533,18 +1552,16 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 		.platform_data = &pia35x_tps_board,
 	},
 #endif /* CONFIG_REGULATOR_TPS6507X */
-	{ /* RTC + WDOG */
+#if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
+	/* piAx only 24AA02E48 on board eeprom with node ID */
+	{
+			I2C_BOARD_INFO("24c01", 0x50),
+			.platform_data  = &eeprom_piax_data,
+	},
+#endif /* CONFIG_EEPROM_AT24 */
 		I2C_BOARD_INFO("ds1374", 0x68),
 	},
 };
-
-#if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
-#include <linux/i2c/at24.h>
-static struct at24_platform_data m24c01 = {
-	.byte_len       = SZ_1K / 8,
-	.page_size      = 16,
-};
-#endif /* CONFIG_EEPROM_AT24 */
 
 static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
 	{ /* temperature sensor LM75 */
@@ -1553,7 +1570,7 @@ static struct i2c_board_info __initdata pia35x_i2c2_info[] = {
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 	{ /* expansion board eeprom */
 			I2C_BOARD_INFO("24c01", 0x50),
-			.platform_data  = &m24c01,
+				.platform_data  = &m24c01_exp,
 	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
@@ -1563,7 +1580,7 @@ static struct i2c_board_info __initdata pia35x_i2c3_info[] = {
 
 	{ /* expansion board eeprom */
 				I2C_BOARD_INFO("24c01", 0x51),
-		.platform_data  = &m24c01,
+				.platform_data  = &m24c01_lcd,
 	},
 #endif /* CONFIG_EEPROM_AT24 */
 };
