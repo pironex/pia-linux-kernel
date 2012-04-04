@@ -627,6 +627,163 @@ static void __init pia35x_ad799x_init(void)
 			ARRAY_SIZE(pia35x_i2c2_ad799x));
 }
 
+/** piA-IO **/
+#if defined(CONFIG_GPIO_PCF857X) || defined (CONFIG_GPIO_PCF857X_MODULE)
+/* expander GPIOs after OMAP GPIOs */
+#define PIAIO_GPIO_BASE(x) (OMAP_MAX_GPIO_LINES + ((x) * 8))
+
+#include <linux/i2c/pcf857x.h>
+/* IO Expander 2 x PCA9672PW: 8 x IN, 8 x OUT */
+#define GPIO_IO_OUT_RESET	14
+#define GPIO_IO_OUT_INT		15
+#define GPIO_IO_IN_RESET	16
+#define GPIO_IO_IN_INT		17
+static struct gpio pia35x_io_gpios[] = {
+		{ GPIO_IO_OUT_RESET, GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
+				"piaio.out_reset" },
+		{ GPIO_IO_OUT_INT,   GPIOF_DIR_IN | GPIOF_INIT_HIGH,
+				"piaio.out_int"  },
+		{ GPIO_IO_IN_RESET,  GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
+				"piaio.in_reset"},
+		{ GPIO_IO_IN_INT,    GPIOF_DIR_IN | GPIOF_INIT_HIGH,
+				"piaio.in_int"  },
+};
+static char *piaio_names[16] = {
+		/* first expander, outputs */
+		0,
+		"piaio.out6",
+		"piaio.out5",
+		"piaio.out4",
+		"piaio.out1",
+		"piaio.out2",
+		"piaio.out3",
+		0,
+		/* second expander, inputs */
+		0,
+		"piaio.in6",
+		"piaio.in5",
+		"piaio.in4",
+		"piaio.in3",
+		"piaio.in2",
+		"piaio.in1",
+		0,
+};
+
+static int pia35x_io_out_setup(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i = 0;
+
+	for (; i < 8; ++i) {
+		if (piaio_names[8+i] == 0)
+			continue;
+		gpio_request(gpio + i, piaio_names[i]);
+		gpio_direction_output(gpio + i, 1);
+		if (0 != gpio_export(gpio + i, false))
+			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
+	}
+
+	return 0;
+}
+
+static int pia35x_io_out_teardown(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i = 0;
+
+	for (; i < 8; ++i)
+		gpio_free(gpio + i);
+
+	return 0;
+}
+
+static struct pcf857x_platform_data pia35x_io_out_data = {
+		.gpio_base = PIAIO_GPIO_BASE(0),
+		.setup     = pia35x_io_out_setup,
+		.teardown  = pia35x_io_out_teardown,
+};
+
+static int pia35x_io_in_setup(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i = 0;
+
+	for (; i < 8; ++i) {
+		if (piaio_names[8+i] == 0)
+			continue;
+
+		gpio_request(gpio + i, piaio_names[8+i]);
+		gpio_direction_output(gpio + i, 1);
+		if (0 != gpio_export(gpio + i, false))
+			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
+	}
+
+	return 0;
+}
+
+static int pia35x_io_in_teardown(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i = 0;
+
+	for (; i < 8; ++i)
+		gpio_free(gpio + i);
+
+	return 0;
+}
+
+static struct pcf857x_platform_data pia35x_io_in_data = {
+		.gpio_base = PIAIO_GPIO_BASE(1),
+		.setup     = pia35x_io_in_setup,
+		.teardown  = pia35x_io_in_teardown,
+};
+
+static struct i2c_board_info pia35x_i2c_io_data[] = {
+		{
+				I2C_BOARD_INFO("pca9672", 0x20),
+				.platform_data	= &pia35x_io_out_data,
+		},
+		{
+				I2C_BOARD_INFO("pca9672", 0x21),
+				.platform_data	= &pia35x_io_in_data,
+		},
+};
+
+static void __init pia35x_ioexp_init(void)
+{
+	int err, i;
+	unsigned int gpio;
+	unsigned long flags;
+
+	pr_info("pia35x: Initializing piA-IO board");
+	if (0 != (err = gpio_request_array(pia35x_io_gpios,
+			ARRAY_SIZE(pia35x_io_gpios)))) {
+		pr_warning("pia35x: unable to request IO expander GPIOs: %d", err);
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_io_gpios); i++) {
+		gpio  = pia35x_io_gpios[i].gpio;
+		flags = pia35x_io_gpios[i].flags;
+
+		omap_mux_init_gpio(gpio, OMAP_MUX_MODE4	| (flags & GPIOF_DIR_IN) ?
+						OMAP_PIN_INPUT_PULLDOWN : OMAP_PIN_OUTPUT);
+		gpio_export(gpio, false);
+	}
+
+	i2c_register_board_info(2, pia35x_i2c_io_data,
+			ARRAY_SIZE(pia35x_i2c_io_data));
+}
+#else
+static inline void __init pia35x_io_init(void) {
+	pr_error("pia35x: piA-IO Expander driver PCA9672 missing\n");
+}
+#endif /* CONFIG_GPIO_PCF857X */
+
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
@@ -1548,6 +1705,9 @@ static int __init pia35x_expansion_init(void)
 		ret++;
 	} else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
 		pia35x_motorcontrol_init();
+		ret++;
+	} else if (0 == strcmp(expansionboard_name, "pia_io")) {
+		pia35x_ioexp_init();
 		ret++;
 	}
 
