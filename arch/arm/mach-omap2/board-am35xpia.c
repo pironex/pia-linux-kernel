@@ -64,6 +64,7 @@ enum {
 };
 static u8 pia35x_version = PIA_UNKNOWN;
 static char expansionboard_name[32];
+static char lcdboard_name[16];
 
 /*
  * GSM: Telit GE864 Quad-V2
@@ -1717,12 +1718,23 @@ static int __init pia35x_expansion_init(void)
 
 static int __init expansionboard_setup(char *str)
 {
-	if (!str){
-		pr_info("pia35x: Expansion Board not found...");
+	if (!str)
 		return -EINVAL;
-	}
+
 	strncpy(expansionboard_name, str, 32);
 	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
+
+	return 0;
+}
+
+static int __init lcdboard_setup(char *str)
+{
+	if (!str)
+		return -EINVAL;
+
+	strncpy(lcdboard_name, str, 32);
+	printk(KERN_INFO "pia35x LCD: %s\n", lcdboard_name);
+
 	return 0;
 }
 
@@ -1799,6 +1811,7 @@ static void __init pia35x_init(void)
 }
 
 early_param("buddy", expansionboard_setup);
+early_param("buddy_lcd", lcdboard_setup);
 
 MACHINE_START(PIA_AM35X, "PIA AM35X")
 	.boot_params  = 0x80000100,
