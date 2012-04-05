@@ -679,7 +679,7 @@ static int pia35x_io_out_setup(
 		if (piaio_names[8+i] == 0)
 			continue;
 		gpio_request(gpio + i, piaio_names[i]);
-		gpio_direction_output(gpio + i, 1);
+		gpio_direction_output(gpio + i, 0);
 		if (0 != gpio_export(gpio + i, false))
 			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
 	}
@@ -716,7 +716,7 @@ static int pia35x_io_in_setup(
 			continue;
 
 		gpio_request(gpio + i, piaio_names[8+i]);
-		gpio_direction_output(gpio + i, 1);
+		gpio_direction_input(gpio + i);
 		if (0 != gpio_export(gpio + i, false))
 			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
 	}
