@@ -777,8 +777,8 @@ static void __init pia35x_ioexp_init(void)
 			ARRAY_SIZE(pia35x_i2c_io_data));
 }
 #else
-static inline void __init pia35x_io_init(void) {
-	pr_error("pia35x: piA-IO Expander driver PCA9672 missing\n");
+static inline void __init pia35x_ioexp_init(void) {
+	pr_err("pia35x: piA-IO Expander driver PCA9672 missing\n");
 }
 #endif /* CONFIG_GPIO_PCF857X */
 
@@ -1572,6 +1572,8 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 		.platform_data  = &eeprom_piax_data,
 	},
 #endif /* CONFIG_EEPROM_AT24 */
+	/* RTC + WDOG */
+	{
 		I2C_BOARD_INFO("ds1374", 0x68),
 	},
 };
