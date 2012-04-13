@@ -219,6 +219,59 @@ static struct omap_dss_board_info pia35x_dss_data = {
 };
 
 #if defined(PIA_LCD) || defined(PIA_DVI)
+
+/* Touch interface */
+#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
+    defined(CONFIG_TOUCHSCREEN_TSC2007)
+/* Pen Down IRQ, low active */
+#define GPIO_LCD_PENDOWN 100
+static int pia35x_tsc2007_pendown(void)
+{
+	return !gpio_get_value(GPIO_LCD_PENDOWN);
+}
+
+static int pia35x_tsc2007_init_hw(void)
+{
+	int gpio = GPIO_LCD_PENDOWN;
+	int ret = 0;
+	pr_info("pia35x_init: init TSC2007\n");
+	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "tsc2007_pen_down");
+	if (ret < 0) {
+		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
+		return ret;
+	}
+	gpio_set_debounce(gpio, 0xa);
+	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
+
+	return ret;
+}
+
+static struct tsc2007_platform_data tsc2007_info = {
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = pia35x_tsc2007_pendown,
+	.init_platform_hw = pia35x_tsc2007_init_hw,
+};
+
+static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {
+	{
+		I2C_BOARD_INFO("tsc2007", 0x4B),
+		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.platform_data = &tsc2007_info,
+	},
+};
+#else
+static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
+#endif
+
+static void __init pia35x_touch_init(void)
+{
+	pr_info("pia35x_init: init touchscreen TSC2007\n");
+	i2c_register_board_info(3, pia35x_i2c3_tsc2007,
+			ARRAY_SIZE(pia35x_i2c3_tsc2007));
+}
+
 static void __init pia35x_display_init(void)
 {
 	int ret;
@@ -273,63 +326,15 @@ static void __init pia35x_display_init(void)
 
 	pr_info("pia35x_init: init LCD\n");
 
+	/* initialize touch interface only for LCD display */
+	if (use_lcd)
+		pia35x_touch_init();
+
 	return;
 }
 #else
 inline static void __init pia35x_display_init(void) { }
 #endif /* PIA_DVI || PIA_LCD */
-
-/* Touch interface */
-#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
-    defined(CONFIG_TOUCHSCREEN_TSC2007)
-/* Pen Down IRQ, low active */
-#define GPIO_LCD_PENDOWN 100
-static int pia35x_tsc2007_pendown(void)
-{
-	return !gpio_get_value(GPIO_LCD_PENDOWN);
-}
-
-static int pia35x_tsc2007_init_hw(void)
-{
-	int gpio = GPIO_LCD_PENDOWN;
-	int ret = 0;
-	pr_info("pia35x_init: init TSC2007\n");
-	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "tsc2007_pen_down");
-	if (ret < 0) {
-		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
-		return ret;
-	}
-	gpio_set_debounce(gpio, 0xa);
-	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
-
-	return ret;
-}
-
-static struct tsc2007_platform_data tsc2007_info = {
-	.model = 2007,
-	.x_plate_ohms = 180,
-	.get_pendown_state = pia35x_tsc2007_pendown,
-	.init_platform_hw = pia35x_tsc2007_init_hw,
-};
-
-static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {
-	{
-		I2C_BOARD_INFO("tsc2007", 0x4B),
-		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
-		.platform_data = &tsc2007_info,
-	},
-};
-#else
-static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
-#endif
-
-static void __init pia35x_touch_init(void)
-{
-	pr_info("pia35x_init: init touchscreen TSC2007\n");
-	i2c_register_board_info(3, pia35x_i2c3_tsc2007,
-			ARRAY_SIZE(pia35x_i2c3_tsc2007));
-}
 
 /** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
@@ -1760,7 +1765,6 @@ static void __init pia35x_init(void)
 	pia35x_status_led_init();
 
 	pia35x_display_init();
-	pia35x_touch_init();
 
 	pia35x_flash_init();
 	pia35x_musb_init();
