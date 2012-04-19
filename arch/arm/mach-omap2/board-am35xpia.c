@@ -776,6 +776,231 @@ static inline void __init pia35x_io_init(void) {
 }
 #endif /* CONFIG_GPIO_PCF857X */
 
+/** piA-EMS_IO **/
+#if (defined(CONFIG_GPIO_PCF857X) || defined(CONFIG_GPIO_PCF857X_MODULE)) && \
+	(defined(CONFIG_CAN_MCP251X) || defined(CONFIG_CAN_MCP251X_MODULE)) && \
+	(defined(CONFIG_SERIAL_MAX3100) || defined(CONFIG_SERIAL_MAX3100_MODULE))
+#include <linux/can/platform/mcp251x.h>
+#include <linux/serial_max3100.h>
+
+#define EMS_IO_CAN_DEV(bus, cs, irqgpio, id) \
+{	.modalias      = "mcp251x", \
+	.bus_num       = bus, \
+	.chip_select   = cs, \
+	.max_speed_hz  = 5E6, \
+	.mode          = SPI_MODE_0, \
+	.irq           = OMAP_GPIO_IRQ(irqgpio), \
+	.platform_data = &ems_io_mcp2515_data[id], \
+}
+#define EMS_IO_485_DEV(bus, cs, irqgpio, id) \
+{ \
+	.modalias      = "max3100", \
+	.bus_num       = bus, \
+	.chip_select   = cs, \
+	.max_speed_hz  = 5E6, \
+	.mode          = SPI_MODE_0, \
+	.irq           = irqgpio, \
+	.platform_data = &ems_io_max3140_data[id], \
+}
+#define EMS_IO_GPIO_DEV(ad, irqgpio, id) \
+{	I2C_BOARD_INFO("pca9672", ad), \
+	.irq           = OMAP_GPIO_IRQ(irqgpio), \
+	.platform_data = &ems_io_pca9672_data[id], \
+}
+#define EMS_IO_GPIO_DEV_DATA(id) \
+{	.gpio_base = PIAIO_GPIO_BASE(id), \
+	.setup     = ems_io_gpio_setup, \
+	.teardown  = ems_io_gpio_teardown \
+}
+
+static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
+	{ .oscillator_frequency = 25E6 }, /* CAN 1 */
+	{ .oscillator_frequency = 25E6 }, /* CAN 2 */
+	{ .oscillator_frequency = 25E6 }, /* CAN 3 */
+};
+
+static struct plat_max3100 ems_io_max3140_data[4] = {
+	{ .loopback = 0, .crystal = 1, .poll_time = 0 }, /* RS485 1 */
+	{ .loopback = 0, .crystal = 1, .poll_time = 0 }, /* RS485 2 */
+	{ .loopback = 0, .crystal = 1, .poll_time = 0 }, /* RS485 3 */
+	{ .loopback = 0, .crystal = 1, .poll_time = 0 }, /* RS485 4 */
+};
+
+/* 3 CAN + 4 RS485 on SPI busses 1+2 */
+static struct spi_board_info pia35x_ems_io_spi_info[] __initdata = {
+	EMS_IO_CAN_DEV(1, 0, 132, 0),
+	EMS_IO_CAN_DEV(1, 2, 133, 1),
+	EMS_IO_CAN_DEV(2, 0, 134, 2),
+	EMS_IO_485_DEV(1, 1, 135, 0),
+	EMS_IO_485_DEV(1, 3, 136, 1),
+	EMS_IO_485_DEV(2, 1, 137, 2),
+	EMS_IO_485_DEV(2, -1, 138, 3),
+};
+
+enum {
+	EMS_IO_DOUT,
+	EMS_IO_DIN1,
+	EMS_IO_DIN2,
+	EMS_IO_TERM,
+	EMS_IO_DISP,
+};
+/* mapping of expander GPIOs to names */
+#define EMS_IO_GPIO(e, n, o, ex) \
+{	.expander = e, .name = n, .out = o, .export = ex }
+struct ems_io_gpio_config {
+	unsigned expander; /* expander id */
+	char    *name;     /* exported name */
+	unsigned out;      /* is output? */
+	unsigned export;   /* auto export? */
+};
+
+/* all gpios on expanders ordered by expander + pin */
+static struct ems_io_gpio_config ems_io_gpios[5*8] = {
+	/* DOUT 0..7 */
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.1", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.2", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.3", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.4", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.5", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.6", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.7", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DOUT, "dout.8", 1, 1),
+	/* DIN 8..19 */
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.1", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.2", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.3", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.4", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.5", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.6", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.7", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN1, "din.8", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, "din.9", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, "din.10", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, "din.11", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, "din.12", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, "display.fehler", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DIN2, NULL, 0, 0),
+	EMS_IO_GPIO(EMS_IO_DIN2, NULL, 0, 0),
+	EMS_IO_GPIO(EMS_IO_DIN2, NULL, 0, 0),
+	/* TERM */
+	EMS_IO_GPIO(EMS_IO_TERM, "term.can.1", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.rs485.1", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.can.2", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.rs485.2", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.can3", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.rs485.3", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, "term.rs485.4", 1, 1),
+	EMS_IO_GPIO(EMS_IO_TERM, NULL, 1, 1),
+	/* DISPLAY */
+	EMS_IO_GPIO(EMS_IO_DISP, "display.enter", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.esc", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.rechts", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.links", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.ab", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.auf", 0, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.led_einspeis", 1, 1),
+	EMS_IO_GPIO(EMS_IO_DISP, "display.led_netz", 1, 1),
+};
+
+static int ems_io_gpio_setup(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i;
+	int base = gpio - OMAP_MAX_GPIO_LINES;
+	struct ems_io_gpio_config *cur;
+
+	for (i = 0; i < 8; ++i) {
+		cur = &ems_io_gpios[base+i];
+		if ((NULL == cur) || (NULL == cur->name))
+			continue;
+
+		gpio_request(gpio + i, cur->name);
+		if (cur->out)
+			gpio_direction_output(gpio + i, 0);
+		else
+			gpio_direction_input(gpio + i);
+
+		if (0 == cur->export)
+			continue;
+
+		if (0 != gpio_export(gpio + i, false))
+			pr_err("piAx: EMS IO couldn't export GPIO %d on expander %d\n",
+					(gpio + i), cur->expander);
+	}
+
+	return 0;
+}
+
+static int ems_io_gpio_teardown(
+		struct i2c_client *client,
+		int gpio, unsigned ngpio, void *c)
+{
+	int i = 0;
+
+	for (; i < 8; ++i)
+		gpio_free(gpio + i);
+
+	return 0;
+}
+
+static struct pcf857x_platform_data ems_io_pca9672_data[5] = {
+	EMS_IO_GPIO_DEV_DATA(0),
+	EMS_IO_GPIO_DEV_DATA(1),
+	EMS_IO_GPIO_DEV_DATA(2),
+	EMS_IO_GPIO_DEV_DATA(3),
+	EMS_IO_GPIO_DEV_DATA(4),
+};
+
+static struct i2c_board_info pia35x_ems_io_i2c_info[] = {
+	EMS_IO_GPIO_DEV(0x20,  0, EMS_IO_DOUT),
+	EMS_IO_GPIO_DEV(0x21, 21, EMS_IO_DIN1),
+	EMS_IO_GPIO_DEV(0x22, 19, EMS_IO_DIN2),
+	EMS_IO_GPIO_DEV(0x23,  0, EMS_IO_TERM),
+	EMS_IO_GPIO_DEV(0x12, 17, EMS_IO_DISP),
+};
+
+#define GPIO_EMS_IO_RESET    14
+#define GPIO_EMS_IO_DIN1_INT 21
+#define GPIO_EMS_IO_DIN2_INT 19
+#define GPIO_EMS_IO_DISP_INT 17
+static struct gpio pia35x_ems_io_gpios[] = {
+	{ GPIO_EMS_IO_RESET, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+			"emsio.reset" },
+	{ GPIO_EMS_IO_DIN1_INT, GPIOF_DIR_IN, "emsio.din1_int"  },
+	{ GPIO_EMS_IO_DIN2_INT, GPIOF_DIR_IN, "emsio.din2_int"},
+	{ GPIO_EMS_IO_DISP_INT, GPIOF_DIR_IN, "emsio.disp_int"  },
+};
+
+static void __init pia35x_ems_io_init(void) {
+	unsigned i;
+
+	pr_info("pia35x: Initializing piA-EMS_IO board");
+
+	/* GPIOs */
+	gpio_request_array(pia35x_ems_io_gpios, ARRAY_SIZE(pia35x_ems_io_gpios));
+	usleep_range(4, 10); /* reset must be held for at least 4us */
+	gpio_set_value(GPIO_EMS_IO_RESET, 1);
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_ems_io_gpios); ++i) {
+		if (0 != gpio_export(pia35x_ems_io_gpios[i].gpio, false))
+			pr_err("piAx: EMS IO couldn't export %s\n",
+					pia35x_ems_io_gpios[i].label);
+	}
+
+	/* IO expander */
+	i2c_register_board_info(2, pia35x_ems_io_i2c_info,
+			ARRAY_SIZE(pia35x_ems_io_i2c_info));
+
+	/* SPI */
+	spi_register_board_info(pia35x_ems_io_spi_info,
+			ARRAY_SIZE(pia35x_ems_io_spi_info));
+}
+#else
+static inline void __init pia35x_ems_io_init(void) {
+	pr_error("pia35x: piA-EMS_IO driver PCA9672|MCP2515|MAX3140 missing\n");
+}
+#endif
 
 /** Integrated Devices **/
 #define GPIO_EN_VCC_5V_PER  28    /* expansion supply voltage */
@@ -1700,6 +1925,9 @@ static int __init pia35x_expansion_init(void)
 		ret++;
 	} else if (0 == strcmp(expansionboard_name, "pia_io")) {
 		pia35x_ioexp_init();
+		ret++;
+	} else if (0 == strcmp(expansionboard_name, "pia_ems")) {
+		pia35x_ems_io_init();
 		ret++;
 	}
 
