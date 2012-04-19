@@ -683,17 +683,24 @@ static char *piaio_names[16] = {
 	0,
 };
 
-static int pia35x_io_out_setup(
+static int pia35x_io_gpio_setup(
 		struct i2c_client *client,
 		int gpio, unsigned ngpio, void *c)
 {
 	int i = 0;
+	int base = gpio - PIAIO_GPIO_BASE(0);
 
 	for (; i < 8; ++i) {
-		if (piaio_names[8+i] == 0)
+		if (piaio_names[base+i] == 0)
 			continue;
-		gpio_request(gpio + i, piaio_names[i]);
-		gpio_direction_output(gpio + i, 0);
+
+		gpio_request(gpio + i, piaio_names[base+i]);
+		/* second expander has inputs */
+		if (base > 0)
+			gpio_direction_input(gpio + i);
+		else
+			gpio_direction_output(gpio + i, 1);
+
 		if (0 != gpio_export(gpio + i, false))
 			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
 	}
@@ -701,7 +708,7 @@ static int pia35x_io_out_setup(
 	return 0;
 }
 
-static int pia35x_io_out_teardown(
+static int pia35x_io_gpio_teardown(
 		struct i2c_client *client,
 		int gpio, unsigned ngpio, void *c)
 {
@@ -715,45 +722,13 @@ static int pia35x_io_out_teardown(
 
 static struct pcf857x_platform_data pia35x_io_out_data = {
 		.gpio_base = PIAIO_GPIO_BASE(0),
-		.setup     = pia35x_io_out_setup,
-		.teardown  = pia35x_io_out_teardown,
+		.setup     = pia35x_io_gpio_setup,
+		.teardown  = pia35x_io_gpio_teardown,
 };
-
-static int pia35x_io_in_setup(
-		struct i2c_client *client,
-		int gpio, unsigned ngpio, void *c)
-{
-	int i = 0;
-
-	for (; i < 8; ++i) {
-		if (piaio_names[8+i] == 0)
-			continue;
-
-		gpio_request(gpio + i, piaio_names[8+i]);
-		gpio_direction_input(gpio + i);
-		if (0 != gpio_export(gpio + i, false))
-			pr_err("piAx: error while exporting GPIO%d\n", (gpio+i));
-	}
-
-	return 0;
-}
-
-static int pia35x_io_in_teardown(
-		struct i2c_client *client,
-		int gpio, unsigned ngpio, void *c)
-{
-	int i = 0;
-
-	for (; i < 8; ++i)
-		gpio_free(gpio + i);
-
-	return 0;
-}
-
 static struct pcf857x_platform_data pia35x_io_in_data = {
 		.gpio_base = PIAIO_GPIO_BASE(1),
-		.setup     = pia35x_io_in_setup,
-		.teardown  = pia35x_io_in_teardown,
+		.setup     = pia35x_io_gpio_setup,
+		.teardown  = pia35x_io_gpio_teardown,
 };
 
 static struct i2c_board_info pia35x_i2c_io_data[] = {
