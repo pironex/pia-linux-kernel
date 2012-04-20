@@ -2864,8 +2864,11 @@ static struct omap_hwmod_ocp_if *omap34xx_mcspi1_slaves[] = {
 	&omap34xx_l4_core__mcspi1,
 };
 
+/* HACK CS GPIOs */
+//extern int mcspi1_cs_gpios[4];
 static struct omap2_mcspi_dev_attr omap_mcspi1_dev_attr = {
 	.num_chipselect = 4,
+	//.cs_gpios	= mcspi1_cs_gpios,
 };
 
 static struct omap_hwmod omap34xx_mcspi1 = {
@@ -2893,8 +2896,11 @@ static struct omap_hwmod_ocp_if *omap34xx_mcspi2_slaves[] = {
 	&omap34xx_l4_core__mcspi2,
 };
 
+/* HACK CS GPIOs */
+extern int mcspi2_cs_gpios[4];
 static struct omap2_mcspi_dev_attr omap_mcspi2_dev_attr = {
-	.num_chipselect = 2,
+	.num_chipselect = 4,
+	.cs_gpios	= mcspi2_cs_gpios,
 };
 
 static struct omap_hwmod omap34xx_mcspi2 = {
