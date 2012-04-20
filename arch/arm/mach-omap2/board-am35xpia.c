@@ -964,12 +964,18 @@ static struct i2c_board_info pia35x_ems_io_i2c_info[] = {
 #define GPIO_EMS_IO_DIN1_INT 21
 #define GPIO_EMS_IO_DIN2_INT 19
 #define GPIO_EMS_IO_DISP_INT 17
+#define GPIO_EMS_IO_SPI2_CS0 181
+#define GPIO_EMS_IO_SPI2_CS1 182
+#define GPIO_EMS_IO_SPI2_CS2 12
 static struct gpio pia35x_ems_io_gpios[] = {
 	{ GPIO_EMS_IO_RESET, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 			"emsio.reset" },
 	{ GPIO_EMS_IO_DIN1_INT, GPIOF_DIR_IN, "emsio.din1_int"  },
 	{ GPIO_EMS_IO_DIN2_INT, GPIOF_DIR_IN, "emsio.din2_int"},
 	{ GPIO_EMS_IO_DISP_INT, GPIOF_DIR_IN, "emsio.disp_int"  },
+	{ GPIO_EMS_IO_SPI2_CS0, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, NULL },
+	{ GPIO_EMS_IO_SPI2_CS1, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, NULL },
+	{ GPIO_EMS_IO_SPI2_CS2, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, NULL },
 };
 
 static void __init pia35x_ems_io_init(void) {
@@ -983,6 +989,9 @@ static void __init pia35x_ems_io_init(void) {
 	gpio_set_value(GPIO_EMS_IO_RESET, 1);
 
 	for (i = 0; i < ARRAY_SIZE(pia35x_ems_io_gpios); ++i) {
+		if (NULL == pia35x_ems_io_gpios[i].label)
+			continue;
+
 		if (0 != gpio_export(pia35x_ems_io_gpios[i].gpio, false))
 			pr_err("piAx: EMS IO couldn't export %s\n",
 					pia35x_ems_io_gpios[i].label);
@@ -991,6 +1000,12 @@ static void __init pia35x_ems_io_init(void) {
 	/* IO expander */
 	i2c_register_board_info(2, pia35x_ems_io_i2c_info,
 			ARRAY_SIZE(pia35x_ems_io_i2c_info));
+
+	/* setup SPI2 GPIO CS */
+	mcspi2_cs_gpios[0] = GPIO_EMS_IO_SPI2_CS0;
+	mcspi2_cs_gpios[1] = GPIO_EMS_IO_SPI2_CS1;
+	mcspi2_cs_gpios[2] = GPIO_EMS_IO_SPI2_CS2;
+	mcspi2_cs_gpios[3] = 0;
 
 	/* SPI */
 	spi_register_board_info(pia35x_ems_io_spi_info,
