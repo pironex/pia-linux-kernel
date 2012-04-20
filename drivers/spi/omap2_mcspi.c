@@ -134,7 +134,7 @@ struct omap2_mcspi {
 	unsigned long		phys;
 	/* SPI1 has 4 channels, while SPI2 has 2 */
 	struct omap2_mcspi_dma	*dma_channels;
-        int                     *cs_gpios;
+	int			*cs_gpios;
 };
 
 struct omap2_mcspi_cs {
@@ -234,6 +234,7 @@ static void omap2_mcspi_set_enable(const struct spi_device *spi, int enable)
 	u32 l;
 
 	l = enable ? OMAP2_MCSPI_CHCTRL_EN : 0;
+	// TODO does this break for GPIO CS?
 	mcspi_write_cs_reg(spi, OMAP2_MCSPI_CHCTRL0, l);
 	/* Flash post-writes */
 	mcspi_read_cs_reg(spi, OMAP2_MCSPI_CHCTRL0);
@@ -241,14 +242,17 @@ static void omap2_mcspi_set_enable(const struct spi_device *spi, int enable)
 
 static void omap2_mcspi_force_cs(struct spi_device *spi, int cs_active)
 {
+	u32 l;
+
 	struct omap2_mcspi* mcspi = spi_master_get_devdata(spi->master);
-	if (mcspi->cs_gpios) {
+	/* allow GPIOs as chip select if defined */
+	if (mcspi->cs_gpios && mcspi->cs_gpios[spi->chip_select]) {
 		int gpio = mcspi->cs_gpios[spi->chip_select];
-		gpio_set_value(gpio, cs_active);
+		gpio_set_value(gpio, !cs_active); /* low active */
 	}
 
 	// TXS times out unless we force the CHCONF reg as well
-	u32 l = mcspi_cached_chconf0(spi);
+	l = mcspi_cached_chconf0(spi);
 	MOD_REG_BIT(l, OMAP2_MCSPI_CHCONF_FORCE, cs_active);
 	mcspi_write_chconf0(spi, l);
 }
@@ -1176,7 +1180,7 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 	case 2:
 		rxdma_id = spi2_rxdma_id;
 		txdma_id = spi2_txdma_id;
-		num_chipselect = 2;
+		num_chipselect = 4;
 		break;
 
 #if defined(CONFIG_ARCH_OMAP2430) || defined(CONFIG_ARCH_OMAP3) \
