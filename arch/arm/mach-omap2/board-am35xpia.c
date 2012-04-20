@@ -600,6 +600,58 @@ static inline void __init pia35x_wlan_init(void) { return; }
 static inline void __init pia35x_bt_init(void) { return; }
 #endif /* CONFIG_WL1271_SDIO */
 
+/* RFID */
+#include <plat/mcspi.h>
+#include <linux/spi/spi.h>
+
+#define GPIO_RFID_IRQ    14
+#define GPIO_RFID_POWER  18
+#define GPIO_RFID_SPI_CS 174
+
+static struct omap2_mcspi_device_config pia35x_rfid_cfg = {
+	.turbo_mode       = 0,
+	.single_channel   = 1,
+};
+
+static struct spi_board_info  __initdata pia35x_spi_rfid_info[] = {
+	{
+		.modalias        = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 0,
+		.max_speed_hz    = 1000000, /* 1MHz */
+		.controller_data = &pia35x_rfid_cfg,
+	},
+};
+static struct gpio pia35x_rfid_gpios[] = {
+	{ GPIO_RFID_IRQ,    GPIOF_DIR_IN, "rfid.irq"   },
+	{ GPIO_RFID_POWER,  GPIOF_DIR_OUT | GPIOF_INIT_LOW, "rfid.power" },
+	{ GPIO_RFID_SPI_CS, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "motorX.nen" },
+};
+
+static void __init pia35x_rfid_init(void)
+{
+	int i;
+	unsigned gpio;
+	if (0 != gpio_request_array(pia35x_rfid_gpios,
+			ARRAY_SIZE(pia35x_rfid_gpios))) {
+		pr_warning("pia35x_init: RFID GPIO request failed\n");
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_rfid_gpios); ++i) {
+		gpio = pia35x_rfid_gpios[i].gpio;
+		gpio_export(gpio, false);
+		omap_mux_init_gpio(gpio,
+			OMAP_MUX_MODE4 |
+			((pia35x_rfid_gpios[i].flags & GPIOF_DIR_IN) ?
+				OMAP_PIN_INPUT_PULLDOWN : OMAP_PIN_OUTPUT));
+		gpio_export(gpio, false);
+	}
+
+	spi_register_board_info(pia35x_spi_rfid_info,
+			ARRAY_SIZE(pia35x_spi_rfid_info));
+}
+
 #if defined(CONFIG_AD799X) || defined(CONFIG_AD799X_MODULE)
 #include "../../../drivers/staging/iio/adc/ad799x.h"
 static struct ad799x_platform_data pia35x_ad799x_info = {
@@ -1691,6 +1743,7 @@ static int __init pia35x_expansion_init(void)
 		pia35x_wlan_init();
 		pia35x_bt_init();
 		pia35x_ad799x_init();
+		pia35x_rfid_init();
 		ret++;
 	} else if (0 == strcmp(expansionboard_name, "pia_motorcontrol")) {
 		pia35x_motorcontrol_init();
