@@ -321,8 +321,7 @@ static void txstate(struct musb *musb, struct musb_request *req)
 				((request->dma + request->actual) & 0x3) &&
 				(musb->hwvers >= MUSB_HWVERS_1800)) {
 
-				request_size = min_t(size_t,
-					max_ep_writesize(musb, musb_ep),
+				request_size = min_t(size_t, musb_ep->packet_sz,
 					request->length - request->actual);
 
 				musb_ep->dma->desired_mode = 0;
@@ -2075,7 +2074,7 @@ __acquires(musb->lock)
 	/* Normal reset, as B-Device;
 	 * or else after HNP, as A-Device
 	 */
-	if (devctl & MUSB_DEVCTL_BDEVICE) {
+	if (!(devctl & MUSB_DEVCTL_HM)) {
 		musb->xceiv->state = OTG_STATE_B_PERIPHERAL;
 		musb->g.is_a_peripheral = 0;
 	} else if (is_otg_enabled(musb)) {

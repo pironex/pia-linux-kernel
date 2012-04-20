@@ -984,7 +984,6 @@ void musb_start(struct musb *musb)
 
 	musb->is_active = 0;
 	devctl = musb_readb(regs, MUSB_DEVCTL);
-	devctl &= ~MUSB_DEVCTL_SESSION;
 
 	if (is_otg_enabled(musb)) {
 		/* session started after:
@@ -1607,6 +1606,10 @@ static irqreturn_t generic_interrupt(int irq, void *__hci)
 
 	if (musb->int_usb || musb->int_tx || musb->int_rx)
 		retval = musb_interrupt(musb);
+
+	/* Poll for ID change */
+	if (musb->ops->id_poll)
+		musb->ops->id_poll(musb);
 
 	spin_unlock_irqrestore(&musb->lock, flags);
 
@@ -2486,13 +2489,19 @@ static int musb_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	unsigned long	flags;
 	struct musb	*musb = dev_to_musb(&pdev->dev);
+	u8 devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
+	int ret = 0;
 
 	spin_lock_irqsave(&musb->lock, flags);
 
 	if (is_peripheral_active(musb)) {
-		/* FIXME force disconnect unless we know USB will wake
-		 * the system up quickly enough to respond ...
+		/*
+		 * Don't allow system suspend while peripheral mode
+		 * is actve and cable is connected to host.
 		 */
+		if ((devctl & MUSB_DEVCTL_VBUS) == MUSB_DEVCTL_VBUS
+				&& (devctl & MUSB_DEVCTL_BDEVICE))
+			ret = -EBUSY;
 	} else if (is_host_active(musb)) {
 		/* we know all the children are suspended; sometimes
 		 * they will even be wakeup-enabled.
@@ -2500,7 +2509,7 @@ static int musb_suspend(struct device *dev)
 	}
 
 	spin_unlock_irqrestore(&musb->lock, flags);
-	return 0;
+	return ret;
 }
 
 static int musb_resume_noirq(struct device *dev)
