@@ -341,6 +341,10 @@ static void __init pia35x_display_init(void)
 inline static void __init pia35x_display_init(void) { }
 #endif /* PIA_DVI || PIA_LCD */
 
+/** SPI GPIO CS Hack **/
+extern int *mcspi1_cs_gpios;
+extern int *mcspi2_cs_gpios;
+
 /** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
 #include <plat/mcspi.h>
@@ -348,7 +352,6 @@ inline static void __init pia35x_display_init(void) { }
 
 //#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
 #define SYS_CLKOUT2_PARENT	"cm_96m_fck"
-
 static struct omap2_mcspi_device_config pia35x_motor_x_cfg = {
 	.turbo_mode       = 0,
 	.single_channel   = 1,
