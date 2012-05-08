@@ -122,6 +122,8 @@ static int __init pia35x_gsm_init(void)
 
 #if defined(CONFIG_PANEL_GENERIC_DPI) || \
 		defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
+		defined(CONFIG_PANEL_DEM_480272D) || \
+		defined(CONFIG_PANEL_DEM_480272D_MODULE)
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_DISP, 1);
@@ -275,10 +277,13 @@ static void __init pia35x_touch_init(void)
 static void __init pia35x_display_init(void)
 {
 	int ret;
-	int use_lcd = 0;
+	int use_lcd = 1;
 
-	if (0 == strcmp(lcdboard_name, "pia_lcd"))
-		use_lcd = 1;
+	/* all lcd board names should start with "pia_lcd" */
+	if (0 != strncmp(lcdboard_name, "pia_lcd", 7))
+		use_lcd = 0;
+	else if (0 == strcmp(lcdboard_name, "pia_lcd_dem"))
+		pia35x_lcd_device.driver_name = "dem_480272d_panel";
 
 	if (0 == use_lcd)
 		pia35x_dss_data.default_device = &pia35x_dvi_device;
