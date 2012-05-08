@@ -1776,7 +1776,7 @@ static int __init lcdboard_setup(char *str)
 	if (!str)
 		return -EINVAL;
 
-	strncpy(lcdboard_name, str, 32);
+	strncpy(lcdboard_name, str, 16);
 	printk(KERN_INFO "pia35x LCD: %s\n", lcdboard_name);
 
 	return 0;
