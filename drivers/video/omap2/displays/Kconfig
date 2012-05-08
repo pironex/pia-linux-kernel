@@ -46,6 +46,12 @@ config PANEL_PICODLP
 		A mini-projector used in TI's SDP4430 and EVM boards
 		For more info please visit http://www.dlp.com/projector/
 
+config PANEL_DEM_480272D
+        tristate "Display Elektronik DEM 480272D TMH-PW-N"
+        depends on OMAP2_DSS
+        help
+          LCD Panel used in piA-AM3517 expansion boards
+
 config PANEL_TAAL
         tristate "Taal DSI Panel"
         depends on OMAP2_DSS_DSI
