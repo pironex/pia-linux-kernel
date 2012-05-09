@@ -316,6 +316,20 @@ static inline void omap_init_audio(void) {}
 
 #endif /* defined(CONFIG_SND_SOC) || defined(CONFIG_SND_SOC_MODULE) */
 
+#if defined(CONFIG_TWL4030_SCRIPT) || defined(CONFIG_TWL4030_SCRIPT_MODULE)
+static struct platform_device omap_twl4030_script = {
+	.name	= "twl4030_script",
+	.id	= -1,
+};
+
+static void omap_init_twl4030_script(void)
+{
+	platform_device_register(&omap_twl4030_script);
+}
+#else
+static inline void omap_init_twl4030_script(void) {}
+#endif
+
 #if defined(CONFIG_SPI_OMAP24XX) || defined(CONFIG_SPI_OMAP24XX_MODULE)
 
 #include <plat/mcspi.h>
@@ -335,8 +349,11 @@ static inline void omap_init_audio(void) {}
 #define TI814X_MCSPI3_BASE		0x481A2100
 #define TI814X_MCSPI4_BASE		0x481A4100
 
+/* HACK CS GPIOs */
+int mcspi1_cs_gpios[4];
 static struct omap2_mcspi_platform_config omap2_mcspi1_config = {
 	.num_cs		= 4,
+	.cs_gpios	= mcspi1_cs_gpios,
 };
 
 static struct resource omap2_mcspi1_resources[] = {
@@ -357,8 +374,11 @@ static struct platform_device omap2_mcspi1 = {
 	},
 };
 
+/* HACK CS GPIOs */
+int mcspi2_cs_gpios[4];
 static struct omap2_mcspi_platform_config omap2_mcspi2_config = {
-	.num_cs		= 2,
+	.num_cs		= 4,
+	.cs_gpios	= mcspi2_cs_gpios,
 };
 
 static struct resource omap2_mcspi2_resources[] = {
@@ -2010,6 +2030,7 @@ static int __init omap2_init_devices(void)
 	omap_init_sham();
 	omap_init_aes();
 	omap_init_vout();
+	omap_init_twl4030_script();
 #ifdef CONFIG_ARCH_TI81XX
 	ti81xx_ethernet_init();
 	ti816x_init_pcie();
