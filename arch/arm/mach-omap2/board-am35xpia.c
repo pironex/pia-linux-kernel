@@ -357,8 +357,8 @@ inline static void __init pia35x_display_init(void) { }
 #endif /* PIA_DVI || PIA_LCD */
 
 /** SPI GPIO CS Hack **/
-extern int *mcspi1_cs_gpios;
-extern int *mcspi2_cs_gpios;
+//int mcspi1_cs_gpios[4];
+int mcspi2_cs_gpios[4];
 
 /** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
@@ -845,7 +845,7 @@ static inline void __init pia35x_io_init(void) {
 #include <linux/serial_max3100.h>
 
 #define EMS_IO_CAN_DEV(bus, cs, irqgpio, id) \
-{	.modalias      = "mcp251x", \
+{	.modalias      = "mcp2515", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
 	.max_speed_hz  = 5E6, \
@@ -895,7 +895,7 @@ static struct spi_board_info pia35x_ems_io_spi_info[] __initdata = {
 	EMS_IO_485_DEV(1, 1, 135, 0),
 	EMS_IO_485_DEV(1, 3, 136, 1),
 	EMS_IO_485_DEV(2, 1, 137, 2),
-	EMS_IO_485_DEV(2, -1, 138, 3),
+	EMS_IO_485_DEV(2, 2, 138, 3),
 };
 
 enum {
@@ -2003,7 +2003,7 @@ static int __init pia35x_expansion_init(void)
 	} else if (0 == strcmp(expansionboard_name, "pia_io")) {
 		pia35x_ioexp_init();
 		ret++;
-	} else if (0 == strcmp(expansionboard_name, "pia_ems")) {
+	} else if (0 == strcmp(expansionboard_name, "pia_ems_io")) {
 		pia35x_ems_io_init();
 		ret++;
 	}

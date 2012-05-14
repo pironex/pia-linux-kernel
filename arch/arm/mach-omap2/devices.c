@@ -350,10 +350,10 @@ static inline void omap_init_twl4030_script(void) {}
 #define TI814X_MCSPI4_BASE		0x481A4100
 
 /* HACK CS GPIOs */
-int mcspi1_cs_gpios[4];
+//extern int mcspi1_cs_gpios[4];
 static struct omap2_mcspi_platform_config omap2_mcspi1_config = {
 	.num_cs		= 4,
-	.cs_gpios	= mcspi1_cs_gpios,
+	//.cs_gpios	= mcspi1_cs_gpios,
 };
 
 static struct resource omap2_mcspi1_resources[] = {
@@ -375,7 +375,7 @@ static struct platform_device omap2_mcspi1 = {
 };
 
 /* HACK CS GPIOs */
-int mcspi2_cs_gpios[4];
+extern int mcspi2_cs_gpios[4];
 static struct omap2_mcspi_platform_config omap2_mcspi2_config = {
 	.num_cs		= 4,
 	.cs_gpios	= mcspi2_cs_gpios,
