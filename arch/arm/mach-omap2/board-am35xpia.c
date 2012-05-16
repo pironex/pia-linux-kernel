@@ -848,9 +848,10 @@ static inline void __init pia35x_io_init(void) {
 {	.modalias      = "mcp2515", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 5E6, \
+	.max_speed_hz  = 10E6, \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
+	.controller_data = &ems_io_mcp2515_cfg[id], \
 	.platform_data = &ems_io_mcp2515_data[id], \
 }
 #define EMS_IO_485_DEV(bus, cs, irqgpio, id) \
@@ -858,9 +859,10 @@ static inline void __init pia35x_io_init(void) {
 	.modalias      = "max3100", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 5E6, \
+	.max_speed_hz  = 4E6, /* DS min 238ns period */ \
 	.mode          = SPI_MODE_0, \
-	.irq           = irqgpio, \
+	.irq           = OMAP_GPIO_IRQ(irqgpio), \
+	.controller_data = &ems_io_max3140_cfg[id], \
 	.platform_data = &ems_io_max3140_data[id], \
 }
 #define EMS_IO_GPIO_DEV(ad, irqgpio, id) \
@@ -888,7 +890,18 @@ static struct plat_max3100 ems_io_max3140_data[4] = {
 };
 
 /* 3 CAN + 4 RS485 on SPI busses 1+2 */
-static struct spi_board_info pia35x_ems_io_spi_info[] __initdata = {
+static struct omap2_mcspi_device_config ems_io_mcp2515_cfg[] = {
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+};
+static struct omap2_mcspi_device_config ems_io_max3140_cfg[] = {
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+	{ .turbo_mode	= 0, .single_channel	= 1 },
+};
+static struct spi_board_info pia35x_ems_io_spi_info[] = {
 	EMS_IO_CAN_DEV(1, 0, 132, 0),
 	EMS_IO_CAN_DEV(1, 2, 133, 1),
 	EMS_IO_CAN_DEV(2, 0, 134, 2),
@@ -1067,6 +1080,9 @@ static void __init pia35x_ems_io_init(void) {
 	mcspi2_cs_gpios[1] = GPIO_EMS_IO_SPI2_CS1;
 	mcspi2_cs_gpios[2] = GPIO_EMS_IO_SPI2_CS2;
 	mcspi2_cs_gpios[3] = 0;
+
+	for (i = 132; i <= 138; ++i)
+		set_irq_type(OMAP_GPIO_IRQ(i), IRQ_TYPE_EDGE_FALLING);
 
 	/* SPI */
 	spi_register_board_info(pia35x_ems_io_spi_info,
