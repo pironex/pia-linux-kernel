@@ -21,6 +21,9 @@
  *                       called on suspend and resume to activate it.
  * @poll_time:           poll time for CTS signal in ms, 0 disables (so no hw
  *                       flow ctrl is possible but you have less CPU usage)
+ * @invert_rts           datasheet schematic for MAX3140 is wrong, as it
+ *                       it enables the driver when RTS is OFF and the other
+ *                       way around. Set this to 1 to invert the RTS logic.
  *
  * You should use this structure in your machine description to specify
  * how the MAX3100 is connected. Example:
@@ -29,6 +32,7 @@
  *  .loopback = 0,
  *  .crystal = 0,
  *  .poll_time = 100,
+ *  .inverrts = 0,
  * };
  *
  * static struct spi_board_info spi_board_info[] = {
@@ -47,6 +51,7 @@ struct plat_max3100 {
 	int crystal;
 	void (*max3100_hw_suspend) (int suspend);
 	int poll_time;
+	int invert_rts;
 };
 
 #endif

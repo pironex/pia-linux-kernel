@@ -117,6 +117,8 @@ struct max3100_port {
 	int minor;		/* minor number */
 	int crystal;		/* 1 if 3.6864Mhz crystal 0 for 1.8432 */
 	int loopback;		/* 1 if we are in loopback mode */
+	int invert_rts;		/* 1 if RTS output logic is inverted */
+	int rts_sleep;		/* wait time for rts release */
 
 	/* for handling irqs: need workqueue since we do spi_sync */
 	struct workqueue_struct *workqueue;
@@ -279,6 +281,7 @@ static void max3100_work(struct work_struct *w)
 		if (cconf)
 			max3100_sr(s, MAX3100_WC | conf, &rx);
 		if (crts) {
+			// FIXME this only works for inverted RTS?
 			max3100_sr(s, MAX3100_WD | MAX3100_TE |
 				   (s->rts ? MAX3100_RTS : 0), &rx);
 			rxchars += max3100_handlerx(s, rx);
@@ -302,9 +305,22 @@ static void max3100_work(struct work_struct *w)
 			}
 			if (tx != 0xffff) {
 				max3100_calc_parity(s, &tx);
-				tx |= MAX3100_WD | (s->rts ? MAX3100_RTS : 0);
-				max3100_sr(s, tx, &rx);
-				rxchars += max3100_handlerx(s, rx);
+				if (s->invert_rts) {
+					// HACK force rts
+					tx |= MAX3100_WD | 0;
+					max3100_sr(s, tx, &rx);
+					rxchars += max3100_handlerx(s, rx);
+					udelay(s->rts_sleep);
+					// disable rts after send
+					max3100_sr(s, MAX3100_WD | MAX3100_TE |
+					   MAX3100_RTS, &rx);
+					//rxchars += max3100_handlerx(s, rx);
+				} else {
+					tx |= MAX3100_WD |
+						(s->rts ? MAX3100_RTS : 0);
+					max3100_sr(s, tx, &rx);
+					rxchars += max3100_handlerx(s, rx);
+				}
 			}
 		}
 
@@ -407,7 +423,7 @@ static void max3100_set_mctrl(struct uart_port *port, unsigned int mctrl)
 					      port);
 	int rts;
 
-	dev_dbg(&s->spi->dev, "%s\n", __func__);
+	dev_err(&s->spi->dev, "%s\n", __func__);
 
 	rts = (mctrl & TIOCM_RTS) > 0;
 
@@ -482,6 +498,7 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 	default:
 		baud = s->baud;
 	}
+	s->rts_sleep = 1000000*10/baud;
 	tty_termios_encode_baud_rate(termios, baud, baud);
 	s->baud = baud;
 	param_mask |= MAX3100_BAUD;
@@ -589,7 +606,7 @@ static int max3100_startup(struct uart_port *port)
 
 	dev_dbg(&s->spi->dev, "%s\n", __func__);
 
-	s->conf = MAX3100_RM;
+	s->conf = MAX3100_RM | MAX3100_TM;
 	s->baud = s->crystal ? 230400 : 115200;
 	s->rx_enabled = 1;
 
@@ -780,6 +797,7 @@ static int __devinit max3100_probe(struct spi_device *spi)
 	pdata = spi->dev.platform_data;
 	max3100s[i]->crystal = pdata->crystal;
 	max3100s[i]->loopback = pdata->loopback;
+	max3100s[i]->invert_rts = pdata->invert_rts;
 	max3100s[i]->poll_time = pdata->poll_time * HZ / 1000;
 	if (pdata->poll_time > 0 && max3100s[i]->poll_time == 0)
 		max3100s[i]->poll_time = 1;
