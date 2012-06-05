@@ -141,10 +141,12 @@ static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 	gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
+static const char pia35x_sharp_name[] = "sharp_lq_panel";
+static const char pia35x_dem_name[] = "dem_480272d_panel";
 static struct omap_dss_device pia35x_lcd_device = {
 	.type               = OMAP_DISPLAY_TYPE_DPI,
 	.name               = "lcd",
-	.driver_name        = "sharp_lq_panel",
+	.driver_name        = pia35x_sharp_name,
 	.phy.dpi.data_lines = 24,
 	.reset_gpio         = -EINVAL,
 	.platform_enable    = pia35x_lcd_enable,
@@ -296,8 +298,10 @@ static void __init pia35x_display_init(void)
 	/* all lcd board names should start with "pia_lcd" */
 	if (0 != strncmp(lcdboard_name, "pia_lcd", 7))
 		use_lcd = 0;
-	else if (0 == strcmp(lcdboard_name, "pia_lcd_dem"))
-		pia35x_lcd_device.driver_name = "dem_480272d_panel";
+	else if (0 == strcmp(lcdboard_name, "pia_lcd_dem")) {
+		pia35x_lcd_device.driver_name = pia35x_dem_name;
+		pia35x_i2c3_tsc2007[0].addr = 0x48;
+	}
 
 	if (0 == use_lcd)
 		pia35x_dss_data.default_device = &pia35x_dvi_device;
