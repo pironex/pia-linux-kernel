@@ -43,11 +43,11 @@ static struct omap_video_timings dem_timings = {
 #else
 	.hsw		= 3, // reduces flickering
 	.hfp		= 8,
-	.hbp		= 43,
+	.hbp		= 40,
 
 	.vsw		= 11, // reduce flickering
 	.vfp		= 4,
-	.vbp		= 12,
+	.vbp		= 1,
 #endif
 };
 
