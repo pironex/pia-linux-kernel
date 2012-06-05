@@ -282,8 +282,10 @@ static void __init pia35x_display_init(void)
 	/* all lcd board names should start with "pia_lcd" */
 	if (0 != strncmp(lcdboard_name, "pia_lcd", 7))
 		use_lcd = 0;
-	else if (0 == strcmp(lcdboard_name, "pia_lcd_dem"))
-		pia35x_lcd_device.driver_name = "dem_480272d_panel";
+	else if (0 == strcmp(lcdboard_name, "pia_lcd_dem")) {
+		pia35x_lcd_device.driver_name = pia35x_dem_name;
+		pia35x_i2c3_tsc2007[0].addr = 0x48;
+	}
 
 	if (0 == use_lcd)
 		pia35x_dss_data.default_device = &pia35x_dvi_device;
