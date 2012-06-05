@@ -146,7 +146,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 
 	/*{"Ext Spk", NULL, "LLOUT"},
 	{"Ext Spk", NULL, "RLOUT"},*/
-	{"Mic In", NULL, "IN3_R"},
+	{"DMic", NULL, "IN3_R"},
 	/*{"DMic Rate 64", NULL, "Mic Bias"},*/
 	{"Mic Bias 2V", NULL, "Mic Bias"},
 };
@@ -176,7 +176,8 @@ static int am35xpia_aic32x4_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_enable_pin(codec, "Headphone Jack");
 	//snd_soc_dapm_enable_pin(codec, "LOL");
 	//snd_soc_dapm_enable_pin(codec, "LOR");
-	snd_soc_dapm_enable_pin(codec, "IN3_R");
+	//snd_soc_dapm_enable_pin(codec, "IN3_R");
+	snd_soc_dapm_enable_pin(codec, "DMic");
 	snd_soc_dapm_enable_pin(codec, "Mic Bias");
 	pr_info("%s: pins & routing enabled\n", __func__);
 
