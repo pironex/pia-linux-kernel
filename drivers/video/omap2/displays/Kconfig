@@ -26,6 +26,12 @@ config PANEL_DEM_480272D
         help
           LCD Panel used in piA-AM3517 expansion boards
 
+config PANEL_DISPLAYTECH_DT028A
+        tristate "Displaytech DT028A-TFT"
+        depends on OMAP2_DSS
+        help
+          2.8 inch LCD Panel used in piA-AM3517 expansion boards
+
 config PANEL_TAAL
         tristate "Taal DSI Panel"
         depends on OMAP2_DSS_DSI
