@@ -258,6 +258,8 @@ static int max3100_handlerx(struct max3100_port *s, u16 rx)
 	return ret;
 }
 
+#define MAX3100_SETRTS(r) \
+	(r ? (s->invert_rts ? 0 : MAX3100_RTS) : (s->invert_rts ? MAX3100_RTS : 0))
 static void max3100_work(struct work_struct *w)
 {
 	struct max3100_port *s = container_of(w, struct max3100_port, work);
@@ -281,9 +283,9 @@ static void max3100_work(struct work_struct *w)
 		if (cconf)
 			max3100_sr(s, MAX3100_WC | conf, &rx);
 		if (crts) {
-			// FIXME this only works for inverted RTS?
-			max3100_sr(s, MAX3100_WD | MAX3100_TE |
-				   (s->rts ? MAX3100_RTS : 0), &rx);
+			max3100_sr(s,
+				MAX3100_WD | MAX3100_TE |
+				MAX3100_SETRTS(s->rts), &rx);
 			rxchars += max3100_handlerx(s, rx);
 		}
 
@@ -305,22 +307,20 @@ static void max3100_work(struct work_struct *w)
 			}
 			if (tx != 0xffff) {
 				max3100_calc_parity(s, &tx);
-				if (s->invert_rts) {
-					// HACK force rts
-					tx |= MAX3100_WD | 0;
-					max3100_sr(s, tx, &rx);
-					rxchars += max3100_handlerx(s, rx);
-					udelay(s->rts_sleep);
-					// disable rts after send
-					max3100_sr(s, MAX3100_WD | MAX3100_TE |
-					   MAX3100_RTS, &rx);
-					//rxchars += max3100_handlerx(s, rx);
-				} else {
-					tx |= MAX3100_WD |
-						(s->rts ? MAX3100_RTS : 0);
-					max3100_sr(s, tx, &rx);
-					rxchars += max3100_handlerx(s, rx);
-				}
+				tx |= MAX3100_WD | MAX3100_SETRTS(s->rts);
+				max3100_sr(s, tx, &rx);
+				rxchars += max3100_handlerx(s, rx);
+				// HACK for half duplex mode
+				// wait until all data sent
+				udelay(s->rts_sleep);
+				// disable rts after send
+				max3100_sr(s, MAX3100_WD | MAX3100_TE |
+						MAX3100_SETRTS(0), &rx);
+				//rxchars += max3100_handlerx(s, rx);
+			} else {
+				// always disable RTS if no transmission
+				max3100_sr(s, MAX3100_WD | MAX3100_TE |
+						MAX3100_SETRTS(0), &rx);
 			}
 		}
 
@@ -498,6 +498,7 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 	default:
 		baud = s->baud;
 	}
+	// 10 bits per byte
 	s->rts_sleep = 1000000*10/baud;
 	tty_termios_encode_baud_rate(termios, baud, baud);
 	s->baud = baud;
