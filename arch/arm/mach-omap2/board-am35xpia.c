@@ -1077,6 +1077,12 @@ static void __init pia35x_ems_io_init(void) {
 	mcspi2_cs_gpios[2] = GPIO_EMS_IO_SPI2_CS2;
 	mcspi2_cs_gpios[3] = 0;
 
+	/* prototype boards used inverted rts logic */
+	if (0 == strcmp(expansionboard_name, "pia_ems_io")) {
+		for (i = 0; i < 4; ++i)
+			ems_io_max3140_data[i].invert_rts = 1;
+	}
+
 	for (i = 132; i <= 138; ++i)
 		set_irq_type(OMAP_GPIO_IRQ(i), IRQ_TYPE_EDGE_FALLING);
 
@@ -1086,7 +1092,7 @@ static void __init pia35x_ems_io_init(void) {
 }
 #else
 static inline void __init pia35x_ems_io_init(void) {
-	pr_error("pia35x: piA-EMS_IO driver PCA9672|MCP2515|MAX3140 missing\n");
+	pr_err("pia35x: piA-EMS_IO driver PCA9672|MCP2515|MAX3140 missing\n");
 }
 #endif
 
