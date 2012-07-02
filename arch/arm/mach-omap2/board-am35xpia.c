@@ -946,10 +946,10 @@ static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
 };
 
 static struct plat_max3100 ems_io_max3140_data[4] = {
-	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 0 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 0 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 0 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 0 },
 };
 
 /* 3 CAN + 4 RS485 on SPI busses 1+2 */
@@ -2088,7 +2088,7 @@ static int __init pia35x_expansion_init(void)
 	} else if (0 == strcmp(expansionboard_name, "pia_io")) {
 		pia35x_ioexp_init();
 		ret++;
-	} else if (0 == strcmp(expansionboard_name, "pia_ems_io")) {
+	} else if (0 == strncmp(expansionboard_name, "pia_ems_io", 10)) {
 		pia35x_ems_io_init();
 		ret++;
 	}
