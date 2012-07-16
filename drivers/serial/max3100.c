@@ -316,11 +316,12 @@ static void max3100_work(struct work_struct *w)
 				// disable rts after send
 				max3100_sr(s, MAX3100_WD | MAX3100_TE |
 						MAX3100_SETRTS(0), &rx);
-				//rxchars += max3100_handlerx(s, rx);
+				rxchars += max3100_handlerx(s, rx);
 			} else {
 				// always disable RTS if no transmission
 				max3100_sr(s, MAX3100_WD | MAX3100_TE |
 						MAX3100_SETRTS(0), &rx);
+				rxchars += max3100_handlerx(s, rx);
 			}
 		}
 
@@ -423,7 +424,7 @@ static void max3100_set_mctrl(struct uart_port *port, unsigned int mctrl)
 					      port);
 	int rts;
 
-	dev_err(&s->spi->dev, "%s\n", __func__);
+	dev_dbg(&s->spi->dev, "%s\n", __func__);
 
 	rts = (mctrl & TIOCM_RTS) > 0;
 
