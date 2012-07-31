@@ -307,7 +307,7 @@ static void max3100_work(struct work_struct *w)
 			}
 			if (tx != 0xffff) {
 				max3100_calc_parity(s, &tx);
-				tx |= MAX3100_WD | MAX3100_SETRTS(s->rts);
+				tx |= MAX3100_WD | MAX3100_SETRTS(1);
 				max3100_sr(s, tx, &rx);
 				rxchars += max3100_handlerx(s, rx);
 				// HACK for half duplex mode
@@ -338,8 +338,9 @@ static void max3100_work(struct work_struct *w)
 		  (!uart_circ_empty(xmit) &&
 		   !uart_tx_stopped(&s->port))));
 
-	if (rxchars > 0 && s->port.state->port.tty != NULL)
+	if (rxchars > 0 && s->port.state->port.tty != NULL) {
 		tty_flip_buffer_push(s->port.state->port.tty);
+	}
 }
 
 static irqreturn_t max3100_irq(int irqno, void *dev_id)
