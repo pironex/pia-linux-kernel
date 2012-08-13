@@ -280,8 +280,9 @@ static void max3100_work(struct work_struct *w)
 		crts = s->rts_commit;
 		s->rts_commit = 0;
 		spin_unlock(&s->conf_lock);
-		if (cconf)
+		if (cconf) {
 			max3100_sr(s, MAX3100_WC | conf, &rx);
+		}
 		if (crts) {
 			max3100_sr(s,
 				MAX3100_WD | MAX3100_TE |
@@ -309,19 +310,26 @@ static void max3100_work(struct work_struct *w)
 				max3100_calc_parity(s, &tx);
 				tx |= MAX3100_WD | MAX3100_SETRTS(1);
 				max3100_sr(s, tx, &rx);
+				if (!s->rts)
+					s->rts = 1;
 				rxchars += max3100_handlerx(s, rx);
 				// HACK for half duplex mode
 				// wait until all data sent
 				udelay(s->rts_sleep);
 				// disable rts after send
-				max3100_sr(s, MAX3100_WD | MAX3100_TE |
-						MAX3100_SETRTS(0), &rx);
-				rxchars += max3100_handlerx(s, rx);
+//				max3100_sr(s, MAX3100_WD | MAX3100_TE |
+//						MAX3100_SETRTS(0), &rx);
+//				rxchars += max3100_handlerx(s, rx);
 			} else {
+				if (s->rts) {
+					max3100_sr(s, MAX3100_WD | MAX3100_TE |
+							MAX3100_SETRTS(0), &rx);
+					rxchars += max3100_handlerx(s, rx);
+					s->rts = 0;
+//					s->rts_commit = 1;
+				}
 				// always disable RTS if no transmission
-				max3100_sr(s, MAX3100_WD | MAX3100_TE |
-						MAX3100_SETRTS(0), &rx);
-				rxchars += max3100_handlerx(s, rx);
+//				dev_err(&s->spi->dev, "r0\n");
 			}
 		}
 
@@ -337,7 +345,6 @@ static void max3100_work(struct work_struct *w)
 		 ((rx & MAX3100_R) ||
 		  (!uart_circ_empty(xmit) &&
 		   !uart_tx_stopped(&s->port))));
-
 	if (rxchars > 0 && s->port.state->port.tty != NULL) {
 		tty_flip_buffer_push(s->port.state->port.tty);
 	}
@@ -895,7 +902,7 @@ static int max3100_resume(struct spi_device *spi)
 {
 	struct max3100_port *s = dev_get_drvdata(&spi->dev);
 
-	dev_dbg(&s->spi->dev, "%s\n", __func__);
+	dev_err(&s->spi->dev, "%s\n", __func__);
 
 	if (s->max3100_hw_suspend)
 		s->max3100_hw_suspend(0);
