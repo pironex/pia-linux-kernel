@@ -1389,6 +1389,7 @@ static int __devinit omap_nand_probe(struct platform_device *pdev)
 		info->gpmc_irq_fifo = platform_get_irq(pdev, 0);
 		if (info->gpmc_irq_fifo <= 0) {
 			dev_err(&pdev->dev, "error getting fifo irq\n");
+			err = -ENODEV;
 			goto out_release_mem_region;
 		}
 		err = request_irq(info->gpmc_irq_fifo,	omap_nand_irq,
