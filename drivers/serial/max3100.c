@@ -118,7 +118,9 @@ struct max3100_port {
 	int crystal;		/* 1 if 3.6864Mhz crystal 0 for 1.8432 */
 	int loopback;		/* 1 if we are in loopback mode */
 	int invert_rts;		/* 1 if RTS output logic is inverted */
-	int rts_sleep;		/* wait time for rts release */
+	s64 rts_sleep;		/* wait time for rts release */
+	struct timespec prev_ts;
+	struct timespec now_ts;
 
 	/* for handling irqs: need workqueue since we do spi_sync */
 	struct workqueue_struct *workqueue;
@@ -262,11 +264,13 @@ static int max3100_handlerx(struct max3100_port *s, u16 rx)
 	(r ? (s->invert_rts ? 0 : MAX3100_RTS) : (s->invert_rts ? MAX3100_RTS : 0))
 static void max3100_work(struct work_struct *w)
 {
+	struct timespec now;
 	struct max3100_port *s = container_of(w, struct max3100_port, work);
 	int rxchars;
 	u16 tx, rx;
 	int conf, cconf, rts, crts;
 	struct circ_buf *xmit = &s->port.state->xmit;
+	s64 diff_ns;
 
 	dev_dbg(&s->spi->dev, "%s\n", __func__);
 
@@ -310,12 +314,35 @@ static void max3100_work(struct work_struct *w)
 				max3100_calc_parity(s, &tx);
 				tx |= MAX3100_WD | MAX3100_SETRTS(1);
 				max3100_sr(s, tx, &rx);
+
+				s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
+				s->prev_ts.tv_sec = s->now_ts.tv_sec;
+				getrawmonotonic(&now);
+
+				// prev_ts not finished
+				if (timespec_compare(&s->prev_ts, &now) > 0) {
+					// prev byte not yet complete
+					// now becomes prev_ts as base of last byte delay
+					s->now_ts.tv_nsec = s->prev_ts.tv_nsec;
+					s->now_ts.tv_sec = s->prev_ts.tv_sec;
+				} else {
+					s->now_ts.tv_nsec = now.tv_nsec;
+					s->now_ts.tv_sec = now.tv_sec;
+				}
+				// 1 byte delay + rest of previous byte
+				timespec_add_ns(&s->now_ts, s->rts_sleep);
+
 				if (!s->rts)
 					s->rts = 1;
 				rxchars += max3100_handlerx(s, rx);
 				// HACK for half duplex mode
 				// wait until all data sent
-				udelay(s->rts_sleep);
+				if (uart_circ_empty(xmit)) {
+					diff_ns = timespec_to_ns(&s->now_ts) -
+							timespec_to_ns(&now);
+					ndelay(diff_ns);
+				}
+
 				// disable rts after send
 //				max3100_sr(s, MAX3100_WD | MAX3100_TE |
 //						MAX3100_SETRTS(0), &rx);
@@ -454,6 +481,7 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 					      port);
 	int baud = 0;
 	unsigned cflag;
+	int bits_per_byte = 10;
 	u32 param_new, param_mask, parity = 0;
 
 	dev_dbg(&s->spi->dev, "%s\n", __func__);
@@ -507,8 +535,6 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 	default:
 		baud = s->baud;
 	}
-	// 10 bits per byte
-	s->rts_sleep = 1000000*10/baud;
 	tty_termios_encode_baud_rate(termios, baud, baud);
 	s->baud = baud;
 	param_mask |= MAX3100_BAUD;
@@ -520,18 +546,22 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 		param_new |= MAX3100_L;
 		parity |= MAX3100_7BIT;
 		cflag = (cflag & ~CSIZE) | CS7;
+		bits_per_byte--;
 	}
 	param_mask |= MAX3100_L;
 
-	if (cflag & CSTOPB)
+	if (cflag & CSTOPB) {
 		param_new |= MAX3100_ST;
-	else
+		bits_per_byte++;
+	} else {
 		param_new &= ~MAX3100_ST;
+	}
 	param_mask |= MAX3100_ST;
 
 	if (cflag & PARENB) {
 		param_new |= MAX3100_PE;
 		parity |= MAX3100_PARITY_ON;
+		bits_per_byte++;
 	} else {
 		param_new &= ~MAX3100_PE;
 		parity &= ~MAX3100_PARITY_ON;
@@ -542,6 +572,10 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 		parity |= MAX3100_PARITY_ODD;
 	else
 		parity &= ~MAX3100_PARITY_ODD;
+
+	// pause after last tx byte depending on bits per byte
+	s->rts_sleep = 1000000*bits_per_byte/baud*1000;
+	dev_notice(&s->spi->dev, "Sleep setup for %d bits/byte\n", bits_per_byte);
 
 	/* mask termios capabilities we don't support */
 	cflag &= ~CMSPAR;
