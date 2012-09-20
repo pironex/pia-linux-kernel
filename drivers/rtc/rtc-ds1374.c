@@ -117,6 +117,10 @@ static int ds1374_check_rtc_status(struct i2c_client *client)
 {
 	int ret = 0;
 	int control, stat;
+	int *keep_wace = 0;
+
+	if (client->dev.platform_data)
+		keep_wace = (int *)client->dev.platform_data;
 
 	stat = i2c_smbus_read_byte_data(client, DS1374_REG_SR);
 	if (stat < 0)
@@ -142,7 +146,11 @@ static int ds1374_check_rtc_status(struct i2c_client *client)
 	if (control < 0)
 		return control;
 
-	control &= ~(DS1374_REG_CR_WACE | DS1374_REG_CR_AIE);
+	if (keep_wace && *keep_wace) {
+		control &= ~(DS1374_REG_CR_AIE);
+	} else {
+		control &= ~(DS1374_REG_CR_WACE | DS1374_REG_CR_AIE);
+	}
 	return i2c_smbus_write_byte_data(client, DS1374_REG_CR, control);
 }
 
