@@ -1931,6 +1931,8 @@ static struct at24_platform_data eeprom_piax_data = {
 };
 #endif /* CONFIG_EEPROM_AT24 */
 
+static int ds1374_keep_wace = 1;
+
 static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 #if defined(CONFIG_REGULATOR_TPS6507X)
 	/* power regulator TPS650732 */
@@ -1951,6 +1953,7 @@ static struct i2c_board_info __initdata pia35x_i2c1_info[] = {
 	/* RTC + WDOG */
 	{
 		I2C_BOARD_INFO("ds1374", 0x68),
+		.platform_data = &ds1374_keep_wace,
 	},
 
 };
