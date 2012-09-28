@@ -96,10 +96,13 @@
 struct max3100_port {
 	struct uart_port port;
 	struct spi_device *spi;
+	spinlock_t spi_lock;
 	u16 spi_rxbuf;
 	u16 spi_txbuf;
 	struct spi_message *spi_msg;
 	struct spi_transfer *spi_tran;
+	struct spi_message *spi_rts_msg;
+	//struct spi_message *spi_rts_tran;
 
 	int cts;	        /* last CTS received for flow ctrl */
 	int tx_empty;		/* last TX empty bit */
@@ -117,6 +120,7 @@ struct max3100_port {
 #define MAX3100_PARITY_ODD 2
 #define MAX3100_7BIT 4
 	int rx_enabled;	        /* if we should rx chars */
+	int rx_count;           /* track number of chars in rx flip buffer */
 
 	int irq;		/* irq assigned to the max3100 */
 
@@ -191,6 +195,7 @@ static void max3100_work(struct work_struct *w);
 
 static void max3100_dowork(struct max3100_port *s)
 {
+	dev_dbg(&s->spi->dev, "%s - %d\n", __func__, s->icnt);
 	if (!s->force_end_work && !work_pending(&s->work) &&
 	    !freezing(current) && !s->suspending) {
 		queue_work(s->workqueue, &s->work);
@@ -209,12 +214,13 @@ static void max3100_dowork(struct max3100_port *s)
 static void max3100_timeout(unsigned long data)
 {
 	struct max3100_port *s = (struct max3100_port *)data;
-	dev_dbg(&s->spi->dev, "%s\n", __func__);
+	int timer_state = -1;
 	if (s->port.state) {
 		max3100_dowork(s);
-		mod_timer(&s->timer, jiffies + s->poll_time);
+		timer_state = mod_timer(&s->timer, jiffies + s->poll_time);
 		//dev_dbg(&s->spi->dev, "poll timeout %d\n", jiffies + s->poll_time);
 	}
+	dev_dbg(&s->spi->dev, "%s - %d\n", __func__, timer_state);
 }
 
 static int max3100_sr(struct max3100_port *s, u16 tx, u16 *rx)
@@ -282,7 +288,7 @@ static int max3100_handlerx(struct max3100_port *s, u16 rx)
 		s->cts = cts;
 		uart_handle_cts_change(&s->port, cts ? TIOCM_CTS : 0);
 	}
-	s->tx_empty = (*rx & MAX3100_T) > 0;
+	s->tx_empty = (rx & MAX3100_T) > 0;
 
 	return ret;
 }
@@ -290,13 +296,22 @@ static int max3100_handlerx(struct max3100_port *s, u16 rx)
 static void cb_rts_complete(void *context)
 {
 	struct max3100_port *s = context;
-	u16 *erx = &s->spi_rxbuf;
+	u16 *erx;
+	const u16 *etx;
 	u16 rx;
-	dev_dbg(&s->spi->dev, "RTS off: %d, %04x %04x\n", s->spi_msg->status,
-	        s->spi_txbuf, s->spi_rxbuf);
+	struct spi_message *msg = s->spi_rts_msg;
+	struct spi_transfer *tran = list_first_entry(&s->spi_rts_msg->transfers,
+				struct spi_transfer, transfer_list);
+	erx = tran->rx_buf;
+	etx = tran->tx_buf;
+	dev_dbg(&s->spi->dev, "RTS off: %d, %04x %04x\n", msg->status,
+	        *etx, *erx);
 	//spi_transfer_del(&s->spi_tran);
 	//spi_message_free(s->spi_msg);
 	rx = be16_to_cpu(*erx);
+	kfree(tran->rx_buf);
+	kfree(tran->tx_buf);
+	spi_message_free(msg);
 
 	// do nothing here
 }
@@ -305,53 +320,56 @@ static void cb_rts_complete(void *context)
 	(r ? (s->invert_rts ? 0 : MAX3100_RTS) : (s->invert_rts ? MAX3100_RTS : 0))
 static enum hrtimer_restart rts_timer_handler(struct hrtimer *handle)
 {
+	unsigned long flags;
 	struct max3100_port *s =
 			container_of(handle, struct max3100_port, rts_timer);
 	//u16 rx;
 	//int cnt;
-	u16 tx = MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1);
+	u16 tx;
+	u16 *etx;
 
-	///struct spi_message *message = spi_message_alloc(1, GFP_ATOMIC);
-			//kmalloc(sizeof(struct spi_message), GFP_ATOMIC);
+	struct spi_message *msg = spi_message_alloc(1, GFP_ATOMIC);
+		//kmalloc(sizeof(struct spi_message), GFP_ATOMIC);
 	//u16 etx, erx;
 	//u16 *ctx;
 	int status;
-	///struct spi_transfer *tran = list_first_entry(&message->transfers,
-	///		struct spi_transfer, transfer_list);
-	///s->spi_msg = message;
-	////s->spi_tran = tran;
+	struct spi_transfer *tran = list_first_entry(&msg->transfers,
+			struct spi_transfer, transfer_list);
+	s->spi_rts_msg = msg;
+	//s->spi_tran = tran;
 	//&s->spi_tran;
-	struct spi_message *msg = s->spi_msg;
-	struct spi_transfer *tran = s->spi_tran;
+	// struct spi_message *msg = s->spi_msg;
+	//OLD struct spi_transfer *tran = s->spi_tran;
 	///tran->tx_buf = &s->spi_txbuf;
 	///tran->rx_buf = &s->spi_rxbuf;
-	///tran->len = 2;
-
-//	{
-//		.tx_buf = s->spi_txbuf,
-//		.rx_buf = s->spi_rxbuf,
-//		.len = 2,
-//	};
-	//etx = cpu_to_be16(tx);
-	s->spi_txbuf = cpu_to_be16(tx); // linked to tran->txbuf
+	dev_dbg(&s->spi->dev, "RTS timeout\n");
+	tran->tx_buf = kmalloc(2, GFP_ATOMIC);
+	tran->rx_buf = kmalloc(2, GFP_ATOMIC);
+	tran->len = 2;
+	etx = (u16 *)tran->tx_buf;
+	tx = MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1);
+	*etx = cpu_to_be16(tx);
 
 	///dev_dbg(&s->spi->dev, "tx: %04x\n", s->spi_txbuf);
 	//s->spi_txbuf[0] = ((u8*)&etx)[0];
 	//s->spi_txbuf[1] = ((u8*)&etx)[1];
 	//spi_message_init(&message);
 
-	//spi_message_init(message);
 	msg->complete = cb_rts_complete;
-	///msg->context = s;
+	msg->context = s;
 
 	//spi_message_add_tail(tran, message);
-	status = spi_async_locked(s->spi, msg);
+	spin_lock_irqsave(&s->spi_lock, flags);
+	status = spi_async(s->spi, msg);
+	spin_unlock_irqrestore(&s->spi_lock, flags);
 	if (status) {
 		dev_warn(&s->spi->dev, "error while calling spi_async\n");
 
 		return HRTIMER_RESTART;
 	}
-//	*rx = be16_to_cpu(erx);
+	dev_dbg(&s->spi->dev, "RTS timeout done\n");
+
+	//	*rx = be16_to_cpu(erx);
 //	s->tx_empty = (*rx & MAX3100_T) > 0;
 //	//dev_dbg(&s->spi->dev, "%04x - %04x\n", tx, *rx);
 //
@@ -459,7 +477,7 @@ static void max3100_work(struct work_struct *w)
 					//ndelay(diff_ns);
 					hrtimer_start(&s->rts_timer, ktime_set(0, diff_ns),
 					              HRTIMER_MODE_REL);
-					//dev_dbg(&s->spi->dev, "ns:%lu\n", diff_ns);
+					dev_dbg(&s->spi->dev, "ns_old:%lu\n", diff_ns);
 //					tx = MAX3100_WD | MAX3100_TE |
 //							MAX3100_SETRTS(1);
 //					max3100_sr(s, tx, &rx);
@@ -516,8 +534,9 @@ static void cb_tx_complete(void *context)
 	struct circ_buf *xmit = &s->port.state->xmit;
 	u16 rx = be16_to_cpu(s->spi_rxbuf);
 
-	dev_dbg(&s->spi->dev, "tx_comp: %d, %04x %04x\n", s->spi_msg->status,
-		        s->spi_txbuf, s->spi_rxbuf);
+	dev_dbg(&s->spi->dev, "%s: %d, %04x %04x\n", __func__,
+	        s->spi_msg->status,
+	        s->spi_txbuf, s->spi_rxbuf);
 	getrawmonotonic(&now);
 
 	s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
@@ -545,7 +564,7 @@ static void cb_tx_complete(void *context)
 		//ndelay(diff_ns);
 		hrtimer_start(&s->rts_timer, ktime_set(0, diff_ns),
 		              HRTIMER_MODE_REL);
-		//dev_dbg(&s->spi->dev, "ns:%lu\n", diff_ns);
+		dev_dbg(&s->spi->dev, "ns:%lu\n", diff_ns);
 //					tx = MAX3100_WD | MAX3100_TE |
 //							MAX3100_SETRTS(1);
 //					max3100_sr(s, tx, &rx);
@@ -562,7 +581,11 @@ static void cb_tx_complete(void *context)
 
 static int max3100_sr_async(struct max3100_port *s, u16 tx,
                             void (*complete)(void *context));
-static void cb_rx_complete(void *context)
+
+/* callback for READ_DATA reply
+ * process according to R/T flags
+ */
+static void max3100_cb_check(void *context)
 {
 	struct max3100_port *s = context;
 	struct circ_buf *xmit = &s->port.state->xmit;
@@ -575,45 +598,57 @@ static void cb_rx_complete(void *context)
 
 		return;
 	}
-	dev_dbg(&s->spi->dev, "rx_comp: %d, %04x %04x\n", s->spi_msg->status,
-	        s->spi_txbuf, s->spi_rxbuf);
+	dev_dbg(&s->spi->dev, "%s: %d, %04x %04x %d irq:%d\n", __func__, s->spi_msg->status,
+	        s->spi_txbuf, s->spi_rxbuf, s->rx_count, s->port.irqflags);
 
 	rx = be16_to_cpu(*erx);
-	rxchars = max3100_handlerx(s, rx);
-	if (rxchars > 0 && s->port.state->port.tty != NULL) {
-		tty_flip_buffer_push(s->port.state->port.tty);
-		//if (rxchars > 5) dev_dbg(&s->spi->dev, "rx:%d\n", rxchars);
+	if (rx & MAX3100_R) {
+		rxchars = max3100_handlerx(s, rx);
+
+		if (rxchars > 0) {
+			s->rx_count++;
+			// check for more bytes in buffer
+			max3100_sr_async(s, MAX3100_RD, max3100_cb_check);
+		}
+		if (s->rx_count > 16 && s->port.state->port.tty != NULL) {
+			tty_flip_buffer_push(s->port.state->port.tty);
+			s->rx_count = 0;
+		}
+
+	} else {
+		if (s->rx_count > 0 && s->port.state->port.tty != NULL) {
+			tty_flip_buffer_push(s->port.state->port.tty);
+			dev_dbg(&s->spi->dev, "rx:%d\n", s->rx_count);
+			s->rx_count = 0;
+		}
+		if (rx & MAX3100_T) {
+				tx = 0xffff;
+				if (s->port.x_char) {
+					tx = s->port.x_char;
+					s->port.icount.tx++;
+					s->port.x_char = 0;
+				} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
+					tx = xmit->buf[xmit->tail];
+					xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
+					s->port.icount.tx++;
+				}
+				if (tx != 0xffff) {
+					max3100_calc_parity(s, &tx);
+					// force rts off while sending
+					tx |= MAX3100_WD | MAX3100_SETRTS(0);
+					max3100_sr_async(s, tx, cb_tx_complete);
+					// => cb_tx_complete
+				}
+		}
 	}
 
-	if (rx & MAX3100_T) {
-		tx = 0xffff;
-		if (s->port.x_char) {
-			tx = s->port.x_char;
-			s->port.icount.tx++;
-			s->port.x_char = 0;
-		} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
-			tx = xmit->buf[xmit->tail];
-			xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
-			s->port.icount.tx++;
-		}
-		if (tx != 0xffff) {
-			max3100_calc_parity(s, &tx);
-			// force rts off while sending
-			tx |= MAX3100_WD | MAX3100_SETRTS(0);
-			max3100_sr_async(s, tx, cb_tx_complete);
-			// => cb_tx_complete
-		}
-	}
-
-//	if (rxchars > 16 && s->port.state->port.tty != NULL) {
-//		tty_flip_buffer_push(s->port.state->port.tty);
-//		rxchars = 0;
-//	}
 
 #ifdef CHECK
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&s->port);
 #endif
+
+	dev_dbg(&s->spi->dev, "%s: done\n", __func__);
 
 //    while (!s->force_end_work &&
 //	 !freezing(current) &&
@@ -625,38 +660,85 @@ static void cb_rx_complete(void *context)
 static int max3100_sr_async(struct max3100_port *s, u16 tx,
                             void (*complete)(void *context))
 {
+	//DECLARE_COMPLETION_ONSTACK(done);
 	int status;
+	unsigned long flags;
 	struct spi_message *msg = s->spi_msg;
 	//struct spi_transfer *tran = s->spi_tran;
+	spi_message_init(msg);
+	spi_message_add_tail(s->spi_tran, msg);
 
 	s->spi_txbuf = cpu_to_be16(tx); // linked to tran->txbuf
+	s->spi_rxbuf = 0;
+	msg->context = s;
 	msg->complete = complete;
 
-	status = spi_async_locked(s->spi, msg);
+	dev_dbg(&s->spi->dev, "spi_async: %04x\n", s->spi_txbuf);
+	spin_lock_irqsave(&s->spi_lock, flags);
+	status = spi_async(s->spi, msg);
+	spin_unlock_irqrestore(&s->spi_lock, flags);
 	if (status) {
 		dev_warn(&s->spi->dev, "error while calling spi_async\n");
 		return -1;
 	}
+	//wait_for_completion(&done);
+	//if (status)
 
 	return 0;
 }
 
+/* ISR for incomming MAX3100 interrupts
+ * using async SPI communication for data transfers or workqueue for
+ * configuration changes
+ */
+static void spidev_complete(void *arg)
+{
+	complete(arg);
+}
 static irqreturn_t max3100_irq_new(int irqno, void *dev_id)
 {
+	//DECLARE_COMPLETION_ONSTACK(done);
 	struct max3100_port *s = dev_id;
+	u16 *tx = (u16 *)s->spi_tran->tx_buf;
+	//int status = -1;
 
+	// check our status first, reading data if there is some in buffer
+	struct spi_message *msg = s->spi_msg;
+
+
+	dev_dbg(&s->spi->dev, "%d == %d i:%d\n", s->irq, irqno, s->port.irqflags);
 	if (s->rts_commit || s->conf_commit) {
 		max3100_dowork(s);
 		dev_dbg(&s->spi->dev, "change rts or conf per work queue\n");
 		return IRQ_HANDLED;
 	}
 
-	max3100_sr_async(s, MAX3100_RD, cb_rx_complete);
-	// cb => max3100_sr_async(...)
+	//struct spi_transfer *tran = s->spi_tran;
+	//spi_message_init(msg);
+	//spi_message_add_tail(s->spi_tran, msg);
+	//*tx = 0;
 
-	//rxchars += max3100_handlerx(s, rx);
+	//s->spi_txbuf = cpu_to_be16(tx); // linked to tran->txbuf
+	//msg->context = &done;
+	//msg->complete = spidev_complete;
+
+//	dev_dbg(&s->spi->dev, "spi_async t: %04x\n", s->spi_txbuf);
+//	status = spi_async(s->spi, msg);
+//
+//	if (status == 0) {
+//		wait_for_completion(&done);
+//		status = msg->status;
+//		if (status == 0)
+//			status = msg->actual_length;
+//		dev_dbg(&s->spi->dev, "spi_async r: %04x %d\n", s->spi_rxbuf, status);
+//	}
+
+	max3100_sr_async(s, MAX3100_RD, max3100_cb_check);
+	// cb => max3100_cb_check(...)
+
 	return IRQ_HANDLED;
 }
+
 
 static irqreturn_t max3100_irq(int irqno, void *dev_id)
 {
@@ -1129,6 +1211,8 @@ static int __devinit max3100_probe(struct spi_device *spi)
 		return -ENOMEM;
 	}
 
+	// TEST
+	spi->bits_per_word = 16;
 	// pre-allocate everything because transfers are always
 	// single and 2 bytes long
 	max3100s[i]->spi = spi;
@@ -1154,6 +1238,7 @@ static int __devinit max3100_probe(struct spi_device *spi)
 //		return -ENOMEM;
 //	}
 	max3100s[i]->irq = spi->irq;
+	spin_lock_init(&max3100s[i]->spi_lock);
 	spin_lock_init(&max3100s[i]->conf_lock);
 	dev_set_drvdata(&spi->dev, max3100s[i]);
 	pdata = spi->dev.platform_data;
@@ -1175,12 +1260,17 @@ static int __devinit max3100_probe(struct spi_device *spi)
 	dev_dbg(&spi->dev, "%s: adding port %d\n", __func__, i);
 	max3100s[i]->port.irq = max3100s[i]->irq;
 	max3100s[i]->port.uartclk = max3100s[i]->crystal ? 3686400 : 1843200;
-	max3100s[i]->port.fifosize = 16;
+	// TESTING
+	//max3100s[i]->port.fifosize = 16;
+	max3100s[i]->port.fifosize = 2;
 	max3100s[i]->port.ops = &max3100_ops;
 	max3100s[i]->port.flags = UPF_SKIP_TEST | UPF_BOOT_AUTOCONF;
 	max3100s[i]->port.line = i;
 	max3100s[i]->port.type = PORT_MAX3100;
 	max3100s[i]->port.dev = &spi->dev;
+	// CHECK
+	//Give membase a psudo value to pass serial_core's check
+	//max->port.membase = (void *)0xff110000;
 	retval = uart_add_one_port(&max3100_uart_driver, &max3100s[i]->port);
 	if (retval < 0)
 		dev_warn(&spi->dev,
