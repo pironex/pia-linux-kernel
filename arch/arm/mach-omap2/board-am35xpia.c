@@ -946,7 +946,7 @@ static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
 };
 
 static struct plat_max3100 ems_io_max3140_data[4] = {
-	{ .loopback = 0, .crystal = 1, .poll_time = 100, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
 	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
 	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
 	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
