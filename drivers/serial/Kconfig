@@ -567,6 +567,13 @@ config SERIAL_MAX3107_AAVA
 	  platform. Includes the extra initialisation and GPIO support
 	  neded for this device.
 
+config SERIAL_MAX3140_HD
+	tristate "MAX3140 support (half-duplex)"
+	depends on SPI
+	select SERIAL_CORE
+	help
+	  MAX3140 RS485 chip support using half-duplex mode
+
 config SERIAL_DZ
 	bool "DECstation DZ serial driver"
 	depends on MACH_DECSTATION && 32BIT
