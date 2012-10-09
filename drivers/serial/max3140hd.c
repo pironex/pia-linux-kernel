@@ -400,6 +400,8 @@ static enum hrtimer_restart max3140_drv_dis_handler(struct hrtimer *handle)
 	return HRTIMER_NORESTART;
 }
 
+#define READ_SINGLE
+
 static int max3140_read_fifo(struct max3140hd_port *s)
 {
 	int i, j = 0;
@@ -421,7 +423,7 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 			return 0;
 		}
 		cur = *ibuf;
-		if (test_and_clear_bit(BIT_RX_PENDING, &s->flags)) {
+		if (test_bit(BIT_RX_PENDING, &s->flags)) {
 			str[j++] = cur & 0xff;
 		} else {
 			break;
@@ -447,14 +449,6 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 
 	if (j) {
 		max3140_receive_chars(s, str, j);
-		/* keep RX_PENDING flag, when FIFO was full,
-		 * otherwise IRQ line is never deasserted */
-//#ifdef READ_SINGLE
-//		if (j == MAX3100_RX_FIFOLEN)
-//#else
-//		if (j == MAX3100_RX_FIFOLEN || cur & MAX3100_R)
-//#endif
-//			set_bit(BIT_RX_PENDING, &s->flags);
 	}
 	//dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
 
@@ -500,10 +494,10 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 				max3100_calc_parity(s, &tx);
 				// force driver on while sending
 				tx |= MAX3100_WD | MAX3100_SETRTS(0);
+				getrawmonotonic(&now);
 				max3140_sr1(s, &tx, &rx);
 				txchars++;
 
-				getrawmonotonic(&now);
 				//dev_dbg(&s->spi->dev, "TX:%04x RX:%04x\n", tx, rx);
 
 				s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
@@ -671,7 +665,7 @@ static irqreturn_t max3140_irq(int irq, void *dev_id)
 	 * so no need to disable the irq */
 	set_bit(BIT_IRQ_PENDING, &s->flags);
 	w = wake_up_process(s->main_thread);
-	printk("w%d\n", w);
+//	printk("w%d\n", w);
 //	if (!test_and_set_bit(BIT_IRQ_PENDING, &s->flags)) {
 //		printk("w%d\n", );
 //		wake_up_process(s->main_thread);
@@ -907,6 +901,7 @@ static void max3100_shutdown(struct uart_port *port)
 		return;
 
 	s->force_end_work = 1;
+	mutex_lock(&s->thread_mutex);
 
 	if (s->poll_time > 0)
 		del_timer_sync(&s->poll_timer);
@@ -915,6 +910,7 @@ static void max3100_shutdown(struct uart_port *port)
 	if (s->irq)
 		free_irq(s->irq, s);
 
+	mutex_unlock(&s->thread_mutex);
 	/* set shutdown mode to save power */
 	tx = (MAX3100_WC | s->conf | MAX3100_SHDN);
 	max3140_cmd(s, tx);
