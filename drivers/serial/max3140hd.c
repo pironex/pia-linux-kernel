@@ -107,6 +107,7 @@ struct max3140hd_port {
 	const char *name;
 	u16 spi_rxbuf[MAX3100_RX_FIFOLEN];
 	u16 spi_txbuf[MAX3100_RX_FIFOLEN];
+	struct spi_message *spi_msg;
 
 #define BIT_DRIVER_DISABLE	1
 #define BIT_IRQ_PENDING		2
@@ -333,20 +334,69 @@ static inline int max3140_cmd(struct max3140hd_port *s, u16 tx)
 //	return ret;
 }
 
+static void spidev_complete(void *arg)
+{
+	struct max3140hd_port *s = arg;
+	struct spi_message *m = s->spi_msg;
+	int status = m->status;
+	struct spi_transfer *spi_tran = list_first_entry(&m->transfers,
+			struct spi_transfer, transfer_list);
+	if (status == 0) {
+		status = m->actual_length;
+		dev_dbg(&s->spi->dev, "RTS timeout done\n");
+	} else {
+		dev_warn(&s->spi->dev, "%s: couldn't send %d\n", __func__,
+				status);
+	}
+
+	kfree(spi_tran->rx_buf);
+	kfree(spi_tran->tx_buf);
+	spi_message_free(m);
+}
+
 #define MAX3100_SETRTS(r) \
 	(r ? (s->invert_rts ? 0 : MAX3100_RTS) : (s->invert_rts ? MAX3100_RTS : 0))
 static enum hrtimer_restart max3140_drv_dis_handler(struct hrtimer *handle)
 {
 	struct max3140hd_port *s =
 			container_of(handle, struct max3140hd_port, drv_dis_timer);
-
+#if 1
 	if (!test_and_set_bit(BIT_DRIVER_DISABLE, &s->flags))
 		wake_up_process(s->main_thread);
 //	s->dd = 1;
 //	wake_up_process(s->drv_dis_thread);
 
 	//dev_dbg(&s->spi->dev, "RTS timeout done\n");
+#else
+	//DECLARE_COMPLETION_ONSTACK(done);
+	struct spi_transfer *spi_tran;
+	struct spi_message *spi_msg = spi_message_alloc(1, GFP_ATOMIC);
+	u16 *rx, *tx;
+	s->spi_msg = spi_msg;
 
+	int status;
+	if (!spi_msg) {
+		return HRTIMER_RESTART;
+	}
+	spi_tran = list_first_entry(&spi_msg->transfers,
+			struct spi_transfer, transfer_list);
+	rx = kzalloc(2, GFP_ATOMIC);
+	tx = kzalloc(2, GFP_ATOMIC);
+	spi_tran->tx_buf = tx;
+	spi_tran->rx_buf = rx;
+	spi_tran->len = 2;
+	spi_msg->context = s;
+	spi_msg->complete = spidev_complete;
+
+	*tx = MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1);
+
+	status = spi_async(s->spi, spi_msg);
+	if (status < 0) {
+		dev_warn(&s->spi->dev, "error while calling sr_async2\n");
+
+		return HRTIMER_RESTART;
+	}
+#endif
 	return HRTIMER_NORESTART;
 }
 
@@ -365,6 +415,7 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 	memset(s->spi_rxbuf, 0, len);
 
 	ibuf = s->spi_rxbuf;
+#ifdef READ_SINGLE
 	for (i = 0; i < MAX3100_RX_FIFOLEN; ++i) {
 		if (max3140_sr1(s, &s->spi_txbuf[i], &s->spi_rxbuf[i]/*, 2 len*/)) {
 			return 0;
@@ -378,15 +429,34 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 
 		ibuf++;
 	}
+#else
+	if (max3140_sr(s, s->spi_txbuf, s->spi_rxbuf, MAX3100_RX_FIFOLEN)) {
+		dev_warn(&s->spi->dev, "%s: read error \n", __func__);
+		return 0;
+	}
+	for (i = 0; i < MAX3100_RX_FIFOLEN; ++i) {
+		cur = *ibuf;
+		if (cur & MAX3100_R) {
+			str[j++] = cur & 0xff;
+		}
+
+		ibuf++;
+	}
+
+#endif
 
 	if (j) {
 		max3140_receive_chars(s, str, j);
 		/* keep RX_PENDING flag, when FIFO was full,
 		 * otherwise IRQ line is never deasserted */
-		if (j == MAX3100_RX_FIFOLEN)
-			set_bit(BIT_RX_PENDING, &s->flags);
+//#ifdef READ_SINGLE
+//		if (j == MAX3100_RX_FIFOLEN)
+//#else
+//		if (j == MAX3100_RX_FIFOLEN || cur & MAX3100_R)
+//#endif
+//			set_bit(BIT_RX_PENDING, &s->flags);
 	}
-	dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
+	//dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
 
 	return j;
 }
