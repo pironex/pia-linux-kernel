@@ -222,19 +222,23 @@ static int max3140_sr(struct max3140hd_port *s, const void *txbuf, void *rxbuf,
 	memset(&x, 0, (sizeof(x[0]) * len));
 	for (i = 0; i < len; ++i) {
 		x[i].len = MAX3140_WORDSIZE;
-		x[i].tx_buf = &tx[i * MAX3140_WORDSIZE];
-		x[i].rx_buf = &rx[i * MAX3140_WORDSIZE];
+		x[i].tx_buf = &tx[i];
+		x[i].rx_buf = &rx[i];
 		x[i].speed_hz = spi->max_speed_hz;
 		x[i].cs_change = 1;
 		spi_message_add_tail(&x[i], &message);
 	}
 
 	ret = spi_sync(spi, &message);
-	s->tx_empty = (rx[i-1] & MAX3100_T);
-	if (rx[i-1] & MAX3100_R)
-		set_bit(BIT_RX_PENDING, &s->flags);
-	else
-		clear_bit(BIT_RX_PENDING, &s->flags);
+	if (!ret) {
+		s->tx_empty = (rx[i-1] & MAX3100_T);
+		if (rx[i-1] & MAX3100_R)
+			set_bit(BIT_RX_PENDING, &s->flags);
+		else
+			clear_bit(BIT_RX_PENDING, &s->flags);
+	} else {
+		dev_warn(&s->spi->dev, "%s: error %d\n", __func__, ret);
+	}
 
 	return ret;
 }
@@ -258,11 +262,15 @@ static int max3140_sr1(struct max3140hd_port *s, const void *txbuf, void *rxbuf)
 
 	ret = spi_sync(spi, &message);
 
-	s->tx_empty = ((*rx & MAX3100_T) > 0);
-	if (*rx & MAX3100_R)
-		set_bit(BIT_RX_PENDING, &s->flags);
-	else
-		clear_bit(BIT_RX_PENDING, &s->flags);
+	if (!ret) {
+		s->tx_empty = ((*rx & MAX3100_T) > 0);
+		if (*rx & MAX3100_R)
+			set_bit(BIT_RX_PENDING, &s->flags);
+		else
+			clear_bit(BIT_RX_PENDING, &s->flags);
+	} else {
+		dev_warn(&s->spi->dev, "%s: error %d\n", __func__, ret);
+	}
 
 	return ret;
 }
@@ -296,33 +304,21 @@ static void max3140_receive_chars(struct max3140hd_port *s, unsigned char *str, 
 /* send single command to max3140 */
 static inline int max3140_cmd(struct max3140hd_port *s, u16 tx)
 {
-	//void *buf;
-	//u16 *obuf, *ibuf;
 	u16 obuf, ibuf;
 	u16 rx;
 	u8 ch;
 	int ret;
 
-	//buf = kzalloc(8, GFP_KERNEL | GFP_DMA);
-	//if (!buf)
-	//	return -ENOMEM;
-
-	//obuf = buf;
-	//ibuf = buf + 4;
-	//*obuf = cpu_to_be16(tx);
-	//*obuf = tx;
 	obuf = tx;
 	ret = max3140_sr1(s, &obuf, &ibuf);
 	dev_dbg(&s->spi->dev, "%s: t0x%04x i0x%04x\n", __func__, tx, ibuf);
 	if (ret) {
-		dev_dbg(&s->spi->dev, "%s: error %d while sending 0x%x\n",
+		dev_warn(&s->spi->dev, "%s: error %d while sending 0x%x\n",
 				__func__, ret, obuf);
 		//goto exit;
 		return ret;
 	}
 
-	//rx = be16_to_cpu(*ibuf);
-	//rx = *ibuf;
 	rx = ibuf;
 
 	/* If some valid data is read back */
@@ -373,7 +369,6 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 		if (max3140_sr1(s, &s->spi_txbuf[i], &s->spi_rxbuf[i]/*, 2 len*/)) {
 			return 0;
 		}
-		//cur = be16_to_cpu(*ibuf);
 		cur = *ibuf;
 		if (test_and_clear_bit(BIT_RX_PENDING, &s->flags)) {
 			str[j++] = cur & 0xff;
@@ -403,7 +398,7 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 	u16 tx, rx;
 	u8 crx;
 	struct circ_buf *xmit = &s->port.state->xmit;
-	unsigned long diff_ns;
+	s64 diff_ns;
 
 	//dev_dbg(&s->spi->dev, "%s\n", __func__);
 	rxchars = 0;
@@ -562,22 +557,27 @@ static int max3140_main_thread(void *_max)
 		mutex_lock(&s->thread_mutex);
 
 		if (test_and_clear_bit(BIT_DRIVER_DISABLE, &s->flags)) {
-			max3140_driver_disable(s, 1);
+			//max3140_driver_disable(s, 1);
+			max3140_cmd(s, MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1));
 			dev_dbg(&s->spi->dev, "dd\n");
 		}
 		if (test_and_clear_bit(BIT_CONF_COMMIT, &s->flags)) {
 			max3140_cmd(s, MAX3100_WC | s->conf);
 			dev_dbg(&s->spi->dev, "cc\n");
 		}
-		//if (test_and_clear_bit(BIT_TX_STARTED, &s->flags)) {
-		if ((test_and_clear_bit(BIT_TX_STARTED, &s->flags)) ||
-				test_and_clear_bit(BIT_IRQ_PENDING, &s->flags)) {
+		if (test_and_clear_bit(BIT_IRQ_PENDING, &s->flags)) {
+			//dev_dbg(&s->spi->dev, "irq\n");
 			max3140_send_and_receive(s);
-			dev_dbg(&s->spi->dev, "tx|irq\n");
+		}
+		if ((test_and_clear_bit(BIT_TX_STARTED, &s->flags)) /*||
+				test_and_clear_bit(BIT_IRQ_PENDING, &s->flags)*/) {
+			//clear_bit(BIT_IRQ_PENDING, &s->flags);
+			max3140_send_and_receive(s);
+			dev_dbg(&s->spi->dev, "tx\n");
 		}
 
 		mutex_unlock(&s->thread_mutex);
-		dev_dbg(&s->spi->dev, "%s -----\n", __func__);
+		//dev_dbg(&s->spi->dev, "%s -----\n", __func__);
 
 	} while (!kthread_should_stop());
 
@@ -587,11 +587,19 @@ static int max3140_main_thread(void *_max)
 static irqreturn_t max3140_irq(int irq, void *dev_id)
 {
 	struct max3140hd_port *s = dev_id;
+	int w;
 
 	/* max3140's irq is a falling edge, not level triggered,
 	 * so no need to disable the irq */
-	if (!test_and_set_bit(BIT_IRQ_PENDING, &s->flags))
-		wake_up_process(s->main_thread);
+	set_bit(BIT_IRQ_PENDING, &s->flags);
+	w = wake_up_process(s->main_thread);
+	printk("w%d\n", w);
+//	if (!test_and_set_bit(BIT_IRQ_PENDING, &s->flags)) {
+//		printk("w%d\n", );
+//		wake_up_process(s->main_thread);
+//	} else {
+//		printk("n\n");
+//	}
 
 	return IRQ_HANDLED;
 }
