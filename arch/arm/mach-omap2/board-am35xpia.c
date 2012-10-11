@@ -862,7 +862,7 @@ static inline void __init pia35x_ioexp_init(void) {
 	.modalias      = "max3140hd", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 5E6, /* DS min 238ns period */ \
+	.max_speed_hz  = 4E6, /* DS min 238ns period */ \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
 	.controller_data = &ems_io_max3140_cfg[id], \
