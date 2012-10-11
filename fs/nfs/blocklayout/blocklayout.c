@@ -38,6 +38,8 @@
 #include <linux/buffer_head.h>	/* various write calls */
 #include <linux/prefetch.h>
 
+#include "../pnfs.h"
+#include "../internal.h"
 #include "blocklayout.h"
 
 #define NFSDBG_FACILITY	NFSDBG_PNFS_LD
@@ -146,14 +148,19 @@ static struct bio *bl_alloc_init_bio(int npg, sector_t isect,
 {
 	struct bio *bio;
 
+	npg = min(npg, BIO_MAX_PAGES);
 	bio = bio_alloc(GFP_NOIO, npg);
-	if (!bio)
-		return NULL;
+	if (!bio && (current->flags & PF_MEMALLOC)) {
+		while (!bio && (npg /= 2))
+			bio = bio_alloc(GFP_NOIO, npg);
+	}
 
-	bio->bi_sector = isect - be->be_f_offset + be->be_v_offset;
-	bio->bi_bdev = be->be_mdev;
-	bio->bi_end_io = end_io;
-	bio->bi_private = par;
+	if (bio) {
+		bio->bi_sector = isect - be->be_f_offset + be->be_v_offset;
+		bio->bi_bdev = be->be_mdev;
+		bio->bi_end_io = end_io;
+		bio->bi_private = par;
+	}
 	return bio;
 }
 
@@ -779,16 +786,13 @@ bl_cleanup_layoutcommit(struct nfs4_layoutcommit_data *lcdata)
 static void free_blk_mountid(struct block_mount_id *mid)
 {
 	if (mid) {
-		struct pnfs_block_dev *dev;
-		spin_lock(&mid->bm_lock);
-		while (!list_empty(&mid->bm_devlist)) {
-			dev = list_first_entry(&mid->bm_devlist,
-					       struct pnfs_block_dev,
-					       bm_node);
+		struct pnfs_block_dev *dev, *tmp;
+
+		/* No need to take bm_lock as we are last user freeing bm_devlist */
+		list_for_each_entry_safe(dev, tmp, &mid->bm_devlist, bm_node) {
 			list_del(&dev->bm_node);
 			bl_free_block_dev(dev);
 		}
-		spin_unlock(&mid->bm_lock);
 		kfree(mid);
 	}
 }
@@ -812,7 +816,7 @@ nfs4_blk_get_deviceinfo(struct nfs_server *server, const struct nfs_fh *fh,
 	 * GETDEVICEINFO's maxcount
 	 */
 	max_resp_sz = server->nfs_client->cl_session->fc_attrs.max_resp_sz;
-	max_pages = max_resp_sz >> PAGE_SHIFT;
+	max_pages = nfs_page_array_len(0, max_resp_sz);
 	dprintk("%s max_resp_sz %u max_pages %d\n",
 		__func__, max_resp_sz, max_pages);
 
