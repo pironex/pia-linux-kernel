@@ -297,6 +297,38 @@ static struct panel_config generic_dpi_panels[] = {
 
 		.name			= "apollon",
 	},
+
+	/* DEM 480272D */
+	{
+		{
+			.x_res = 480,
+			.y_res = 272,
+
+			.pixel_clock	= 9000,
+
+			#if 0 // closes to datasheet, works but slight flickering
+				.hsw		= 2,
+				.hfp		= 8,
+				.hbp		= 43,
+
+				.vsw		= 10,
+				.vfp		= 5,
+				.vbp		= 12,
+			#else
+				.hsw		= 3, // reduces flickering
+				.hfp		= 8,
+				.hbp		= 40,
+
+				.vsw		= 11, // reduce flickering
+				.vfp		= 4,
+				.vbp		= 1,
+			#endif
+		},
+		.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+				OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IEO |
+				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
+		.name = "dem_480272d",
+	}
 };
 
 struct panel_drv_data {
