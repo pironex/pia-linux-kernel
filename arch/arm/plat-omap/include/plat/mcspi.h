@@ -15,6 +15,7 @@ struct omap2_mcspi_platform_config {
 
 struct omap2_mcspi_dev_attr {
 	unsigned short num_chipselect;
+	int *cs_gpios;
 };
 
 struct omap2_mcspi_device_config {

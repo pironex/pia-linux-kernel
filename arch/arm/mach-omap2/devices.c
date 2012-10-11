@@ -355,6 +355,7 @@ static int omap_mcspi_init(struct omap_hwmod *oh, void *unused)
 	}
 
 	pdata->num_cs = mcspi_attrib->num_chipselect;
+	pdata->cs_gpios = mcspi_attrib->cs_gpios;
 	switch (oh->class->rev) {
 	case OMAP2_MCSPI_REV:
 	case OMAP3_MCSPI_REV:
