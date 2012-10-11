@@ -841,9 +841,10 @@ static inline void __init pia35x_ioexp_init(void) {
 /** piA-EMS_IO **/
 #if (defined(CONFIG_GPIO_PCF857X) || defined(CONFIG_GPIO_PCF857X_MODULE)) && \
 	(defined(CONFIG_CAN_MCP251X) || defined(CONFIG_CAN_MCP251X_MODULE)) && \
-	(defined(CONFIG_SERIAL_MAX3100) || defined(CONFIG_SERIAL_MAX3100_MODULE))
+	(defined(CONFIG_SERIAL_MAX3100) || defined(CONFIG_SERIAL_MAX3100_MODULE) || \
+	defined(CONFIG_SERIAL_MAX3140) || defined(CONFIG_SERIAL_MAX3140_MODULE))
 #include <linux/can/platform/mcp251x.h>
-#include <linux/serial_max3100.h>
+#include <linux/serial_max3140hd.h>
 
 #define EMS_IO_CAN_DEV(bus, cs, irqgpio, id) \
 {	.modalias      = "mcp2515", \
@@ -857,7 +858,7 @@ static inline void __init pia35x_ioexp_init(void) {
 }
 #define EMS_IO_485_DEV(bus, cs, irqgpio, id) \
 { \
-	.modalias      = "max3100", \
+	.modalias      = "max3140hd", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
 	.max_speed_hz  = 5E6, /* DS min 238ns period */ \
@@ -883,7 +884,7 @@ static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
 	{ .oscillator_frequency = 25E6 }, /* CAN 3 */
 };
 
-static struct plat_max3100 ems_io_max3140_data[4] = {
+static struct plat_max3140hd ems_io_max3140_data[4] = {
 	{ .loopback = 0, .crystal = 1, .poll_time = 100, .invert_rts = 0 },
 	{ .loopback = 0, .crystal = 1, .poll_time = 100, .invert_rts = 0 },
 	{ .loopback = 0, .crystal = 1, .poll_time = 100, .invert_rts = 0 },
