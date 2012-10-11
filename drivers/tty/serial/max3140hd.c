@@ -45,12 +45,15 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#include <linux/module.h>
 #include <linux/hrtimer.h>
 #include <linux/serial_core.h>
 #include <linux/serial.h>
 #include <linux/spi/spi.h>
 #include <linux/freezer.h>
 #include <linux/string.h>
+#include <linux/tty.h>
+#include <linux/tty_flip.h>
 
 #include <linux/kthread.h>
 #include <linux/serial_max3140hd.h>
@@ -144,6 +147,7 @@ struct max3140hd_port {
 	struct timespec prev_ts;
 	struct timespec now_ts;
 	int dd;
+	wait_queue_head_t wq_dd;
 
 	int force_end_work; /* 1 to force stop */
 	int suspending; /* 1 when suspend started, 0 when resumed */
@@ -451,7 +455,7 @@ static int max3140_read_fifo(struct max3140hd_port *s)
 	if (j) {
 		max3140_receive_chars(s, str, j);
 	}
-	//dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
+	dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
 
 	return j;
 }
@@ -475,79 +479,83 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 		rxchars += max3140_read_fifo(s);
 //		while (!test_bit(BIT_DRIVER_DISABLE, &s->flags) &&
 //				!uart_circ_empty(xmit) &&
-		if (!test_bit(BIT_DRIVER_DISABLE, &s->flags) &&
-				!uart_circ_empty(xmit) &&
-				s->tx_empty) {
-			tx = 0xffff;
-			if (s->port.x_char) {
-				tx = s->port.x_char;
-				s->port.icount.tx++;
-				s->port.x_char = 0;
-			} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
-				tx = xmit->buf[xmit->tail];
-				xmit->tail = (xmit->tail + 1) &
-						(UART_XMIT_SIZE - 1);
-				s->port.icount.tx++;
-			}
-
-			if (tx != 0xffff) {
-				char o =tx;
-				max3100_calc_parity(s, &tx);
-				// force driver on while sending
-				tx |= MAX3100_WD | MAX3100_SETRTS(0);
-				getrawmonotonic(&now);
-				max3140_sr1(s, &tx, &rx);
-				txchars++;
-
-				//dev_dbg(&s->spi->dev, "TX:%04x RX:%04x\n", tx, rx);
-
-				s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
-				s->prev_ts.tv_sec = s->now_ts.tv_sec;
-
-				// prev_ts not finished
-				if (timespec_compare(&s->prev_ts, &now) > 0) {
-					// prev byte not yet complete
-					// now becomes prev_ts as base of last byte delay
-					//dev_dbg(&s->spi->dev, ">%02x\n", (u8)o);
-					s->now_ts.tv_nsec = s->prev_ts.tv_nsec;
-					s->now_ts.tv_sec = s->prev_ts.tv_sec;
-				} else {
-					//	dev_dbg(&s->spi->dev, "<%02x\n", (u8)o);
-					s->now_ts.tv_nsec = now.tv_nsec;
-					s->now_ts.tv_sec = now.tv_sec;
-				}
-				// 1 byte delay + rest of previous byte
-				//dev_dbg(&s->spi->dev, "old:%lld\n", timespec_to_ns(&s->now_ts));
-				timespec_add_ns(&s->now_ts, s->rts_sleep);
-				//dev_dbg(&s->spi->dev, "net:%lld\n", timespec_to_ns(&s->now_ts));
-
-				// wait until all data sent
-				if (uart_circ_empty(xmit) || uart_tx_stopped(&s->port)) {
-					getrawmonotonic(&now);
-					diff_ns = timespec_to_ns(&s->now_ts) -
-							timespec_to_ns(&now);
-					if (diff_ns < 0) {
-						max3140_cmd(s, MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1));
-					} else {
-						//ndelay(diff_ns);
-						hrtimer_start(&s->drv_dis_timer, ktime_set(0, diff_ns),
-					              HRTIMER_MODE_REL);
-//						dev_dbg(&s->spi->dev, "ns_diff:%lld, %lld, %lld.%lld\n",
-//						        diff_ns, s->rts_sleep, timespec_to_ns(&s->now_ts),
-//						        timespec_to_ns(&now));
-					}
-					//clear_bit(BIT_TX_STARTED, &s->flags);
-				}
-				/* unlikely to receive something here
-				 * keep RX_PENDING as we only read one byte */
-				if (test_bit(BIT_RX_PENDING, &s->flags)) {
-					crx = rx & 0xff;
-					//rxchars++;
-					max3140_receive_chars(s, &crx, 1);
-				}
-			}
-			//dev_dbg(&s->spi->dev, "inner\n");
+		if (test_bit(BIT_DRIVER_DISABLE, &s->flags) ||
+			uart_circ_empty(xmit) || !s->tx_empty) {
+			break;
 		}
+
+		tx = 0xffff;
+		if (s->port.x_char) {
+			tx = s->port.x_char;
+			s->port.icount.tx++;
+			s->port.x_char = 0;
+		} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
+			tx = xmit->buf[xmit->tail];
+			xmit->tail = (xmit->tail + 1) &
+					(UART_XMIT_SIZE - 1);
+			s->port.icount.tx++;
+		}
+
+		if (tx != 0xffff) {
+			char o =tx;
+			max3100_calc_parity(s, &tx);
+			// force driver on while sending
+			tx |= MAX3100_WD | MAX3100_SETRTS(0);
+			max3140_sr1(s, &tx, &rx);
+			/* get the time right after SPI transfer finished
+			 * it is sufficient because of the slow RS485 speeds */
+			getrawmonotonic(&now);
+			txchars++;
+
+			//dev_dbg(&s->spi->dev, "TX:%04x RX:%04x\n", tx, rx);
+
+			s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
+			s->prev_ts.tv_sec = s->now_ts.tv_sec;
+
+			// prev_ts not finished
+			if (timespec_compare(&s->prev_ts, &now) > 0) {
+				// prev byte not yet complete
+				// now becomes prev_ts as base of last byte delay
+				//dev_dbg(&s->spi->dev, ">%02x\n", (u8)o);
+				s->now_ts.tv_nsec = s->prev_ts.tv_nsec;
+				s->now_ts.tv_sec = s->prev_ts.tv_sec;
+			} else {
+				//	dev_dbg(&s->spi->dev, "<%02x\n", (u8)o);
+				s->now_ts.tv_nsec = now.tv_nsec;
+				s->now_ts.tv_sec = now.tv_sec;
+			}
+			// 1 byte delay + rest of previous byte
+			//dev_dbg(&s->spi->dev, "old:%lld\n", timespec_to_ns(&s->now_ts));
+			timespec_add_ns(&s->now_ts, s->rts_sleep);
+			//dev_dbg(&s->spi->dev, "net:%lld\n", timespec_to_ns(&s->now_ts));
+
+			// wait until all data sent
+			if (uart_circ_empty(xmit) || uart_tx_stopped(&s->port)) {
+				getrawmonotonic(&now);
+				diff_ns = timespec_to_ns(&s->now_ts) -
+						timespec_to_ns(&now);
+				if (diff_ns < 0) {
+					max3140_cmd(s, MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(1));
+				} else {
+					//ndelay(diff_ns);
+					hrtimer_start(&s->drv_dis_timer,
+							ktime_set(0, diff_ns),
+							HRTIMER_MODE_REL);
+					//dev_dbg(&s->spi->dev, "ns_diff:%lld, %lld, %lld.%lld\n",
+					//        diff_ns, s->rts_sleep, timespec_to_ns(&s->now_ts),
+					//timespec_to_ns(&now));
+				}
+				//clear_bit(BIT_TX_STARTED, &s->flags);
+			}
+			/* unlikely to receive something here
+			 * keep RX_PENDING as we only read one byte */
+			if (test_bit(BIT_RX_PENDING, &s->flags)) {
+				crx = rx & 0xff;
+				//rxchars++;
+				max3140_receive_chars(s, &crx, 1);
+			}
+		}
+		//dev_dbg(&s->spi->dev, "inner\n");
 		//dev_dbg(&s->spi->dev, "outer\n");
 		/* don't read if TX active */
 		//if (txchars == 0 || test_bit(BIT_RX_PENDING, &s->flags))
