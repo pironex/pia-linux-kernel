@@ -122,8 +122,6 @@ static int __init pia35x_gsm_init(void)
 
 #if defined(CONFIG_PANEL_GENERIC_DPI) || \
 		defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
-		defined(CONFIG_PANEL_DEM_480272D) || \
-		defined(CONFIG_PANEL_DEM_480272D_MODULE)
 static int pia35x_lcd_enable(struct omap_dss_device *dssdev)
 {
 	gpio_set_value(GPIO_LCD_DISP, 1);
@@ -143,8 +141,14 @@ static void pia35x_lcd_disable(struct omap_dss_device *dssdev)
 	gpio_set_value(GPIO_LCD_DISP, 0);
 }
 
-static struct panel_generic_dpi_data pia35x_lcd_panel = {
-	.name				= "sharp_lq",
+static struct panel_generic_dpi_data pia35x_lcd_panel_dem = {
+	.name               = "dem_480272d",
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+
+static struct panel_generic_dpi_data pia35x_lcd_panel_sharp = {
+	.name               = "sharp_lq",
 	.platform_enable    = pia35x_lcd_enable,
 	.platform_disable   = pia35x_lcd_disable,
 };
@@ -155,7 +159,7 @@ static struct omap_dss_device pia35x_lcd_device = {
 	.driver_name        = "generic_dpi_panel",
 	.phy.dpi.data_lines = 24,
 	.reset_gpio         = -EINVAL,
-	.data				= &pia35x_lcd_panel,
+	.data               = &pia35x_lcd_panel_sharp,
 };
 #define PIA_LCD
 #else
@@ -284,11 +288,12 @@ static void __init pia35x_display_init(void)
 	sub = strrchr(lcdboard_name, '-');
 	if (sub != NULL)
 		rev = 0 - simple_strtol(sub, 0, 10);
-	/* all lcd board names should start with "pia_lcd" */
+	/* all lcd board names should start with "pia_lcd"
+	 * default panel is Sharp LQ */
 	if (0 != strncmp(lcdboard_name, "pia_lcd", 7)) {
 		use_lcd = 0;
 	} else if (0 == strncmp(lcdboard_name, "pia_lcd_dem", 11)) {
-		pia35x_lcd_device.driver_name = pia35x_dem_name;
+		pia35x_lcd_device.data = &pia35x_lcd_panel_dem;
 	} else if (0 == strncmp(lcdboard_name, "pia_lcd_dt028", 13)) {
 	}
 
@@ -1083,8 +1088,8 @@ static void __init pia35x_ems_io_init(void) {
 			ems_io_max3140_data[i].invert_rts = 1;
 	}
 
-	for (i = 132; i <= 138; ++i)
-		set_irq_type(OMAP_GPIO_IRQ(i), IRQ_TYPE_EDGE_FALLING);
+//	for (i = 132; i <= 138; ++i)
+//		set_irq_type(OMAP_GPIO_IRQ(i), IRQ_TYPE_EDGE_FALLING);
 
 	/* SPI */
 	spi_register_board_info(pia35x_ems_io_spi_info,
