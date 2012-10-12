@@ -45,7 +45,7 @@
 #define MAX_MAX3140 4
 
 #define THREADED
-//#define DEBUG
+#define DEBUG
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/device.h>
@@ -497,12 +497,14 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 		rxchars += max3140_read_fifo(s);
 //		while (!test_bit(BIT_DRIVER_DISABLE, &s->flags) &&
 //				!uart_circ_empty(xmit) &&
-		if (test_bit(BIT_DRIVER_DISABLE, &s->irqflags) ||
-			uart_circ_empty(xmit) ||
-			!test_bit(BIT_TX_EMPTY, &s->runflags)) {
-			continue;
-		}
 
+//		if (test_bit(BIT_DRIVER_DISABLE, &s->irqflags) ||
+//			uart_circ_empty(xmit) ||
+//			!test_bit(BIT_TX_EMPTY, &s->runflags)) {
+//			continue;
+//		} else {
+
+		if (test_bit(BIT_TX_EMPTY, &s->runflags)) {
 		tx = 0xffff;
 		if (s->port.x_char) {
 			tx = s->port.x_char;
@@ -554,11 +556,14 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 				diff_ns = timespec_to_ns(&s->now_ts) -
 						timespec_to_ns(&now);
 				if (diff_ns > 0) {
-					//ndelay(diff_ns);
+#if 1
+					ndelay(diff_ns);
+#else
 					hrtimer_start(&s->drv_dis_timer,
 							ktime_set(0, diff_ns),
 							HRTIMER_MODE_REL);
 					wait_event(s->wq_dd, s->dd != 0);
+#endif
 					//dev_dbg(&s->spi->dev, "ns_diff:%lld, %lld, %lld.%lld\n",
 					//        diff_ns, s->rts_sleep, timespec_to_ns(&s->now_ts),
 					//timespec_to_ns(&now));
@@ -572,9 +577,10 @@ static int max3140_send_and_receive(struct max3140hd_port *s)
 			 * keep RX_PENDING as we only read one byte */
 			if (test_bit(BIT_RX_PENDING, &s->runflags)) {
 				crx = rx & 0xff;
-				//rxchars++;
+				rxchars++;
 				max3140_receive_chars(s, &crx, 1);
 			}
+		}
 		}
 		/* don't read if TX active */
 		//if (txchars == 0 || test_bit(BIT_RX_PENDING, &s->flags))
@@ -644,9 +650,11 @@ static int max3140_main_thread(void *_max)
 			max3140_send_and_receive(s);
 			//dev_dbg(&s->spi->dev, "tx\n");
 		}
+		if (test_and_clear_bit(BIT_RX_PENDING, &s->runflags))
+			set_bit(BIT_IRQ_PENDING, &s->irqflags);
 
 		mutex_unlock(&s->thread_mutex);
-		//dev_dbg(&s->spi->dev, "%s -----\n", __func__);
+		//dev_dbg(&s->spi->dev, "%s %x %x\n", __func__,s->irqflags, s->runflags);
 
 	} while (!kthread_should_stop());
 
@@ -1061,7 +1069,7 @@ static int __devinit max3140_probe(struct spi_device *spi)
 	u16 tx;
 	/* make sure we handle interrupts as soon as possible
 	 * in chip FIFO is too short to handle even short delays */
-	struct sched_param scheduler_param = { .sched_priority = 60 };
+	struct sched_param scheduler_param = { .sched_priority = 50 };
 	//struct sched_param scheduler_param_dd = { .sched_priority = 99 };
 
 	mutex_lock(&max3140s_lock);
