@@ -1099,7 +1099,7 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 	struct omap2_mcspi	*mcspi;
 	struct resource		*r;
 	int			status = 0, i;
-	struct omap2_mcspi_platform_config* pconfig = pdev->dev.platform_data;
+	int num_dma;
 
 	master = spi_alloc_master(&pdev->dev, sizeof *mcspi);
 	if (master == NULL) {
@@ -1122,10 +1122,13 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 
 	mcspi = spi_master_get_devdata(master);
 	mcspi->master = master;
-	if (pconfig && pconfig->cs_gpios)
-		mcspi->cs_gpios = pconfig->cs_gpios;
-	else
+	if (pdata->cs_gpios) {
+		mcspi->cs_gpios = pdata->cs_gpios;
+		num_dma = 1;
+	} else {
 		mcspi->cs_gpios = NULL;
+		num_dma = master->num_chipselect;
+	}
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (r == NULL) {
@@ -1156,14 +1159,14 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&mcspi->msg_queue);
 	INIT_LIST_HEAD(&omap2_mcspi_ctx[master->bus_num - 1].cs);
 
-	mcspi->dma_channels = kcalloc(master->num_chipselect,
+	mcspi->dma_channels = kcalloc(num_dma,
 			sizeof(struct omap2_mcspi_dma),
 			GFP_KERNEL);
 
 	if (mcspi->dma_channels == NULL)
 		goto err2;
 
-	for (i = 0; i < master->num_chipselect; i++) {
+	for (i = 0; i < num_dma; i++) {
 		char dma_ch_name[14];
 		struct resource *dma_res;
 
