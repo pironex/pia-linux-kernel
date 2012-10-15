@@ -912,7 +912,7 @@ static inline void __init pia35x_io_init(void) {
 {	.modalias      = "mcp2515", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 4E6, \
+	.max_speed_hz  = 10E6, \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
 	.controller_data = &ems_io_mcp2515_cfg[id], \
@@ -923,7 +923,7 @@ static inline void __init pia35x_io_init(void) {
 	.modalias      = "max3140hd", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 5E6, /* DS min 238ns period */ \
+	.max_speed_hz  = 4E6, /* DS min 238ns period */ \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
 	.controller_data = &ems_io_max3140_cfg[id], \
@@ -947,10 +947,10 @@ static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
 };
 
 static struct plat_max3140hd ems_io_max3140_data[4] = {
-	{ .loopback = 0, .crystal = 1, .poll_time = 0, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
-	{ .loopback = 0, .crystal = 1, .poll_time = 1, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 10, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 10, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 10, .invert_rts = 1 },
+	{ .loopback = 0, .crystal = 1, .poll_time = 10, .invert_rts = 1 },
 };
 
 /* 3 CAN + 4 RS485 on SPI busses 1+2 */

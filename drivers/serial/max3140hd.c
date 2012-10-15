@@ -334,6 +334,8 @@ static inline int max3140_cmd(struct max3140hd_port *s, u16 tx)
 //	return ret;
 }
 
+#define READ_SINGLE
+#ifndef READ_SINGLE
 static void spidev_complete(void *arg)
 {
 	struct max3140hd_port *s = arg;
@@ -353,6 +355,7 @@ static void spidev_complete(void *arg)
 	kfree(spi_tran->tx_buf);
 	spi_message_free(m);
 }
+#endif
 
 #define MAX3100_SETRTS(r) \
 	(r ? (s->invert_rts ? 0 : MAX3100_RTS) : (s->invert_rts ? MAX3100_RTS : 0))
@@ -399,8 +402,6 @@ static enum hrtimer_restart max3140_drv_dis_handler(struct hrtimer *handle)
 #endif
 	return HRTIMER_NORESTART;
 }
-
-#define READ_SINGLE
 
 static int max3140_read_fifo(struct max3140hd_port *s)
 {

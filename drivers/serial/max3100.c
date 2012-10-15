@@ -290,20 +290,24 @@ static int max3140_sr(struct max3100_port *s, const void *txbuf, void *rxbuf,
 {
 	struct spi_device *spi = s->spi;
 	struct spi_message	message;
-	struct spi_transfer	x;
-	int ret;
+	struct spi_transfer	x[len];
+	int ret, i;
+	u16 *rx;
 
 	spi_message_init(&message);
-	memset(&x, 0, sizeof x);
-	x.len = len;
-	x.tx_buf = txbuf;
-	x.rx_buf = rxbuf;
-	x.speed_hz = spi->max_speed_hz;
-	x.cs_change = 1;
-	spi_message_add_tail(&x, &message);
+	memset(&x, 0, (sizeof(x[0]) * len));
+	for (i = 0; i < len; ++i) {
+		x[i].len = MAX3140_WORDSIZE;
+		x[i].tx_buf = txbuf;
+		x[i].rx_buf = rxbuf;
+		x[i].speed_hz = spi->max_speed_hz;
+		x[i].cs_change = 1;
+		spi_message_add_tail(&x[i], &message);
+	}
 
 	ret = spi_sync(spi, &message);
-	s->tx_empty = (rx & MAX3100_T);
+	rx = x[i].rx_buf;
+	s->tx_empty = (*rx & MAX3100_T);
 
 	return ret;
 }
@@ -313,8 +317,7 @@ static int max3140_sr1(struct max3100_port *s, const void *txbuf, void *rxbuf)
 	struct spi_device *spi = s->spi;
 	struct spi_message	message;
 	struct spi_transfer	x;
-	u16 *ibuf = rxbuf;
-	u16 *obuf = txbuf;
+	u16 *rx = rxbuf;
 	int ret;
 
 	spi_message_init(&message);
@@ -328,11 +331,11 @@ static int max3140_sr1(struct max3100_port *s, const void *txbuf, void *rxbuf)
 
 	ret = spi_sync(spi, &message);
 
-	s->tx_empty = ((rx & MAX3100_T) > 0);
-	if (rx & MAX3100_R)
-		set_bit(BIT_RX_PENDING, s->flags);
+	s->tx_empty = ((*rx & MAX3100_T) > 0);
+	if (*rx & MAX3100_R)
+		set_bit(BIT_RX_PENDING, &s->flags);
 	else
-		clear_bit(BIT_RX_PENDING, s->flags);
+		clear_bit(BIT_RX_PENDING, &s->flags);
 
 	return ret;
 }
@@ -1090,12 +1093,11 @@ static int max3140_read_fifo(struct max3100_port *s)
 		//cur = be16_to_cpu(*ibuf);
 		cur = *ibuf;
 		//if (cur & MAX3100_R) {
-		if ((s->flags & (1 << BIT_RX_PENDING)) > 0) {
+		if (test_and_clear_bit(BIT_RX_PENDING, &s->flags)) {
 			str[j++] = cur & 0xff;
 		} else {
 			break;
 		}
-		dev_dbg(&s->spi->dev, "%s %04x %04x\n", __func__, *ibuf, cur);
 
 		ibuf++;
 	}
@@ -1115,8 +1117,12 @@ static int max3140_read_fifo(struct max3100_port *s)
 
 	if (j) {
 		max3140_receive_chars(s, str, j);
+		/* keep RX_PENDING flag, when FIFO was full,
+		 * otherwise IRQ line is never deasserted */
+		if (j == MAX3100_RX_FIFOLEN)
+			set_bit(BIT_RX_PENDING, &s->flags);
 	}
-	dev_dbg(&s->spi->dev, "%s tx_empty %d\n", __func__, s->tx_empty);
+	dev_dbg(&s->spi->dev, "%s cnt: %d, tx_empty %d\n", __func__, j, s->tx_empty);
 	//max3140_sr(s, MAX3100_RD, &rx, MAX3100_RX_FIFOLEN);
 
 	return j;
@@ -1137,77 +1143,79 @@ static int max3140_send_and_receive(struct max3100_port *s)
 	getrawmonotonic(&start);
 
 	do {
+		while ((s->flags & (1 << BIT_TX_STARTED)) && s->tx_empty) {
+			tx = 0xffff;
+			if (s->port.x_char) {
+				tx = s->port.x_char;
+				s->port.icount.tx++;
+				s->port.x_char = 0;
+			} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
+				tx = xmit->buf[xmit->tail];
+				xmit->tail = (xmit->tail + 1) &
+						(UART_XMIT_SIZE - 1);
+				s->port.icount.tx++;
+			} else {
+				clear_bit(BIT_TX_STARTED, &s->flags);
+			}
+			if (tx != 0xffff) {
+				max3100_calc_parity(s, &tx);
+				// force driver on while sending
+				tx |= MAX3100_WD | MAX3100_SETRTS(0);
+				///tx = cpu_to_be16(tx);
+				max3140_sr1(s, &tx, &rx);
+				///rx = be16_to_cpu(rx);
+
+				s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
+				s->prev_ts.tv_sec = s->now_ts.tv_sec;
+				getrawmonotonic(&now);
+
+				// prev_ts not finished
+				if (timespec_compare(&s->prev_ts, &now) > 0) {
+					// prev byte not yet complete
+					// now becomes prev_ts as base of last byte delay
+					s->now_ts.tv_nsec = s->prev_ts.tv_nsec;
+					s->now_ts.tv_sec = s->prev_ts.tv_sec;
+				} else {
+					s->now_ts.tv_nsec = now.tv_nsec;
+					s->now_ts.tv_sec = now.tv_sec;
+				}
+				// 1 byte delay + rest of previous byte
+				timespec_add_ns(&s->now_ts, s->rts_sleep);
+
+				/* unlikely to receive something here */
+				//if (rx & MAX3100_R) {
+				if (test_and_clear_bit(BIT_RX_PENDING, &s->flags)) {
+					crx = rx & 0xff;
+					//rxchars++;
+					max3140_receive_chars(s, &crx, 1);
+				}
+				// wait until all data sent
+				if (uart_circ_empty(xmit) || uart_tx_stopped(&s->port)) {
+					diff_ns = timespec_to_ns(&s->now_ts) -
+							timespec_to_ns(&now);
+					//ndelay(diff_ns);
+					hrtimer_start(&s->rts_timer, ktime_set(0, diff_ns),
+					              HRTIMER_MODE_REL);
+					dev_dbg(&s->spi->dev, "ns_old:%lu\n", diff_ns);
+					//tx = MAX3100_WD | MAX3100_TE |
+					//MAX3100_SETRTS(1);
+					//max3100_sr(s, tx, &rx);
+					//rxchars += max3100_handlerx(s, rx);
+					//dev_dbg(&s->spi->dev, "Test: %04x %04x\n", tx, rx);
+
+				}
+			}
+		}
 		rxchars += max3140_read_fifo(s);
 
-	while ((s->flags & (1 << BIT_TX_STARTED)) && s->tx_empty) {
-		tx = 0xffff;
-		if (s->port.x_char) {
-			tx = s->port.x_char;
-			s->port.icount.tx++;
-			s->port.x_char = 0;
-		} else if (!uart_circ_empty(xmit) && !uart_tx_stopped(&s->port)) {
-			tx = xmit->buf[xmit->tail];
-			xmit->tail = (xmit->tail + 1) &
-					(UART_XMIT_SIZE - 1);
-			s->port.icount.tx++;
-		} else {
-			clear_bit(BIT_TX_STARTED, &s->flags);
+
+		if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+			uart_write_wakeup(&s->port);
+
+		if (rxchars > 16 && s->port.state->port.tty != NULL) {
+			tty_flip_buffer_push(s->port.state->port.tty);
+			rxchars = 0;
 		}
-		if (tx != 0xffff) {
-			max3100_calc_parity(s, &tx);
-			// force driver on while sending
-			tx |= MAX3100_WD | MAX3100_SETRTS(0);
-			///tx = cpu_to_be16(tx);
-			max3140_sr(s, &tx, &rx, 2);
-			///rx = be16_to_cpu(rx);
-
-			s->prev_ts.tv_nsec = s->now_ts.tv_nsec;
-			s->prev_ts.tv_sec = s->now_ts.tv_sec;
-			getrawmonotonic(&now);
-
-			// prev_ts not finished
-			if (timespec_compare(&s->prev_ts, &now) > 0) {
-				// prev byte not yet complete
-				// now becomes prev_ts as base of last byte delay
-				s->now_ts.tv_nsec = s->prev_ts.tv_nsec;
-				s->now_ts.tv_sec = s->prev_ts.tv_sec;
-			} else {
-				s->now_ts.tv_nsec = now.tv_nsec;
-				s->now_ts.tv_sec = now.tv_sec;
-			}
-			// 1 byte delay + rest of previous byte
-			timespec_add_ns(&s->now_ts, s->rts_sleep);
-
-			/* unlikely to receive something here */
-			if (rx & MAX3100_R) {
-				crx = rx & 0xff;
-				rxchars++;
-				max3140_receive_chars(s, &crx, 1);
-			}
-			// wait until all data sent
-			if (uart_circ_empty(xmit) || uart_tx_stopped(&s->port)) {
-				diff_ns = timespec_to_ns(&s->now_ts) -
-						timespec_to_ns(&now);
-				//ndelay(diff_ns);
-				hrtimer_start(&s->rts_timer, ktime_set(0, diff_ns),
-				              HRTIMER_MODE_REL);
-				dev_dbg(&s->spi->dev, "ns_old:%lu\n", diff_ns);
-				//tx = MAX3100_WD | MAX3100_TE |
-				//MAX3100_SETRTS(1);
-				//max3100_sr(s, tx, &rx);
-				//rxchars += max3100_handlerx(s, rx);
-				//dev_dbg(&s->spi->dev, "Test: %04x %04x\n", tx, rx);
-
-			}
-		}
-	}
-	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-		uart_write_wakeup(&s->port);
-
-	if (rxchars > 16 && s->port.state->port.tty != NULL) {
-		tty_flip_buffer_push(s->port.state->port.tty);
-		rxchars = 0;
-	}
 
 	} while (!s->force_end_work &&
 		 !freezing(current) &&
@@ -1229,7 +1237,7 @@ static int max3140_send_and_receive(struct max3100_port *s)
 static void max3140_driver_disable(struct max3100_port *s, u8 dis)
 {
 	u16 cmd = MAX3100_WD | MAX3100_TE | MAX3100_SETRTS(dis);
-	max3140_cmd(s, cpu_to_be16(cmd));
+	max3140_cmd(s, cmd);
 	dev_dbg(&s->spi->dev, "%s\n", __func__);
 }
 static int max3140_main_thread(void *_max)
@@ -1316,7 +1324,7 @@ static void max3100_start_tx(struct uart_port *port)
 #ifndef THREADED
 	max3100_dowork(s);
 #else
-	max3140_cmd(s, MAX3100_RC);
+	//max3140_cmd(s, MAX3100_RC);
 	if (!test_and_set_bit(BIT_TX_STARTED, &s->flags))
 		wake_up_process(s->main_thread);
 #endif
@@ -1331,7 +1339,9 @@ static void max3100_stop_rx(struct uart_port *port)
 	dev_dbg(&s->spi->dev, "%s\n", __func__);
 
 	s->rx_enabled = 0;
+#ifndef THREADED
 	spin_lock(&s->conf_lock);
+#endif
 	s->conf &= ~MAX3100_RM;
 #ifndef THREADED
 	s->conf_commit = 1;
@@ -1383,6 +1393,7 @@ static void max3100_set_mctrl(struct uart_port *port, unsigned int mctrl)
 
 	spin_lock(&s->conf_lock);
 	if (s->rts != rts) {
+		dev_dbg(&s->spi->dev, "%s crts %u\n", __func__, mctrl);
 		s->rts = rts;
 		s->rts_commit = 1;
 		max3100_dowork(s);
@@ -1522,10 +1533,12 @@ max3100_set_termios(struct uart_port *port, struct ktermios *termios,
 #ifndef THREADED
 	max3100_dowork(s);
 #else
-	max3140_cmd(s, s->conf | MAX3100_WC);
-	max3140_cmd(s, MAX3100_RC);
+	//max3140_cmd(s, s->conf | MAX3100_WC);
+	//max3140_cmd(s, MAX3100_RC);
 
-	//set_bit(BIT_CONF_COMMIT, &s->flags);
+	set_bit(BIT_CONF_COMMIT, &s->flags);
+	set_bit(BIT_DRIVER_DISABLE, &s->flags);
+	wake_up_process(s->main_thread);
 #endif
 
 	if (UART_ENABLE_MS(&s->port, termios->c_cflag))
@@ -1644,13 +1657,10 @@ static int max3100_startup(struct uart_port *port)
 
 	if (s->max3100_hw_suspend)
 		s->max3100_hw_suspend(0);
-#ifndef THREADED
-	s->conf_commit = 1;
-	max3100_dowork(s);
-#else
-	max3140_cmd(s, s->conf | MAX3100_WC);
-	//set_bit(BIT_CONF_COMMIT, &s->flags);
-#endif
+
+	set_bit(BIT_CONF_COMMIT, &s->flags);
+	wake_up_process(s->main_thread);
+	//max3140_cmd(s, s->conf | MAX3100_WC);
 	/* wait for clock to settle */
 	msleep(50);
 
@@ -1768,6 +1778,7 @@ static int __devinit max3100_probe(struct spi_device *spi)
 	int i, retval;
 	struct plat_max3100 *pdata;
 	u16 tx, rx;
+	struct sched_param scheduler_param = { .sched_priority = 60 };
 
 	mutex_lock(&max3100s_lock);
 
@@ -1827,16 +1838,11 @@ static int __devinit max3100_probe(struct spi_device *spi)
 		spi_message_free(max3100s[i]->spi_msg);
 		return ret;
 	}
+	if (sched_setscheduler(max3100s[i]->main_thread, SCHED_FIFO,
+			&scheduler_param))
+		dev_warn(&spi->dev, "Error setting scheduler, using default.\n");
 #endif
 
-//	max3100s[i]->spi_txbuf = kmalloc(2, GFP_KERNEL);
-//	if (!max3100s[i]->spi_txbuf)
-//		return -ENOMEM;
-//	max3100s[i]->spi_rxbuf = kmalloc(2, GFP_KERNEL);
-//	if (!max3100s[i]->spi_rxbuf) {
-//		kfree(max3100s[i]->spi_txbuf);
-//		return -ENOMEM;
-//	}
 	max3100s[i]->irq = spi->irq;
 	spin_lock_init(&max3100s[i]->spi_lock);
 	spin_lock_init(&max3100s[i]->conf_lock);
@@ -1866,12 +1872,7 @@ static int __devinit max3100_probe(struct spi_device *spi)
 	/* port setup */
 	max3100s[i]->port.irq = max3100s[i]->irq;
 	max3100s[i]->port.uartclk = max3100s[i]->crystal ? 3686400 : 1843200;
-	// TESTING
-#ifdef ORIGINAL
-	max3100s[i]->port.fifosize = 16;
-#else
 	max3100s[i]->port.fifosize = 2; /* TX "FIFO" is only 2 bytes */
-#endif
 	max3100s[i]->port.ops = &max3100_ops;
 	max3100s[i]->port.flags = UPF_SKIP_TEST | UPF_BOOT_AUTOCONF;
 	max3100s[i]->port.line = i;
