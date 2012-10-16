@@ -851,7 +851,7 @@ static inline void __init pia35x_ioexp_init(void) {
 {	.modalias      = "mcp2515", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 10E6, \
+	.max_speed_hz  = 4E6, \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
 	.controller_data = &ems_io_mcp2515_cfg[id], \
