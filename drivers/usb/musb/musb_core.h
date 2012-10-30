@@ -367,7 +367,7 @@ struct musb_context_registers {
 	u32 otg_sysconfig, otg_forcestandby;
 #endif
 	u8 power;
-	u16 intrtxe, intrrxe;
+	u16 intrtxe;
 	u8 intrusbe;
 	u16 frame;
 	u8 index, testmode;
@@ -391,6 +391,7 @@ struct musb {
 	struct work_struct	irq_work;
 	u16			hwvers;
 
+	u16			intrrxe;
 /* this hub status bit is reserved by USB 2.0 and not seen by usbcore */
 #define MUSB_PORT_STAT_RESUME	(1 << 31)
 
