@@ -412,11 +412,11 @@ void musb_hnp_stop(struct musb *musb)
  */
 
 static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
-				u8 devctl, u8 power)
+				u8 devctl)
 {
 	irqreturn_t handled = IRQ_NONE;
 
-	dev_dbg(musb->controller, "<== Power=%02x, DevCtl=%02x, int_usb=0x%x\n", power, devctl,
+	dev_dbg(musb->controller, "<== DevCtl=%02x, int_usb=0x%x\n", devctl,
 		int_usb);
 
 	/* in host mode, the peripheral may issue remote wakeup.
@@ -429,6 +429,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 
 		if (devctl & MUSB_DEVCTL_HM) {
 			void __iomem *mbase = musb->mregs;
+			u8 power;
 
 			switch (musb->xceiv->state) {
 			case OTG_STATE_A_SUSPEND:
@@ -436,6 +437,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				 * will stop RESUME signaling
 				 */
 
+				power = musb_readb(musb->mregs, MUSB_POWER);
 				if (power & MUSB_POWER_SUSPENDM) {
 					/* spurious */
 					musb->int_usb &= ~MUSB_INTR_SUSPEND;
@@ -599,8 +601,8 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 	}
 
 	if (int_usb & MUSB_INTR_SUSPEND) {
-		dev_dbg(musb->controller, "SUSPEND (%s) devctl %02x power %02x\n",
-			otg_state_string(musb->xceiv->state), devctl, power);
+		dev_dbg(musb->controller, "SUSPEND (%s) devctl %02x\n",
+			otg_state_string(musb->xceiv->state), devctl);
 		handled = IRQ_HANDLED;
 
 		switch (musb->xceiv->state) {
@@ -1513,12 +1515,11 @@ static irqreturn_t generic_interrupt(int irq, void *__hci)
 irqreturn_t musb_interrupt(struct musb *musb)
 {
 	irqreturn_t	retval = IRQ_NONE;
-	u8		devctl, power;
+	u8		devctl;
 	int		ep_num;
 	u32		reg;
 
 	devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
-	power = musb_readb(musb->mregs, MUSB_POWER);
 
 	dev_dbg(musb->controller, "** IRQ %s usb%04x tx%04x rx%04x\n",
 		(devctl & MUSB_DEVCTL_HM) ? "host" : "peripheral",
@@ -1529,7 +1530,7 @@ irqreturn_t musb_interrupt(struct musb *musb)
 	 */
 	if (musb->int_usb)
 		retval |= musb_stage0_irq(musb, musb->int_usb,
-				devctl, power);
+				devctl);
 
 	/* "stage 1" is handling endpoint irqs */
 
