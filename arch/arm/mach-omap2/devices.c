@@ -375,10 +375,10 @@ static struct platform_device omap2_mcspi1 = {
 };
 
 /* HACK CS GPIOs */
-extern int mcspi2_cs_gpios[4];
+int *mcspi2_cs_gpios = NULL;
 static struct omap2_mcspi_platform_config omap2_mcspi2_config = {
-	.num_cs		= 4,
-	.cs_gpios	= mcspi2_cs_gpios,
+	.num_cs		= 2,
+	//.cs_gpios	= NULL,//mcspi2_cs_gpios,
 };
 
 static struct resource omap2_mcspi2_resources[] = {
@@ -494,6 +494,10 @@ static inline void omap4_mcspi_fixup(void)
 
 static inline void omap2_mcspi2_init(void)
 {
+	if (mcspi2_cs_gpios != NULL) {
+		omap2_mcspi2_config.cs_gpios = mcspi2_cs_gpios;
+		omap2_mcspi2_config.num_cs = 4;
+	}
 	platform_device_register(&omap2_mcspi2);
 }
 

@@ -1223,10 +1223,12 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 
 	mcspi = spi_master_get_devdata(master);
 	mcspi->master = master;
-	if (pconfig && pconfig->cs_gpios)
+	if (pconfig && pconfig->cs_gpios) {
+		dev_warn(&pdev->dev, "using GPIOs for CS\n");
 		mcspi->cs_gpios = pconfig->cs_gpios;
-	else
+	} else {
 		mcspi->cs_gpios = NULL;
+	}
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (r == NULL) {
@@ -1387,6 +1389,7 @@ static int __init omap2_mcspi_init(void)
 				omap2_mcspi_driver.driver.name);
 	if (omap2_mcspi_wq == NULL)
 		return -1;
+
 	return platform_driver_probe(&omap2_mcspi_driver, omap2_mcspi_probe);
 }
 subsys_initcall(omap2_mcspi_init);
