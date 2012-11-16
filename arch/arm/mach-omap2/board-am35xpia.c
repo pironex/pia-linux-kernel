@@ -70,6 +70,19 @@ static u8 pia35x_version = PIA_UNKNOWN;
 static char expansionboard_name[32];
 static char lcdboard_name[16];
 
+/* USB EHCI port only on expansion port
+ * currently used for KACO_EMS_IO rev 0.3+ */
+static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
+	.port_mode[0] = EHCI_HCD_OMAP_MODE_PHY,
+	.port_mode[1] = EHCI_HCD_OMAP_MODE_UNKNOWN,
+	.port_mode[2] = EHCI_HCD_OMAP_MODE_UNKNOWN,
+
+	.phy_reset  = true,
+	.reset_gpio_port[0]  = 130,
+	.reset_gpio_port[1]  = -EINVAL,
+	.reset_gpio_port[2]  = -EINVAL
+};
+
 /*
  * GSM: Telit GE864 Quad-V2
  */
@@ -880,6 +893,13 @@ static inline void __init pia35x_ioexp_init(void) {
 	.teardown  = ems_io_gpio_teardown \
 }
 
+#define GPIO_EMS_CAN_INT0 132
+#define GPIO_EMS_CAN_INT1 133
+#define GPIO_EMS_CAN_INT2 134
+#define GPIO_EMS_MAX_INT0 135
+#define GPIO_EMS_MAX_INT1 136
+#define GPIO_EMS_MAX_INT2 137
+#define GPIO_EMS_MAX_INT3 138
 static struct mcp251x_platform_data ems_io_mcp2515_data[3] = {
 	{ .oscillator_frequency = 25E6 }, /* CAN 1 */
 	{ .oscillator_frequency = 25E6 }, /* CAN 2 */
@@ -906,13 +926,13 @@ static struct omap2_mcspi_device_config ems_io_max3140_cfg[] = {
 	{ .turbo_mode	= 0, .single_channel	= 1 },
 };
 static struct spi_board_info pia35x_ems_io_spi_info[] = {
-	EMS_IO_CAN_DEV(1, 0, 132, 0),
-	EMS_IO_CAN_DEV(1, 2, 133, 1),
-	EMS_IO_CAN_DEV(2, 0, 134, 2),
-	EMS_IO_485_DEV(1, 1, 135, 0),
-	EMS_IO_485_DEV(1, 3, 136, 1),
-	EMS_IO_485_DEV(2, 1, 137, 2),
-	EMS_IO_485_DEV(2, 2, 138, 3),
+	EMS_IO_CAN_DEV(1, 0, GPIO_EMS_CAN_INT0, 0),
+	EMS_IO_CAN_DEV(1, 2, GPIO_EMS_CAN_INT1, 1),
+	EMS_IO_CAN_DEV(2, 0, GPIO_EMS_CAN_INT2, 2),
+	EMS_IO_485_DEV(1, 1, GPIO_EMS_MAX_INT0, 0),
+	EMS_IO_485_DEV(1, 3, GPIO_EMS_MAX_INT1, 1),
+	EMS_IO_485_DEV(2, 1, GPIO_EMS_MAX_INT2, 2),
+	EMS_IO_485_DEV(2, 2, GPIO_EMS_MAX_INT3, 3),
 };
 
 enum {
@@ -1030,14 +1050,6 @@ static struct pcf857x_platform_data ems_io_pca9672_data[5] = {
 	EMS_IO_GPIO_DEV_DATA(4),
 };
 
-static struct i2c_board_info pia35x_ems_io_i2c_info[] = {
-	EMS_IO_GPIO_DEV(0x20,  0, EMS_IO_DOUT),
-	EMS_IO_GPIO_DEV(0x21, 21, EMS_IO_DIN1),
-	EMS_IO_GPIO_DEV(0x22, 19, EMS_IO_DIN2),
-	EMS_IO_GPIO_DEV(0x23,  0, EMS_IO_TERM),
-	EMS_IO_GPIO_DEV(0x12, 17, EMS_IO_DISP),
-};
-
 #define GPIO_EMS_IO_RESET    14
 #define GPIO_EMS_IO_DIN1_INT 21
 #define GPIO_EMS_IO_DIN2_INT 19
@@ -1045,6 +1057,14 @@ static struct i2c_board_info pia35x_ems_io_i2c_info[] = {
 #define GPIO_EMS_IO_SPI2_CS0 181
 #define GPIO_EMS_IO_SPI2_CS1 182
 #define GPIO_EMS_IO_SPI2_CS2 12
+static struct i2c_board_info pia35x_ems_io_i2c_info[] = {
+	EMS_IO_GPIO_DEV(0x20,                    0, EMS_IO_DOUT),
+	EMS_IO_GPIO_DEV(0x21, GPIO_EMS_IO_DIN1_INT, EMS_IO_DIN1),
+	EMS_IO_GPIO_DEV(0x22, GPIO_EMS_IO_DIN2_INT, EMS_IO_DIN2),
+	EMS_IO_GPIO_DEV(0x23,                    0, EMS_IO_TERM),
+	EMS_IO_GPIO_DEV(0x12, GPIO_EMS_IO_DISP_INT, EMS_IO_DISP),
+};
+
 static struct gpio pia35x_ems_io_gpios[] = {
 	{ GPIO_EMS_IO_RESET, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 			"emsio.reset" },
@@ -1055,11 +1075,8 @@ static struct gpio pia35x_ems_io_gpios[] = {
 	{ GPIO_EMS_IO_SPI2_CS1, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, NULL },
 	{ GPIO_EMS_IO_SPI2_CS2, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, NULL },
 };
-
-static void __init pia35x_ems_io_init(void) {
+static void __init pia35x_ems_io_init_v1(void) {
 	unsigned i;
-
-	pr_info("pia35x: Initializing piA-EMS_IO board");
 
 	/* GPIOs */
 	gpio_request_array(pia35x_ems_io_gpios, ARRAY_SIZE(pia35x_ems_io_gpios));
@@ -1075,15 +1092,11 @@ static void __init pia35x_ems_io_init(void) {
 					pia35x_ems_io_gpios[i].label);
 	}
 
-	/* IO expander */
-	i2c_register_board_info(2, pia35x_ems_io_i2c_info,
-			ARRAY_SIZE(pia35x_ems_io_i2c_info));
-
 	/* setup SPI2 GPIO CS */
-	mcspi2_cs_gpios[0] = GPIO_EMS_IO_SPI2_CS0;
-	mcspi2_cs_gpios[1] = GPIO_EMS_IO_SPI2_CS1;
-	mcspi2_cs_gpios[2] = GPIO_EMS_IO_SPI2_CS2;
-	mcspi2_cs_gpios[3] = 0;
+	pia_mcspi2_cs_gpios[0] = GPIO_EMS_IO_SPI2_CS0;
+	pia_mcspi2_cs_gpios[1] = GPIO_EMS_IO_SPI2_CS1;
+	pia_mcspi2_cs_gpios[2] = GPIO_EMS_IO_SPI2_CS2;
+	pia_mcspi2_cs_gpios[3] = 0;
 
 	/* prototype boards used inverted rts logic */
 	if (0 == strcmp(expansionboard_name, "pia_ems_io")) {
@@ -1097,6 +1110,110 @@ static void __init pia35x_ems_io_init(void) {
 	/* SPI */
 	spi_register_board_info(pia35x_ems_io_spi_info,
 			ARRAY_SIZE(pia35x_ems_io_spi_info));
+}
+
+/* Overrides for EMS-IO Rev. 0.3 */
+#define GPIO_EMSV3_USB_NRESET  130
+#define GPIO_EMSV3_RESET       135
+#define GPIO_EMSV3_IO_DIN1_INT 137
+#define GPIO_EMSV3_IO_DIN2_INT 138
+#define GPIO_EMSV3_IO_DISP_INT 139
+#define GPIO_EMSV3_CAN_INT0    133
+#define GPIO_EMSV3_CAN_INT1    134
+#define GPIO_EMSV3_CAN_INT2    132
+static struct gpio pia35x_ems_io_gpios_v3[] = {
+	{ GPIO_EMSV3_USB_NRESET, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "hsusb1.reset" },
+	{ GPIO_EMSV3_RESET, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "emsio.reset" },
+	{ GPIO_EMSV3_IO_DIN1_INT, GPIOF_DIR_IN, "emsio.din1_int"  },
+	{ GPIO_EMSV3_IO_DIN2_INT, GPIOF_DIR_IN, "emsio.din2_int"},
+	{ GPIO_EMSV3_IO_DISP_INT, GPIOF_DIR_IN, "emsio.disp_int"  },
+};
+
+static struct spi_board_info pia35x_ems_io_spi_info_v3[] = {
+	EMS_IO_CAN_DEV(1, 0, GPIO_EMSV3_CAN_INT0, 0),
+	EMS_IO_CAN_DEV(1, 2, GPIO_EMSV3_CAN_INT1, 1),
+	EMS_IO_CAN_DEV(2, 0, GPIO_EMSV3_CAN_INT2, 2),
+};
+
+static void __init pia35x_ems_io_init_v3(void) {
+	unsigned i;
+
+	/* GPIOs */
+	gpio_request_array(pia35x_ems_io_gpios_v3,
+			ARRAY_SIZE(pia35x_ems_io_gpios_v3));
+	usleep_range(4, 10); /* reset must be held for at least 4us */
+	/* deassert USB and GPIO expander RESETS */
+	gpio_set_value(GPIO_EMSV3_USB_NRESET, 1);
+	gpio_set_value(GPIO_EMSV3_RESET, 1);
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_ems_io_gpios_v3); ++i) {
+		if (NULL == pia35x_ems_io_gpios_v3[i].label)
+			continue;
+
+		if (0 != gpio_export(pia35x_ems_io_gpios_v3[i].gpio, false))
+			pr_err("piAx: EMS IO couldn't export %s\n",
+					pia35x_ems_io_gpios_v3[i].label);
+	}
+
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT0), IRQ_TYPE_EDGE_FALLING);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT1), IRQ_TYPE_EDGE_FALLING);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT2), IRQ_TYPE_EDGE_FALLING);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT), IRQ_TYPE_EDGE_FALLING);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT), IRQ_TYPE_EDGE_FALLING);
+	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DISP_INT), IRQ_TYPE_EDGE_FALLING);
+
+	/* SPI */
+	spi_register_board_info(pia35x_ems_io_spi_info_v3,
+			ARRAY_SIZE(pia35x_ems_io_spi_info_v3));
+
+	pia35x_ems_io_i2c_info[EMS_IO_DIN1].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT);
+	pia35x_ems_io_i2c_info[EMS_IO_DIN2].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN2_INT);
+	pia35x_ems_io_i2c_info[EMS_IO_DISP].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DISP_INT);
+	/* USB */
+	/* Configure GPIO for EHCI port */
+//	if (omap_mux_init_gpio(GPIO_EMSV3_USB_NRESET, OMAP_PIN_OUTPUT)) {
+//		pr_err("Can not configure mux for GPIO_USB_NRESET %d\n",
+//			GPIO_EMSV3_USB_NRESET);
+//		return;
+//	}
+
+//	if (omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT)) {
+//		pr_err("Can not configure mux for GPIO_USB_POWER %d\n",
+//			GPIO_USB_POWER);
+//		return;
+//	}
+//
+//	ret = gpio_request_one(GPIO_USB_POWER,
+//			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "usb_ehci_enable");
+//	if (ret < 0) {
+//		pr_err("Can not request GPIO %d\n", GPIO_USB_POWER);
+//		return;
+//	}
+//
+//	//ret = gpio_direction_output(GPIO_USB_POWER, 1);
+//	if (ret < 0) {
+//		gpio_free(GPIO_USB_POWER);
+//		pr_err("Unable to initialize EHCI power\n");
+//		return;
+//	}
+
+	usb_ehci_init(&ehci_pdata);
+}
+
+static void __init pia35x_ems_io_init(int revision) {
+	pr_info("pia35x: Initializing piA-EMS_IO board Rev. %d", revision);
+
+	if ((1 == revision) || (2 == revision)) {
+		pia35x_ems_io_init_v1();
+	} else if (3 == revision) {
+		pia35x_ems_io_init_v3();
+	} else {
+		return;
+	}
+
+	/* IO expander */
+	i2c_register_board_info(2, pia35x_ems_io_i2c_info,
+			ARRAY_SIZE(pia35x_ems_io_i2c_info));
 }
 #else
 static inline void __init pia35x_ems_io_init(void) {
@@ -1157,19 +1274,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 };
 #else
 #define board_mux	NULL
-#endif
-
-#if 0 /* USB EHCI port only on expansion port */
-static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
-	.port_mode[0] = EHCI_HCD_OMAP_MODE_PHY,
-	.port_mode[1] = EHCI_HCD_OMAP_MODE_UNKNOWN,
-	.port_mode[2] = EHCI_HCD_OMAP_MODE_UNKNOWN,
-
-	.phy_reset  = true,
-	.reset_gpio_port[0]  = -EINVAL,
-	.reset_gpio_port[1]  = -EINVAL,
-	.reset_gpio_port[2]  = -EINVAL
-};
 #endif
 
 /*
@@ -2011,6 +2115,7 @@ static void __init pia35x_status_led_init(void)
 static int __init pia35x_expansion_init(void)
 {
 	int ret = 0;
+	int revision = 0;
 
 	pia35x_gsm_init();
 
@@ -2028,7 +2133,20 @@ static int __init pia35x_expansion_init(void)
 		pia35x_ioexp_init();
 		ret++;
 	} else if (0 == strncmp(expansionboard_name, "pia_ems_io", 10)) {
-		pia35x_ems_io_init();
+		switch (expansionboard_name[10]) {
+			case 0:
+				revision = 1;
+				break;
+			case '2':
+				revision = 2;
+				break;
+			case '3':
+				revision = 3;
+				break;
+			default:
+				break;
+		}
+		pia35x_ems_io_init(revision);
 		ret++;
 	}
 
@@ -2042,6 +2160,10 @@ static int __init expansionboard_setup(char *str)
 		return -EINVAL;
 
 	strncpy(expansionboard_name, str, 32);
+	if (strcasecmp(expansionboard_name, "pia_ems_io") == 0||
+			strcasecmp(expansionboard_name, "pia_ems_io2") == 0) {
+		mcspi2_cs_gpios = pia_mcspi2_cs_gpios;
+	}
 	printk(KERN_INFO "pia35x expansionboard: %s\n", expansionboard_name);
 
 	return 0;
