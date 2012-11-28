@@ -1091,7 +1091,8 @@ static int omap_mcspi_runtime_resume(struct device *dev)
 	return 0;
 }
 
-
+/* HACK CS GPIOs */
+int *mcspi2_cs_gpios = NULL;
 static int __init omap2_mcspi_probe(struct platform_device *pdev)
 {
 	struct spi_master	*master;
@@ -1116,15 +1117,21 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 	master->setup = omap2_mcspi_setup;
 	master->transfer = omap2_mcspi_transfer;
 	master->cleanup = omap2_mcspi_cleanup;
+	/* when using 4 GPIOs for CS on McSPI2 */
+	if (mcspi2_cs_gpios != NULL) {
+		pdata->cs_gpios = mcspi2_cs_gpios;
+		pdata->num_cs = 4;
+	}
 	master->num_chipselect = pdata->num_cs;
 
 	dev_set_drvdata(&pdev->dev, master);
 
 	mcspi = spi_master_get_devdata(master);
 	mcspi->master = master;
-	if (pdata->cs_gpios) {
+	if (pdata && pdata->cs_gpios) {
 		mcspi->cs_gpios = pdata->cs_gpios;
 		num_dma = 1;
+		dev_warn(&pdev->dev, "using GPIOs for CS\n");
 	} else {
 		mcspi->cs_gpios = NULL;
 		num_dma = master->num_chipselect;
@@ -1298,6 +1305,7 @@ static int __init omap2_mcspi_init(void)
 				omap2_mcspi_driver.driver.name);
 	if (omap2_mcspi_wq == NULL)
 		return -1;
+
 	return platform_driver_probe(&omap2_mcspi_driver, omap2_mcspi_probe);
 }
 subsys_initcall(omap2_mcspi_init);

@@ -360,7 +360,8 @@ inline static void __init pia35x_display_init(void) { }
 
 /** SPI GPIO CS Hack **/
 //int mcspi1_cs_gpios[4];
-int mcspi2_cs_gpios[4];
+int pia_mcspi2_cs_gpios[4];
+extern int *mcspi2_cs_gpios;
 
 /** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
