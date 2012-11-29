@@ -72,10 +72,10 @@ static char lcdboard_name[16];
 
 /* USB EHCI port only on expansion port
  * currently used for KACO_EMS_IO rev 0.3+ */
-static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
-	.port_mode[0] = EHCI_HCD_OMAP_MODE_PHY,
-	.port_mode[1] = EHCI_HCD_OMAP_MODE_UNKNOWN,
-	.port_mode[2] = EHCI_HCD_OMAP_MODE_UNKNOWN,
+static struct usbhs_omap_board_data usbhs_pdata __initdata = {
+	.port_mode[0] = OMAP_EHCI_PORT_MODE_PHY,
+	.port_mode[1] = OMAP_USBHS_PORT_MODE_UNUSED,
+	.port_mode[2] = OMAP_USBHS_PORT_MODE_UNUSED,
 
 	.phy_reset  = true,
 	.reset_gpio_port[0]  = 130,
@@ -1155,12 +1155,18 @@ static void __init pia35x_ems_io_init_v3(void) {
 					pia35x_ems_io_gpios_v3[i].label);
 	}
 
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT0), IRQ_TYPE_EDGE_FALLING);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT1), IRQ_TYPE_EDGE_FALLING);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT2), IRQ_TYPE_EDGE_FALLING);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT), IRQ_TYPE_EDGE_FALLING);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT), IRQ_TYPE_EDGE_FALLING);
-	set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DISP_INT), IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT0),
+			IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT1),
+			IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_CAN_INT2),
+			IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT),
+			IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT),
+			IRQ_TYPE_EDGE_FALLING);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DISP_INT),
+			IRQ_TYPE_EDGE_FALLING);
 
 	/* SPI */
 	spi_register_board_info(pia35x_ems_io_spi_info_v3,
@@ -1197,7 +1203,7 @@ static void __init pia35x_ems_io_init_v3(void) {
 //		return;
 //	}
 
-	usb_ehci_init(&ehci_pdata);
+	usbhs_init(&usbhs_pdata);
 }
 
 static void __init pia35x_ems_io_init(int revision) {
