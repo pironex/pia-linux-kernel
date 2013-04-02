@@ -112,6 +112,44 @@ struct pia335x_eeprom_config {
 };
 static struct pia335x_eeprom_config config;
 
+/* Module pin mux for mmc0 */
+static struct pinmux_config mmc0_pin_mux[] = {
+	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_txclk.gpio3_9", AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = GPIO_TO_PIN(0, 17),
+		.gpio_wp        = GPIO_TO_PIN(3, 9),
+		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{}      /* Terminator */
+};
+
+static void mmc0_init(void)
+{
+	setup_pin_mux(mmc0_pin_mux);
+
+	omap2_hsmmc_init(pia335x_mmc);
+	return;
+}
+
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
 	int ret;
@@ -278,6 +316,8 @@ static void __init pia335x_init(void)
 	omap_serial_init();
 	pia335x_rtc_init();
 	pia335x_i2c_init();
+
+	mmc0_init();
 }
 
 static void __init pia335x_map_io(void)
