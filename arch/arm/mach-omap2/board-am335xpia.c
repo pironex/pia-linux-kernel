@@ -21,10 +21,97 @@
 #include <asm/mach/arch.h>
 
 #include "common.h"
+/* module pin mux structure */
+struct pinmux_config {
+	const char *string_name; /* signal name format */
+	int val; /* Options for the mux register value */
+};
 
+/*
+* @pin_mux - single module pin-mux structure which defines pin-mux
+*			details for all its pins.
+*/
+static void setup_pin_mux(struct pinmux_config *pin_mux)
+{
+	int i;
+
+	for (i = 0; pin_mux->string_name != NULL; pin_mux++)
+		omap_mux_init_signal(pin_mux->string_name, pin_mux->val);
+
+}
+
+#ifdef CONFIG_OMAP_MUX
+static struct omap_board_mux board_mux[] __initdata = {
+	AM33XX_MUX(I2C0_SDA, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
+};
+#else
+#define	board_mux	NULL
+#endif
+
+void __iomem *pia335x_emif_base;
+
+void __iomem * __init pia335x_get_mem_ctlr(void)
+{
+
+	pia335x_emif_base = ioremap(AM33XX_EMIF0_BASE, SZ_32K);
+
+	if (!pia335x_emif_base)
+		pr_warning("%s: Unable to map DDR2 controller",	__func__);
+
+	return pia335x_emif_base;
+}
+
+#ifndef CONFIG_MACH_AM335XEVM
+void __iomem *am33xx_get_ram_base(void)
+{
+	return pia335x_emif_base;
+}
+#endif
+
+static struct resource am33xx_cpuidle_resources[] = {
+	{
+		.start		= AM33XX_EMIF0_BASE,
+		.end		= AM33XX_EMIF0_BASE + SZ_32K - 1,
+		.flags		= IORESOURCE_MEM,
+	},
+};
+
+/* AM33XX devices support DDR2 power down */
+static struct am33xx_cpuidle_config pia335x_cpuidle_pdata = {
+	.ddr2_pdown	= 1,
+};
+
+static struct platform_device pia335x_cpuidle_device = {
+	.name			= "cpuidle-am33xx",
+	.num_resources		= ARRAY_SIZE(am33xx_cpuidle_resources),
+	.resource		= am33xx_cpuidle_resources,
+	.dev = {
+		.platform_data	= &pia335x_cpuidle_pdata,
+	},
+};
+
+static void __init pia335x_cpuidle_init(void)
+{
+	int ret;
+
+	pia335x_cpuidle_pdata.emif_base = pia335x_get_mem_ctlr();
+
+	ret = platform_device_register(&pia335x_cpuidle_device);
+
+	if (ret)
+		pr_warning("AM33XX cpuidle registration failed\n");
+
+}
+
+#include <mach/board-am335xevm.h>
 static void __init pia335x_init(void)
 {
-	// TODO implement
+	pia335x_cpuidle_init();
+	am33xx_mux_init(board_mux);
 }
 
 static void __init pia335x_map_io(void)
