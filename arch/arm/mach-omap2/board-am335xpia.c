@@ -318,6 +318,9 @@ static void __init pia335x_init(void)
 	pia335x_i2c_init();
 
 	mmc0_init();
+
+	am33xx_evmid_fillup(PIA335_KM_E2);
+	am33xx_cpsw_init(0);
 }
 
 static void __init pia335x_map_io(void)
