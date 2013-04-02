@@ -149,6 +149,72 @@ static void __init pia335x_i2c_init(void)
 				ARRAY_SIZE(pia335x_i2c1_boardinfo));
 }
 
+/**
+ * AM33xx internal RTC
+ */
+static struct resource pia335x_rtc_resources[] = {
+	{
+		.start		= AM33XX_RTC_BASE,
+		.end		= AM33XX_RTC_BASE + SZ_4K - 1,
+		.flags		= IORESOURCE_MEM,
+	},
+	{ /* timer irq */
+		.start		= AM33XX_IRQ_RTC_TIMER,
+		.end		= AM33XX_IRQ_RTC_TIMER,
+		.flags		= IORESOURCE_IRQ,
+	},
+	{ /* alarm irq */
+		.start		= AM33XX_IRQ_RTC_ALARM,
+		.end		= AM33XX_IRQ_RTC_ALARM,
+		.flags		= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device pia335x_rtc_device = {
+	.name           = "omap_rtc",
+	.id             = -1,
+	.num_resources	= ARRAY_SIZE(pia335x_rtc_resources),
+	.resource	= pia335x_rtc_resources,
+};
+
+static int pia335x_rtc_init(void)
+{
+	void __iomem *base;
+	struct clk *clk;
+
+	clk = clk_get(NULL, "rtc_fck");
+	if (IS_ERR(clk)) {
+		pr_err("rtc : Failed to get RTC clock\n");
+		return -1;
+	}
+
+	if (clk_enable(clk)) {
+		pr_err("rtc: Clock Enable Failed\n");
+		return -1;
+	}
+
+	base = ioremap(AM33XX_RTC_BASE, SZ_4K);
+
+	if (WARN_ON(!base))
+		return -ENOMEM;
+
+	/* Unlock the rtc's registers */
+	writel(0x83e70b13, base + 0x6c);
+	writel(0x95a4f1e0, base + 0x70);
+
+	/*
+	 * Enable the 32K OSc
+	 * TODO: Need a better way to handle this
+	 * Since we want the clock to be running before mmc init
+	 * we need to do it before the rtc probe happens
+	 */
+	writel(0x48, base + 0x54);
+
+	iounmap(base);
+
+	return  platform_device_register(&pia335x_rtc_device);
+}
+
 void __iomem *pia335x_emif_base;
 
 void __iomem * __init pia335x_get_mem_ctlr(void)
@@ -209,6 +275,8 @@ static void __init pia335x_init(void)
 {
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
+	omap_serial_init();
+	pia335x_rtc_init();
 	pia335x_i2c_init();
 }
 
