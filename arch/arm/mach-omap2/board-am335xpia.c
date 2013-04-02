@@ -170,11 +170,36 @@ static struct at24_platform_data pia335x_eeprom_info = {
 	.context        = (void *)NULL,
 };
 
+static struct regulator_init_data pia335x_tps_dummy = {
+	.constraints.always_on	= true,
+};
+
+static struct tps65910_board pia335x_tps65910_info = {
+	.tps65910_pmic_init_data[TPS65910_REG_VRTC]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VPLL]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDAC]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
+};
+
+
 static struct i2c_board_info __initdata pia335x_i2c1_boardinfo[] = {
 	{
 		/* Daughter Board EEPROM */
 		I2C_BOARD_INFO("24c00", PIA335X_EEPROM_I2C_ADDR),
 		.platform_data  = &pia335x_eeprom_info,
+	},
+	{
+		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
+		.platform_data  = &pia335x_tps65910_info,
 	},
 };
 
