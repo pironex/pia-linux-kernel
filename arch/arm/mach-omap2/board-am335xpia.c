@@ -74,6 +74,81 @@ static struct omap_board_mux board_mux[] __initdata = {
 #define	board_mux	NULL
 #endif
 
+/*
+* EVM Config held in On-Board eeprom device.
+*
+* Header Format
+*
+*  Name			Size	Contents
+*			(Bytes)
+*-------------------------------------------------------------
+*  Header		4	0xAA, 0x55, 0x33, 0xEE
+*
+*  Board Name		8	Name for board in ASCII.
+*				example "A33515BB" = "AM335X
+				Low Cost EVM board"
+*
+*  Version		4	Hardware version code for board in
+*				in ASCII. "1.0A" = rev.01.0A
+*
+*  Serial Number	12	Serial number of the board. This is a 12
+*				character string which is WWYY4P16nnnn, where
+*				WW = 2 digit week of the year of production
+*				YY = 2 digit year of production
+*				nnnn = incrementing board number
+*
+*  Configuration option	32	Codes(TBD) to show the configuration
+*				setup on this board.
+*
+*  Available		32720	Available space for other non-volatile
+*				data.
+*/
+struct pia335x_eeprom_config {
+	u32	header;
+	u8	name[8];
+	char	version[4];
+	u8	serial[12];
+	u8	opt[32];
+};
+static struct pia335x_eeprom_config config;
+
+static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
+{
+	int ret;
+	/* get board specific data */
+	ret = mem_acc->read(mem_acc, (char *)&config, 0, sizeof(config));
+	/* FIXME */
+}
+
+/**
+ * I2C devices
+ */
+#define PIA335X_EEPROM_I2C_ADDR 0x50
+static struct at24_platform_data pia335x_eeprom_info = {
+	.byte_len       = 128,
+	.page_size      = 8,
+	.flags          = AT24_FLAG_TAKE8ADDR,
+	.setup          = pia335x_setup,
+	.context        = (void *)NULL,
+};
+
+static struct i2c_board_info __initdata pia335x_i2c1_boardinfo[] = {
+	{
+		/* Daughter Board EEPROM */
+		I2C_BOARD_INFO("24c00", PIA335X_EEPROM_I2C_ADDR),
+		.platform_data  = &pia335x_eeprom_info,
+	},
+};
+
+static void __init pia335x_i2c_init(void)
+{
+	/* Initially assume Low Cost EVM Config */
+	//am335x_evm_id = LOW_COST_EVM;
+
+	omap_register_i2c_bus(1, 100, pia335x_i2c1_boardinfo,
+				ARRAY_SIZE(pia335x_i2c1_boardinfo));
+}
+
 void __iomem *pia335x_emif_base;
 
 void __iomem * __init pia335x_get_mem_ctlr(void)
@@ -134,6 +209,7 @@ static void __init pia335x_init(void)
 {
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
+	pia335x_i2c_init();
 }
 
 static void __init pia335x_map_io(void)
