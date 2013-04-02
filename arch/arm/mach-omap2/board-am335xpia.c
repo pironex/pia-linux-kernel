@@ -16,11 +16,33 @@
 #include <linux/init.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/gpio.h>
+#include <linux/platform_device.h>
+#include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/i2c/at24.h>
+#include <linux/mfd/tps65910.h>
+
+#include <mach/hardware.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <asm/mach/map.h>
+
+#include <plat/omap_device.h>
+#include <plat/irqs.h>
+#include <plat/board.h>
+#include <plat/common.h>
+#include <plat/mmc.h>
 
 #include "common.h"
+#include "cpuidle33xx.h"
+#include "mux.h"
+#include "hsmmc.h"
+
+/* Convert GPIO signal to GPIO pin number */
+#define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
+
 /* module pin mux structure */
 struct pinmux_config {
 	const char *string_name; /* signal name format */
