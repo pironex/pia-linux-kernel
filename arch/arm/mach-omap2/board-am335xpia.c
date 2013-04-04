@@ -278,25 +278,39 @@ static int pia335x_rtc_init(void)
 	return  platform_device_register(&pia335x_rtc_device);
 }
 
-void __iomem *pia335x_emif_base;
 
-void __iomem * __init pia335x_get_mem_ctlr(void)
 {
 
-	pia335x_emif_base = ioremap(AM33XX_EMIF0_BASE, SZ_32K);
 
-	if (!pia335x_emif_base)
+#ifdef CONFIG_MACH_AM335XEVM
+/* FIXME for some reason board specific stuff is called from mach code
+ * e.g.
+ * pm33xx.c depends on definitions from board-am33xevm.c
+ * or
+ * multiple AM335x board definitions must conflict with each other
+ * either way, this is a hack to prevent multiple definitions for now
+ */
+extern void __iomem * am33xx_emif_base;
+extern void __iomem * __init am33xx_get_mem_ctlr(void);
+#else
+void __iomem *am33xx_emif_base;
+
+void __iomem * __init am33xx_get_mem_ctlr(void)
+{
+	am33xx_emif_base = ioremap(AM33XX_EMIF0_BASE, SZ_32K);
+
+	if (!am33xx_emif_base)
 		pr_warning("%s: Unable to map DDR2 controller",	__func__);
 
-	return pia335x_emif_base;
+	return am33xx_emif_base;
 }
 
-#ifndef CONFIG_MACH_AM335XEVM
 void __iomem *am33xx_get_ram_base(void)
 {
-	return pia335x_emif_base;
+	return am335xx_emif_base;
 }
 #endif
+
 
 static struct resource am33xx_cpuidle_resources[] = {
 	{
@@ -324,7 +338,9 @@ static void __init pia335x_cpuidle_init(void)
 {
 	int ret;
 
-	pia335x_cpuidle_pdata.emif_base = pia335x_get_mem_ctlr();
+	pr_info("piA335x: %s\n", __func__);
+
+	pia335x_cpuidle_pdata.emif_base = am33xx_get_mem_ctlr();
 
 	ret = platform_device_register(&pia335x_cpuidle_device);
 
