@@ -20,8 +20,10 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/if_ether.h>
 #include <linux/i2c/at24.h>
 #include <linux/mfd/tps65910.h>
+#include <linux/reboot.h>
 
 #include <mach/hardware.h>
 
@@ -40,39 +42,15 @@
 #include "mux.h"
 #include "hsmmc.h"
 
+/** BOARD CONFIG storage */
+static struct omap_board_config_kernel pia335x_config[] __initdata = {
+};
+
+/* fallback mac addresses */
+static char am335x_mac_addr[2][ETH_ALEN];
+
 /* Convert GPIO signal to GPIO pin number */
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
-
-/* module pin mux structure */
-struct pinmux_config {
-	const char *string_name; /* signal name format */
-	int val; /* Options for the mux register value */
-};
-
-/*
-* @pin_mux - single module pin-mux structure which defines pin-mux
-*			details for all its pins.
-*/
-static void setup_pin_mux(struct pinmux_config *pin_mux)
-{
-	int i;
-
-	for (i = 0; pin_mux->string_name != NULL; pin_mux++)
-		omap_mux_init_signal(pin_mux->string_name, pin_mux->val);
-
-}
-
-#ifdef CONFIG_OMAP_MUX
-static struct omap_board_mux board_mux[] __initdata = {
-	AM33XX_MUX(I2C0_SDA, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	{ .reg_offset = OMAP_MUX_TERMINATOR },
-};
-#else
-#define	board_mux	NULL
-#endif
 
 /*
 * EVM Config held in On-Board eeprom device.
@@ -112,6 +90,38 @@ struct pia335x_eeprom_config {
 };
 static struct pia335x_eeprom_config config;
 
+
+/** PINMUX **/
+struct pinmux_config {
+	const char *string_name; /* signal name format */
+	int val; /* Options for the mux register value */
+};
+
+/*
+* @pin_mux - single module pin-mux structure which defines pin-mux
+*			details for all its pins.
+*/
+static void setup_pin_mux(struct pinmux_config *pin_mux)
+{
+	int i;
+
+	for (i = 0; pin_mux->string_name != NULL; pin_mux++)
+		omap_mux_init_signal(pin_mux->string_name, pin_mux->val);
+
+}
+
+#ifdef CONFIG_OMAP_MUX
+static struct omap_board_mux board_mux[] __initdata = {
+	AM33XX_MUX(I2C0_SDA, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
+};
+#else
+#define	board_mux	NULL
+#endif
+
 /* Module pin mux for mmc0 */
 static struct pinmux_config mmc0_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -120,7 +130,9 @@ static struct pinmux_config mmc0_pin_mux[] = {
 	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	/* write protect */
 	{"mii1_txclk.gpio3_9", AM33XX_PIN_INPUT_PULLUP},
+	/* card detect */
 	{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
@@ -150,12 +162,169 @@ static void mmc0_init(void)
 	return;
 }
 
+
+/**
+ * AM33xx internal RTC
+ */
+static struct resource pia335x_rtc_resources[] = {
+	{
+		.start		= AM33XX_RTC_BASE,
+		.end		= AM33XX_RTC_BASE + SZ_4K - 1,
+		.flags		= IORESOURCE_MEM,
+	},
+	{ /* timer irq */
+		.start		= AM33XX_IRQ_RTC_TIMER,
+		.end		= AM33XX_IRQ_RTC_TIMER,
+		.flags		= IORESOURCE_IRQ,
+	},
+	{ /* alarm irq */
+		.start		= AM33XX_IRQ_RTC_ALARM,
+		.end		= AM33XX_IRQ_RTC_ALARM,
+		.flags		= IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device pia335x_rtc_device = {
+	.name           = "omap_rtc",
+	.id             = -1,
+	.num_resources	= ARRAY_SIZE(pia335x_rtc_resources),
+	.resource	= pia335x_rtc_resources,
+};
+
+static int pia335x_rtc_init(void)
+{
+	void __iomem *base;
+	struct clk *clk;
+
+	pr_info("piA335x: %s\n", __func__);
+
+	clk = clk_get(NULL, "rtc_fck");
+	if (IS_ERR(clk)) {
+		pr_err("rtc : Failed to get RTC clock\n");
+		return -1;
+	}
+
+	if (clk_enable(clk)) {
+		pr_err("rtc: Clock Enable Failed\n");
+		return -1;
+	}
+
+	base = ioremap(AM33XX_RTC_BASE, SZ_4K);
+
+	if (WARN_ON(!base))
+		return -ENOMEM;
+
+	/* Unlock the rtc's registers */
+	writel(0x83e70b13, base + 0x6c);
+	writel(0x95a4f1e0, base + 0x70);
+
+	/*
+	 * Enable the 32K OSc
+	 * TODO: Need a better way to handle this
+	 * Since we want the clock to be running before mmc init
+	 * we need to do it before the rtc probe happens
+	 */
+	writel(0x48, base + 0x54);
+
+	iounmap(base);
+
+	return  platform_device_register(&pia335x_rtc_device);
+}
+
+static void setup_e2(void)
+{
+	pr_info("piA335x: Setup KM E2.\n");
+	/* EVM - Starter Kit */
+/*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
+		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+		{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+		{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+		{lcdc_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
+		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
+		{mfd_tscadc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
+		{gpio_led_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
+		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
+		{mcasp1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
+		{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
+		{wl12xx_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
+		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+		{NULL, 0, 0},
+	};*/
+	pia335x_rtc_init();
+
+	mmc0_init();
+
+	pr_info("piA335x: cpsw_init\n");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_RGMII, NULL, NULL);
+}
+
+void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
+	/* generic board detection triggered by eeprom init */
 	int ret;
+	char tmp[10];
+
+	pr_info("piA335x: setup\n");
+	/* from evm code
+	 * 1st get the MAC address from EEPROM */
+	ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
+		0x60, sizeof(am335x_mac_addr));
+
+	if (ret != sizeof(am335x_mac_addr)) {
+		pr_warning("AM335X: EVM Config read fail: %d\n", ret);
+		return;
+	}
+
+	/* Fillup global mac id */
+	am33xx_cpsw_macidfillup(&am335x_mac_addr[0][0],
+				&am335x_mac_addr[1][0]);
+
 	/* get board specific data */
 	ret = mem_acc->read(mem_acc, (char *)&config, 0, sizeof(config));
-	/* FIXME */
+	if (ret != sizeof(config)) {
+		pr_err("piA335x config read fail, read %d bytes\n", ret);
+		goto out;
+	}
+
+	if (config.header != 0xEE3355AA) { // header magic number
+		pr_err("piA335x: wrong header 0x%x, expected 0x%x\n",
+			config.header, 0xEE3355AA);
+		goto out;
+	}
+
+	if (strncmp("PIA335", config.name, 6)) {
+		pr_err("Board %s\ndoesn't look like a PIA335 board\n",
+			config.name);
+		goto out;
+	}
+
+	snprintf(tmp, sizeof(config.name) + 1, "%s", config.name);
+	pr_info("Board name: %s\n", tmp);
+	snprintf(tmp, sizeof(config.version) + 1, "%s", config.version);
+	pr_info("Board version: %s\n", tmp);
+
+	if (!strncmp("PIA335E2", config.name, 8)) {
+		//daughter_brd_detected = false;
+		if(!strncmp("0.01", config.version, 4)) {
+			setup_e2();
+		} else {
+			pr_info("piA335x: Unknown board revision %.4s\n",
+					config.version);
+		}
+	}
+
+	return;
+
+out:
+	/*
+	 * If the EEPROM hasn't been programed or an incorrect header
+	 * or board name are read then the hardware details are unknown.
+	 * Notify the user and call machine_halt to stop the boot process.
+	 */
+	pr_err("PIA335x: Board identification failed... Halting...\n");
+	machine_halt();
 }
 
 /**
@@ -191,7 +360,7 @@ static struct tps65910_board pia335x_tps65910_info = {
 };
 
 
-static struct i2c_board_info __initdata pia335x_i2c1_boardinfo[] = {
+static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 	{
 		/* Daughter Board EEPROM */
 		I2C_BOARD_INFO("24c00", PIA335X_EEPROM_I2C_ADDR),
@@ -205,82 +374,11 @@ static struct i2c_board_info __initdata pia335x_i2c1_boardinfo[] = {
 
 static void __init pia335x_i2c_init(void)
 {
-	/* Initially assume Low Cost EVM Config */
-	//am335x_evm_id = LOW_COST_EVM;
-
-	omap_register_i2c_bus(1, 100, pia335x_i2c1_boardinfo,
-				ARRAY_SIZE(pia335x_i2c1_boardinfo));
+	/* I2C1 must be muxed in u-boot */
+	pr_info("piA335x: %s", __func__);
+	omap_register_i2c_bus(1, 100, pia335x_i2c0_boardinfo,
+				ARRAY_SIZE(pia335x_i2c0_boardinfo));
 }
-
-/**
- * AM33xx internal RTC
- */
-static struct resource pia335x_rtc_resources[] = {
-	{
-		.start		= AM33XX_RTC_BASE,
-		.end		= AM33XX_RTC_BASE + SZ_4K - 1,
-		.flags		= IORESOURCE_MEM,
-	},
-	{ /* timer irq */
-		.start		= AM33XX_IRQ_RTC_TIMER,
-		.end		= AM33XX_IRQ_RTC_TIMER,
-		.flags		= IORESOURCE_IRQ,
-	},
-	{ /* alarm irq */
-		.start		= AM33XX_IRQ_RTC_ALARM,
-		.end		= AM33XX_IRQ_RTC_ALARM,
-		.flags		= IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device pia335x_rtc_device = {
-	.name           = "omap_rtc",
-	.id             = -1,
-	.num_resources	= ARRAY_SIZE(pia335x_rtc_resources),
-	.resource	= pia335x_rtc_resources,
-};
-
-static int pia335x_rtc_init(void)
-{
-	void __iomem *base;
-	struct clk *clk;
-
-	clk = clk_get(NULL, "rtc_fck");
-	if (IS_ERR(clk)) {
-		pr_err("rtc : Failed to get RTC clock\n");
-		return -1;
-	}
-
-	if (clk_enable(clk)) {
-		pr_err("rtc: Clock Enable Failed\n");
-		return -1;
-	}
-
-	base = ioremap(AM33XX_RTC_BASE, SZ_4K);
-
-	if (WARN_ON(!base))
-		return -ENOMEM;
-
-	/* Unlock the rtc's registers */
-	writel(0x83e70b13, base + 0x6c);
-	writel(0x95a4f1e0, base + 0x70);
-
-	/*
-	 * Enable the 32K OSc
-	 * TODO: Need a better way to handle this
-	 * Since we want the clock to be running before mmc init
-	 * we need to do it before the rtc probe happens
-	 */
-	writel(0x48, base + 0x54);
-
-	iounmap(base);
-
-	return  platform_device_register(&pia335x_rtc_device);
-}
-
-
-{
-
 
 #ifdef CONFIG_MACH_AM335XEVM
 /* FIXME for some reason board specific stuff is called from mach code
@@ -355,13 +453,18 @@ static void __init pia335x_init(void)
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
 	omap_serial_init();
-	pia335x_rtc_init();
 	pia335x_i2c_init();
+	omap_sdrc_init(NULL, NULL);
 
-	mmc0_init();
 
-	am33xx_evmid_fillup(PIA335_KM_E2);
-	am33xx_cpsw_init(0);
+	//mmc0_init();
+
+	//am33xx_evmid_fillup(PIA335_KM_E2);
+	//am33xx_cpsw_init(0);
+	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+	/* XXX what for? */
+	omap_board_config = pia335x_config;
+	omap_board_config_size = ARRAY_SIZE(pia335x_config);
 }
 
 static void __init pia335x_map_io(void)
