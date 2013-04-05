@@ -166,37 +166,19 @@ static void mmc0_init(void)
 /**
  * AM33xx internal RTC
  */
-static struct resource pia335x_rtc_resources[] = {
-	{
-		.start		= AM33XX_RTC_BASE,
-		.end		= AM33XX_RTC_BASE + SZ_4K - 1,
-		.flags		= IORESOURCE_MEM,
-	},
-	{ /* timer irq */
-		.start		= AM33XX_IRQ_RTC_TIMER,
-		.end		= AM33XX_IRQ_RTC_TIMER,
-		.flags		= IORESOURCE_IRQ,
-	},
-	{ /* alarm irq */
-		.start		= AM33XX_IRQ_RTC_ALARM,
-		.end		= AM33XX_IRQ_RTC_ALARM,
-		.flags		= IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device pia335x_rtc_device = {
-	.name           = "omap_rtc",
-	.id             = -1,
-	.num_resources	= ARRAY_SIZE(pia335x_rtc_resources),
-	.resource	= pia335x_rtc_resources,
+#include <linux/rtc/rtc-omap.h>
+static struct omap_rtc_pdata pia335x_rtc_info = {
+	.pm_off		= false,
+	.wakeup_capable	= 0,
 };
 
 static int pia335x_rtc_init(void)
 {
 	void __iomem *base;
 	struct clk *clk;
-
-	pr_info("piA335x: %s\n", __func__);
+	struct omap_hwmod *oh;
+	struct platform_device *pdev;
+	char *dev_name = "am33xx-rtc";
 
 	clk = clk_get(NULL, "rtc_fck");
 	if (IS_ERR(clk)) {
@@ -212,7 +194,7 @@ static int pia335x_rtc_init(void)
 	base = ioremap(AM33XX_RTC_BASE, SZ_4K);
 
 	if (WARN_ON(!base))
-		return -ENOMEM;
+		return -1;
 
 	/* Unlock the rtc's registers */
 	writel(0x83e70b13, base + 0x6c);
@@ -223,12 +205,33 @@ static int pia335x_rtc_init(void)
 	 * TODO: Need a better way to handle this
 	 * Since we want the clock to be running before mmc init
 	 * we need to do it before the rtc probe happens
+	 *
+	 * pia: we don't really need the 32k external OSC
 	 */
 	writel(0x48, base + 0x54);
 
 	iounmap(base);
 
-	return  platform_device_register(&pia335x_rtc_device);
+	// TODO check pia335x_rtc_info.pm_off = true;
+
+	clk_disable(clk);
+	clk_put(clk);
+
+	if (omap_rev() == AM335X_REV_ES2_0)
+		pia335x_rtc_info.wakeup_capable = 1;
+
+	oh = omap_hwmod_lookup("rtc");
+	if (!oh) {
+		pr_err("could not look up %s\n", "rtc");
+		return -1;
+	}
+
+	pdev = omap_device_build(dev_name, -1, oh, &pia335x_rtc_info,
+			sizeof(struct omap_rtc_pdata), NULL, 0, 0);
+	WARN(IS_ERR(pdev), "Can't build omap_device for %s:%s.\n",
+			dev_name, oh->name);
+
+	return 0;
 }
 
 static void setup_e2(void)
