@@ -219,9 +219,7 @@ struct iwl_trans_pcie {
 
 	/* INT ICT Table */
 	__le32 *ict_tbl;
-	void *ict_tbl_vir;
 	dma_addr_t ict_tbl_dma;
-	dma_addr_t aligned_ict_tbl_dma;
 	int ict_index;
 	u32 inta;
 	bool use_ict;
@@ -305,7 +303,7 @@ int iwl_queue_space(const struct iwl_queue *q);
 ******************************************************/
 int iwl_dump_nic_event_log(struct iwl_trans *trans, bool full_log,
 			    char **buf, bool display);
-int iwl_dump_fh(struct iwl_trans *trans, char **buf, bool display);
+int iwl_dump_fh(struct iwl_trans *trans, char **buf);
 void iwl_dump_csr(struct iwl_trans *trans);
 
 /*****************************************************

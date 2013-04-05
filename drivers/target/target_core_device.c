@@ -658,7 +658,9 @@ int target_report_luns(struct se_task *se_task)
 	unsigned char *buf;
 	u32 cdb_offset = 0, lun_count = 0, offset = 8, i;
 
-	buf = transport_kmap_first_data_page(se_cmd);
+	buf = transport_kmap_data_sg(se_cmd);
+	if (!buf)
+		return -ENOMEM;
 
 	/*
 	 * If no struct se_session pointer is present, this struct se_cmd is
@@ -696,12 +698,12 @@ int target_report_luns(struct se_task *se_task)
 	 * See SPC3 r07, page 159.
 	 */
 done:
-	transport_kunmap_first_data_page(se_cmd);
 	lun_count *= 8;
 	buf[0] = ((lun_count >> 24) & 0xff);
 	buf[1] = ((lun_count >> 16) & 0xff);
 	buf[2] = ((lun_count >> 8) & 0xff);
 	buf[3] = (lun_count & 0xff);
+	transport_kunmap_data_sg(se_cmd);
 
 	se_task->task_scsi_status = GOOD;
 	transport_complete_task(se_task, 1);
@@ -833,20 +835,20 @@ int se_dev_check_shutdown(struct se_device *dev)
 
 u32 se_dev_align_max_sectors(u32 max_sectors, u32 block_size)
 {
-	u32 tmp, aligned_max_sectors;
+	u32 aligned_max_sectors;
+	u32 alignment;
 	/*
 	 * Limit max_sectors to a PAGE_SIZE aligned value for modern
 	 * transport_allocate_data_tasks() operation.
 	 */
-	tmp = rounddown((max_sectors * block_size), PAGE_SIZE);
-	aligned_max_sectors = (tmp / block_size);
-	if (max_sectors != aligned_max_sectors) {
-		printk(KERN_INFO "Rounding down aligned max_sectors from %u"
-				" to %u\n", max_sectors, aligned_max_sectors);
-		return aligned_max_sectors;
-	}
+	alignment = max(1ul, PAGE_SIZE / block_size);
+	aligned_max_sectors = rounddown(max_sectors, alignment);
 
-	return max_sectors;
+	if (max_sectors != aligned_max_sectors)
+		pr_info("Rounding down aligned max_sectors from %u to %u\n",
+			max_sectors, aligned_max_sectors);
+
+	return aligned_max_sectors;
 }
 
 void se_dev_set_default_attribs(
