@@ -137,6 +137,35 @@ static struct pinmux_config mmc0_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* Module pin mux for mii2 */
+static struct pinmux_config mii2_pin_mux[] = {
+	/*
+	{"gpmc_wpn.mii2_rxerr", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	*/
+	{"gpmc_a0.mii2_txen", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_a1.mii2_rxdv", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a2.mii2_txd3", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_a3.mii2_txd2", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_a4.mii2_txd1", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_a5.mii2_txd0", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_a6.mii2_txclk", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a7.mii2_rxclk", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a8.mii2_rxd3", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a9.mii2_rxd2", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a10.mii2_rxd1", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"gpmc_a11.mii2_rxd0", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mdio_data.mdio_data", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mdio_clk.mdio_clk", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT_PULLUP},
+	{NULL, 0},
+};
+
+/* MII2 */
+static void mii2_init(void)
+{
+	pr_info("piA335x: %s\n", __func__);
+	setup_pin_mux(mii2_pin_mux);
+}
+
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
@@ -257,9 +286,10 @@ static void setup_e2(void)
 	pia335x_rtc_init();
 
 	mmc0_init();
+	mii2_init();
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_RGMII, NULL, NULL);
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
@@ -459,12 +489,6 @@ static void __init pia335x_init(void)
 	pia335x_i2c_init();
 	omap_sdrc_init(NULL, NULL);
 
-
-	//mmc0_init();
-
-	//am33xx_evmid_fillup(PIA335_KM_E2);
-	//am33xx_cpsw_init(0);
-	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
