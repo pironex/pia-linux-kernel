@@ -185,6 +185,7 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 
 static void mmc0_init(void)
 {
+	pr_info("piA335x: %s\n", __func__);
 	setup_pin_mux(mmc0_pin_mux);
 
 	omap2_hsmmc_init(pia335x_mmc);
