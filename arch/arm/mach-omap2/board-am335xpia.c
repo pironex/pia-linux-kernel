@@ -23,6 +23,10 @@
 #include <linux/if_ether.h>
 #include <linux/i2c/at24.h>
 #include <linux/mfd/tps65910.h>
+#include <linux/mtd/nand.h>
+#include <linux/mtd/partitions.h>
+#include <linux/mfd/ti_tscadc.h>
+#include <linux/pwm/pwm.h>
 #include <linux/reboot.h>
 
 #include <mach/hardware.h>
@@ -30,15 +34,19 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
+#include <asm/hardware/asp.h>
 
 #include <plat/omap_device.h>
 #include <plat/irqs.h>
 #include <plat/board.h>
 #include <plat/common.h>
 #include <plat/mmc.h>
+#include <plat/nand.h>
 
+#include "board-flash.h"
 #include "common.h"
 #include "cpuidle33xx.h"
+#include "devices.h"
 #include "mux.h"
 #include "hsmmc.h"
 
@@ -158,6 +166,116 @@ static struct pinmux_config mii2_pin_mux[] = {
 	{"mdio_clk.mdio_clk", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT_PULLUP},
 	{NULL, 0},
 };
+
+/* Module pin mux for nand */
+static struct pinmux_config nand_pin_mux[] = {
+	{"gpmc_ad0.gpmc_ad0",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad1.gpmc_ad1",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad2.gpmc_ad2",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad3.gpmc_ad3",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad4.gpmc_ad4",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad5.gpmc_ad5",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad6.gpmc_ad6",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_ad7.gpmc_ad7",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_wait0.gpmc_wait0", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_wpn.gpmc_wpn",	  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{"gpmc_csn0.gpmc_csn0",	  OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
+	{"gpmc_advn_ale.gpmc_advn_ale",  OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
+	{"gpmc_oen_ren.gpmc_oen_ren",	 OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
+	{"gpmc_wen.gpmc_wen",     OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
+	{"gpmc_ben0_cle.gpmc_ben0_cle",	 OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
+	{NULL, 0},
+};
+
+/* NAND partition information */
+static struct mtd_partition pia335x_nand_partitions[] = {
+/* All the partition sizes are listed in terms of NAND block size */
+	{
+		.name           = "SPL",
+		.offset         = 0,			/* Offset = 0x0 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup1",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x20000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup2",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x40000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup3",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "U-Boot",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x80000 */
+		.size           = 15 * SZ_128K,
+	},
+	{
+		.name           = "U-Boot Env",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x260000 */
+		.size           = 1 * SZ_128K,
+	},
+	{
+		.name           = "Kernel",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x280000 */
+		.size           = 40 * SZ_128K,
+	},
+	{
+		.name           = "File System",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x780000 */
+		.size           = MTDPART_SIZ_FULL,
+	},
+};
+
+/* taken from ti evm */
+static struct gpmc_timings pia335x_nand_timings = {
+	.sync_clk = 0,
+
+	.cs_on = 0,
+	.cs_rd_off = 44,
+	.cs_wr_off = 44,
+
+	.adv_on = 6,
+	.adv_rd_off = 34,
+	.adv_wr_off = 44,
+	.we_off = 40,
+	.oe_off = 54,
+
+	.access = 64,
+	.rd_cycle = 82,
+	.wr_cycle = 82,
+
+	.wr_access = 40,
+	.wr_data_mux_bus = 0,
+};
+
+static void nand_init(void)
+{
+	struct omap_nand_platform_data *pdata;
+	struct gpmc_devices_info gpmc_device[2] = {
+		{ NULL, 0 },
+		/*{ NULL, 0 },*/
+	};
+
+	setup_pin_mux(nand_pin_mux);
+	pdata = omap_nand_init(pia335x_nand_partitions,
+		ARRAY_SIZE(pia335x_nand_partitions), 0, 0,
+		&pia335x_nand_timings);
+	if (!pdata)
+		return;
+	pdata->ecc_opt =OMAP_ECC_BCH8_CODE_HW;
+	pdata->elm_used = true; /* Error Locator Module */
+	gpmc_device[0].pdata = pdata;
+	gpmc_device[0].flag = GPMC_DEVICE_NAND;
+
+	omap_init_gpmc(gpmc_device, sizeof(gpmc_device));
+	omap_init_elm();
+}
 
 /* MII2 */
 static void mii2_init(void)
@@ -288,6 +406,7 @@ static void setup_e2(void)
 
 	mmc0_init();
 	mii2_init();
+	nand_init();
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
