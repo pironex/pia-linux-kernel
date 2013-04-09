@@ -40,6 +40,7 @@
 #include <plat/irqs.h>
 #include <plat/board.h>
 #include <plat/common.h>
+#include <plat/usb.h>
 #include <plat/mmc.h>
 #include <plat/nand.h>
 
@@ -186,6 +187,19 @@ static struct pinmux_config nand_pin_mux[] = {
 	{"gpmc_ben0_cle.gpmc_ben0_cle",	 OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
 	{NULL, 0},
 };
+/* pinmux for usb0 */
+static struct pinmux_config usb0_pin_mux[] = {
+	/*{"usb0_drvvbus.usb0_drvvbus",    OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},*/
+	{NULL, 0},
+};
+
+/* pinmux for usb1 */
+static struct pinmux_config usb1_pin_mux[] = {
+	/* other usb pins are not muxable */
+	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"gmii1_rxd1.gpio2_20",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
 
 /* NAND partition information */
 static struct mtd_partition pia335x_nand_partitions[] = {
@@ -275,6 +289,18 @@ static void nand_init(void)
 
 	omap_init_gpmc(gpmc_device, sizeof(gpmc_device));
 	omap_init_elm();
+}
+
+/* USB0 device */
+static void usb0_init(void)
+{
+	setup_pin_mux(usb0_pin_mux);
+}
+
+/* USB1 host */
+static void usb1_init(void)
+{
+	setup_pin_mux(usb1_pin_mux);
 }
 
 /* MII2 */
@@ -406,6 +432,8 @@ static void setup_e2(void)
 
 	mmc0_init();
 	mii2_init();
+	usb0_init();
+	usb1_init();
 	nand_init();
 
 	pr_info("piA335x: cpsw_init\n");
@@ -479,6 +507,17 @@ out:
 	pr_err("PIA335x: Board identification failed... Halting...\n");
 	machine_halt();
 }
+
+static struct omap_musb_board_data musb_board_data = {
+	.interface_type	= MUSB_INTERFACE_ULPI,
+	/*
+	 * mode[0:3] = USB0PORT's mode
+	 * mode[4:7] = USB1PORT's mode
+	 */
+	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
+	.power		= 500,
+	.instances	= 1,
+};
 
 /**
  * I2C devices
@@ -606,8 +645,12 @@ static void __init pia335x_init(void)
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
 	omap_serial_init();
+	pr_info("piA335x: i2c_init\n");
 	pia335x_i2c_init();
+	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
+	pr_info("piA335x: musb_init\n");
+	usb_musb_init(&musb_board_data);
 
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
