@@ -28,6 +28,7 @@
 #include <linux/mfd/ti_tscadc.h>
 #include <linux/pwm/pwm.h>
 #include <linux/reboot.h>
+#include <linux/platform_data/leds-pca9633.h>
 
 #include <mach/hardware.h>
 
@@ -121,9 +122,15 @@ static void setup_pin_mux(struct pinmux_config *pin_mux)
 
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux[] __initdata = {
+	/* I2C0 */
 	AM33XX_MUX(I2C0_SDA, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	/* I2C1*/
+	AM33XX_MUX(UART0_CTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
+			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	AM33XX_MUX(UART0_RTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
@@ -198,6 +205,13 @@ static struct pinmux_config usb1_pin_mux[] = {
 	/* other usb pins are not muxable */
 	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"gmii1_rxd1.gpio2_20",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+
+/* pinmux for led drivers */
+static struct pinmux_config km_e2_leds_pin_mux[] = {
+	/* enable input to allow readback of status */
+	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -336,6 +350,111 @@ static void mmc0_init(void)
 	return;
 }
 
+/** I2C1 */
+static struct led_info km_e2_leds1_config[] = {
+	{
+		.name = "led9",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled1",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled3",
+		.default_trigger = "none",
+	},
+	{
+		.name = "null",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled2",
+		.default_trigger = "default-on",
+	},
+};
+static struct pca9633_platform_data km_e2_leds1_data = {
+	.leds = {
+		.num_leds = 5,
+		.leds = km_e2_leds1_config,
+	},
+	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
+static struct led_info km_e2_leds2_config[] = {
+	{
+		.name = "led1",
+		.default_trigger = "heartbeat",
+	},
+	{
+		.name = "led2",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led3",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led4",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led5",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led6",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led7",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led8",
+		.default_trigger = "none",
+	},
+};
+static struct pca9633_platform_data km_e2_leds2_data = {
+	.leds = {
+		.num_leds = 8,
+		.leds = km_e2_leds2_config,
+	},
+	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
+static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("pca9634", 0x22),
+		.platform_data = &km_e2_leds1_data,
+	},
+	{
+		I2C_BOARD_INFO("pca9634", 0x23),
+		.platform_data = &km_e2_leds2_data,
+	},
+};
+
+static void km_e2_leds_init(void)
+{
+	int gpio = GPIO_TO_PIN(3, 17);
+	setup_pin_mux(nand_pin_mux);
+	if (gpio_request(gpio, "led_oe") < 0) {
+		pr_err("Failed to request gpio for led_oe");
+		return;
+	}
+
+	pr_info("Configure LEDs...\n");
+	gpio_direction_output(gpio, 0);
+	gpio_export(gpio, 0);
+}
+
+static void km_e2_i2c2_init(void)
+{
+	setup_pin_mux(km_e2_leds_pin_mux);
+	km_e2_leds_init();
+	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
+			ARRAY_SIZE(km_e2_i2c1_boardinfo));
+}
 
 /**
  * AM33xx internal RTC
@@ -429,7 +548,7 @@ static void setup_e2(void)
 		{NULL, 0, 0},
 	};*/
 	pia335x_rtc_init();
-
+	km_e2_i2c2_init(); /* second i2c bus */
 	mmc0_init();
 	mii2_init();
 	usb0_init();
