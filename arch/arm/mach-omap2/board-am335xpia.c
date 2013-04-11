@@ -208,7 +208,13 @@ static struct pinmux_config usb0_pin_mux[] = {
 static struct pinmux_config usb1_pin_mux[] = {
 	/* other usb pins are not muxable */
 	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"gmii1_rxd1.gpio2_20",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+
+/* pinmux for special gpios */
+static struct pinmux_config km_e2_gpios_pin_mux[] = {
+	/* USB OC */
+	{"mii1_rxd1.gpio2_20",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
 	{NULL, 0},
 };
 
@@ -481,6 +487,35 @@ static void km_e2_i2c2_init(void)
 	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
+
+struct pia_gpios {
+	int gpio; /* gpio number from GPIO_TO_PIN() */
+	char *name;
+	int input  :1;
+	int export :1;
+	int value  :1;
+};
+
+static struct gpio km_e2_gpios[] = {
+	{ GPIO_TO_PIN(2, 20), GPIOF_IN, "usb_oc" },
+};
+static void km_e2_gpios_init(void)
+{
+	int i;
+	setup_pin_mux(km_e2_gpios_pin_mux);
+	for (i = 0; i < ARRAY_SIZE(km_e2_gpios); ++i) {
+		if (gpio_request_one(km_e2_gpios[i].gpio,
+				km_e2_gpios[i].flags,
+				km_e2_gpios[i].label) < 0) {
+			pr_err("Failed to request gpio: %s\n",
+					km_e2_gpios[i].label);
+			return;
+		}
+		pr_info("piA335x: GPIO init %s\n", km_e2_gpios[i].label);
+		gpio_export(km_e2_gpios[i].gpio, 0);
+	}
+}
+
 #define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
 static void km_e2_rs485_init(void)
 {
@@ -602,6 +637,7 @@ static void setup_e2(void)
 	mii2_init();
 	usb0_init();
 	usb1_init();
+	km_e2_gpios_init();
 	nand_init();
 	km_e2_rs485_init();
 
