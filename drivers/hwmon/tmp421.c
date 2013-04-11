@@ -250,6 +250,9 @@ static int tmp421_detect(struct i2c_client *client,
 	case TMP423_DEVICE_ID:
 		kind = tmp423;
 		break;
+	case 42:
+		kind = tmp422;
+		break;
 	default:
 		return -ENODEV;
 	}
