@@ -2,6 +2,7 @@
  * Code for piA-AM335X board.
  *
  * Copyright (C) 2013 pironex GmbH. - http://www.pironex.de/
+ * (based on board-am335xevm.c)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -434,17 +435,6 @@ static struct pca9633_platform_data km_e2_leds2_data = {
 	.outdrv = PCA9633_OPEN_DRAIN,
 };
 
-static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("pca9634", 0x22),
-		.platform_data = &km_e2_leds1_data,
-	},
-	{
-		I2C_BOARD_INFO("pca9634", 0x23),
-		.platform_data = &km_e2_leds2_data,
-	},
-};
-
 static void km_e2_leds_init(void)
 {
 	int gpio = GPIO_TO_PIN(3, 17);
@@ -458,6 +448,17 @@ static void km_e2_leds_init(void)
 	gpio_direction_output(gpio, 0);
 	gpio_export(gpio, 0);
 }
+
+static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("pca9634", 0x22),
+		.platform_data = &km_e2_leds1_data,
+	},
+	{
+		I2C_BOARD_INFO("pca9634", 0x23),
+		.platform_data = &km_e2_leds2_data,
+	},
+};
 
 static void km_e2_i2c2_init(void)
 {
@@ -571,13 +572,9 @@ static void setup_e2(void)
 	/* EVM - Starter Kit */
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-		{rgmii1_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-		{rgmii2_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-		{lcdc_init,     DEV_ON_BASEBOARD, PROFILE_ALL},
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
 		{mfd_tscadc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
-		{gpio_led_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 		{mcasp1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
 		{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
