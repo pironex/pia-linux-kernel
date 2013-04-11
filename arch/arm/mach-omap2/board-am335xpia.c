@@ -466,6 +466,9 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("pca9634", 0x23),
 		.platform_data = &km_e2_leds2_data,
 	},
+	{
+		I2C_BOARD_INFO("tmp422", 0x4C),
+	},
 	{	I2C_BOARD_INFO("24c256", 0x52),
 		.platform_data = &e2_km_fram_info,
 	}
