@@ -132,6 +132,9 @@ static struct omap_board_mux board_mux[] __initdata = {
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 	AM33XX_MUX(UART0_RTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
+	/* RS485 / UART3 */
+	AM33XX_MUX(MII1_RXD2, OMAP_MUX_MODE1 | AM33XX_PULL_ENBL),
+	AM33XX_MUX(MII1_RXD3, OMAP_MUX_MODE1 | AM33XX_INPUT_EN),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
@@ -212,6 +215,14 @@ static struct pinmux_config usb1_pin_mux[] = {
 static struct pinmux_config km_e2_leds_pin_mux[] = {
 	/* enable input to allow readback of status */
 	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+static struct pinmux_config km_e2_rs485_pin_mux[] = {
+	/* signal not implemented in mux33xx.c
+	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},*/
+	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -455,6 +466,33 @@ static void km_e2_i2c2_init(void)
 	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
+#define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
+static void km_e2_rs485_init(void)
+{
+	setup_pin_mux(km_e2_rs485_pin_mux);
+	/* use GPIO for RS485 Driver Enable signal
+	 * Auto-RTS functionality (MUX MODE 6) cannot be used, because it
+	 * doesn't de-assert RTS if a transmission is active, which would
+	 * be required to provide a driver disable functionality.
+	 *
+	 * Instead it disables RTS only if RX FIFO is full, which means
+	 * during normal operation RTS will always be active and so would the
+	 * driver, while the receiver would be deactivated most of the time.
+	 *
+	 * For Half-Duplex RS485 we need the receiver to be enabled whenever
+	 * no transmission is active, as Tranceiver and Receiver must never be
+	 * active at the same time.
+	 */
+	if (gpio_request(KM_E2_RS485_DE_GPIO, "te_reg") < 0) {
+		pr_err("Failed to request gpio for led_oe");
+		return;
+	}
+
+	pr_info("Configure RS485 TE GPIO\n");
+	/* enable receiver by default */
+	gpio_direction_output(KM_E2_RS485_DE_GPIO, 0);
+	gpio_export(KM_E2_RS485_DE_GPIO, 0);
+}
 
 /**
  * AM33xx internal RTC
@@ -554,6 +592,7 @@ static void setup_e2(void)
 	usb0_init();
 	usb1_init();
 	nand_init();
+	km_e2_rs485_init();
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
