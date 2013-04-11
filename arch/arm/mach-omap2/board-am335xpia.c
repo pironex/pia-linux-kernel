@@ -449,6 +449,14 @@ static void km_e2_leds_init(void)
 	gpio_export(gpio, 0);
 }
 
+/* FRAM is similar to at24 eeproms without write delay and page limits */
+static struct at24_platform_data e2_km_fram_info = {
+	.byte_len       = (256*1024) / 8,
+	.page_size      = (256*1024) / 8, /* no sequencial rw limit */
+	.flags          = AT24_FLAG_ADDR16,
+	.context        = (void *)NULL,
+};
+
 static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("pca9634", 0x22),
@@ -458,6 +466,9 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("pca9634", 0x23),
 		.platform_data = &km_e2_leds2_data,
 	},
+	{	I2C_BOARD_INFO("24c256", 0x52),
+		.platform_data = &e2_km_fram_info,
+	}
 };
 
 static void km_e2_i2c2_init(void)
