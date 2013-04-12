@@ -145,6 +145,11 @@ static struct omap_board_mux board_mux[] __initdata = {
 #define	board_mux	NULL
 #endif
 
+static struct pinmux_config clkout2_pin_mux[] = {
+	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
 /* Module pin mux for mmc0 */
 static struct pinmux_config mmc0_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -265,6 +270,62 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
+
+/** CLKOUT2 */
+#define SYS_CLKOUT2_PARENT	"cm_96m_fck"
+static void pia335x_clkout2_enable(void)
+{
+#if 0
+	/* code to enable default 32k clock output*/
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
+#endif
+	/* change clkout2 to a 12 MHz clock */
+	struct clk *sys_clkout2;
+	struct clk *parent_clk;
+	struct clk *sys_clkout2_src;
+
+	pr_info("piA335x: Initializing SYS_CLKOUT2");
+	sys_clkout2_src = clk_get(NULL, "clkout2_src_ck");
+
+	if (IS_ERR(sys_clkout2_src)) {
+		pr_err("pia35x: Could not get clkout2_src_ck");
+		return -1;
+	}
+
+	sys_clkout2 = clk_get(NULL, "sys_clkout2");
+	if (IS_ERR(sys_clkout2)) {
+		pr_err("pia35x: Could not get sys_clkout2");
+		clk_put(sys_clkout2_src);
+		return -2;
+	}
+
+	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
+	if (IS_ERR(parent_clk)) {
+		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
+		clk_put(sys_clkout2);
+		clk_put(sys_clkout2_src);
+		return -3;
+	}
+
+	clk_set_parent(sys_clkout2_src, parent_clk);
+	//clk_set_rate(sys_clkout2, 13500000);
+	clk_set_rate(sys_clkout2, 12000000);
+
+	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
+	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
+			clk_get_rate(sys_clkout2));
+	clk_enable(sys_clkout2);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
 
 /* NAND partition information */
 static struct mtd_partition pia335x_nand_partitions[] = {
@@ -628,6 +689,11 @@ static void km_e2_rs485_init(void)
 	gpio_export(KM_E2_RS485_DE_GPIO, 0);
 }
 
+static void km_e2_ls7366_init(void)
+{
+	pia335x_clkout2_enable();
+}
+
 /**
  * AM33xx internal RTC
  */
@@ -725,6 +791,7 @@ static void setup_e2(void)
 
 	km_e2_gpios_init();
 	km_e2_rs485_init();
+	km_e2_ls7366_init();
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
