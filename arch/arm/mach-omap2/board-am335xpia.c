@@ -253,8 +253,18 @@ static struct pinmux_config km_e2_gpios_pin_mux[] = {
 	{"gpmc_csn1.gpio1_30",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
 	{NULL, 0},
 };
+
+/* E2 CAN 0+1 */
+static struct pinmux_config km_e2_can_pin_mux[] = {
+	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
+	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
+	{"uart1_rxd.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
+	{"uart1_txd.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
+	/* KSB_TERM */
+	{"mii1_rxd0.gpio2_21",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
 	{NULL, 0},
 };
+
 
 /* pinmux for led drivers */
 static struct pinmux_config km_e2_leds_pin_mux[] = {
@@ -659,6 +669,13 @@ static void km_e2_gpios_init(void)
 	pia_print_gpio_state("230V_B:   ", E2_GPIO_230V_B, 1);
 	pia_print_gpio_state("WARTUNG:  ", E2_GPIO_WARTUNG, 1);
 }
+
+extern void am33xx_d_can_init(unsigned int instance);
+static void km_e2_can_init(void)
+{
+	setup_pin_mux(km_e2_can_pin_mux);
+	am33xx_d_can_init(0);
+	am33xx_d_can_init(1);
 }
 
 #define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
@@ -790,6 +807,7 @@ static void setup_e2(void)
 	nand_init();
 
 	km_e2_gpios_init();
+	km_e2_can_init();
 	km_e2_rs485_init();
 	km_e2_ls7366_init();
 
