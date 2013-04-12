@@ -136,6 +136,9 @@ static struct omap_board_mux board_mux[] __initdata = {
 	/* RS485 / UART3 */
 	AM33XX_MUX(MII1_RXD2, OMAP_MUX_MODE1 | AM33XX_PULL_ENBL),
 	AM33XX_MUX(MII1_RXD3, OMAP_MUX_MODE1 | AM33XX_INPUT_EN),
+	/* PMIC INT */
+	AM33XX_MUX(MII1_TXD0, OMAP_MUX_MODE7 | AM33XX_INPUT_EN |
+			AM33XX_PULL_UP | AM33XX_PULL_ENBL),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
@@ -754,6 +757,8 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
+	.gpio_base = (4 * 32),
+	.irq = GPIO_TO_PIN(0, 28),
 };
 
 
