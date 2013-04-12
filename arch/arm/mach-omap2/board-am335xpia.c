@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
+#include <linux/spi/spi.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/if_ether.h>
@@ -45,6 +46,7 @@
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/mmc.h>
+#include <plat/mcspi.h>
 #include <plat/nand.h>
 
 #include "board-flash.h"
@@ -279,6 +281,36 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
 	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},*/
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+/* SPI1 */
+static struct pinmux_config km_e2_spi1_pin_mux[] = {
+	/* SPI0 */
+	{"spi0_sclk.spi0_sclk", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL
+			| AM33XX_INPUT_EN},
+	{"spi0_d0.spi0_d0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
+			| AM33XX_INPUT_EN},
+	{"spi0_d1.spi0_d1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL
+			| AM33XX_INPUT_EN},
+	{"spi0_cs0.spi0_cs0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
+			| AM33XX_INPUT_EN},
+	{"spi0_cs1.spi0_cs1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
+			| AM33XX_INPUT_EN},
+	/* SPI1 */
+	{"mcasp0_aclkx.spi1_sclk", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
+			| AM33XX_INPUT_EN},
+	{"mcasp0_fsx.spi1_d0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
+			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"mcasp0_axr0.spi1_d1", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
+			| AM33XX_INPUT_EN},
+	{"rmii1_refclk.spi1_cs0", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL
+			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"ecap0_in_pwm0_out.spi1_cs1", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL
+			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	// can2 interrupt line MCP2515
+	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PULL_ENBL
+			| AM33XX_INPUT_EN},
 	{NULL, 0},
 };
 
@@ -677,6 +709,54 @@ static void km_e2_can_init(void)
 	setup_pin_mux(km_e2_can_pin_mux);
 	am33xx_d_can_init(0);
 	am33xx_d_can_init(1);
+
+}
+
+/* SPI1 -> CAN2 */
+#define KM_E2_CAN2_INT_GPIO GPIO_TO_PIN(3, 20)
+#include <linux/can/platform/mcp251x.h>
+static struct mcp251x_platform_data km_e2_mcp2515_data = {
+	.oscillator_frequency = 25E6 ,
+};
+//static struct omap2_mcspi_device_config km_e2_mcp2515_cfg = {
+//	.turbo_mode	= 0,
+//};
+static struct spi_board_info km_e1_spi_info[] = {
+	{	/* LS7366, max 8 MHz */
+		.modalias      = "spidev",
+		.bus_num         = 0,
+		.chip_select     = 0,
+		.max_speed_hz    = 5E6, /* 5MHz */
+	},
+	{
+		.modalias      = "spidev",
+		.bus_num         = 0,
+		.chip_select     = 1,
+		.max_speed_hz    = 1E6, /* 1MHz */
+	},
+	{
+		.modalias      = "mcp2515",
+		.bus_num       = 1,
+		.chip_select   = 0,
+		.max_speed_hz  = 5E6,
+		.mode          = SPI_MODE_0,
+		.irq           = OMAP_GPIO_IRQ(KM_E2_CAN2_INT_GPIO),
+		//.controller_data = &km_e2_mcp2515_cfg,
+		.platform_data = &km_e2_mcp2515_data,
+	},
+	{
+		.modalias      = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 1,
+		.max_speed_hz    = 1E6, /* 1MHz */
+	},
+};
+
+static void km_e2_spi1_init(void)
+{
+	setup_pin_mux(km_e2_spi1_pin_mux);
+	spi_register_board_info(km_e1_spi_info,
+			ARRAY_SIZE(km_e1_spi_info));
 }
 
 #define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
@@ -809,6 +889,7 @@ static void setup_e2(void)
 
 	km_e2_gpios_init();
 	km_e2_can_init();
+	km_e2_spi1_init();
 	km_e2_rs485_init();
 	km_e2_ls7366_init();
 
