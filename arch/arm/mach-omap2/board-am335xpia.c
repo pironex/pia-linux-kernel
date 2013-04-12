@@ -41,6 +41,7 @@
 #include <plat/omap_device.h>
 #include <plat/irqs.h>
 #include <plat/board.h>
+#include <plat/clock.h>
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/mmc.h>
@@ -282,7 +283,7 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 };
 
 /** CLKOUT2 */
-#define SYS_CLKOUT2_PARENT	"cm_96m_fck"
+#define SYS_CLKOUT2_PARENT	"per_192mhz_clk"
 static void pia335x_clkout2_enable(void)
 {
 #if 0
@@ -303,18 +304,18 @@ static void pia335x_clkout2_enable(void)
 	struct clk *sys_clkout2_src;
 
 	pr_info("piA335x: Initializing SYS_CLKOUT2");
-	sys_clkout2_src = clk_get(NULL, "clkout2_src_ck");
+	sys_clkout2_src = clk_get(NULL, "sysclkout_pre_ck");
 
 	if (IS_ERR(sys_clkout2_src)) {
 		pr_err("pia35x: Could not get clkout2_src_ck");
-		return -1;
+		return;
 	}
 
-	sys_clkout2 = clk_get(NULL, "sys_clkout2");
+	sys_clkout2 = clk_get(NULL, "clkout2_ck");
 	if (IS_ERR(sys_clkout2)) {
 		pr_err("pia35x: Could not get sys_clkout2");
 		clk_put(sys_clkout2_src);
-		return -2;
+		return;
 	}
 
 	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
@@ -322,7 +323,7 @@ static void pia335x_clkout2_enable(void)
 		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
 		clk_put(sys_clkout2);
 		clk_put(sys_clkout2_src);
-		return -3;
+		return;
 	}
 
 	clk_set_parent(sys_clkout2_src, parent_clk);
@@ -708,7 +709,7 @@ static void km_e2_rs485_init(void)
 
 static void km_e2_ls7366_init(void)
 {
-	pia335x_clkout2_enable();
+	//pia335x_clkout2_enable();
 }
 
 /**
@@ -1021,6 +1022,7 @@ static void __init pia335x_init(void)
 {
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
+	pia335x_clkout2_enable();
 	omap_serial_init();
 	pr_info("piA335x: i2c_init\n");
 	pia335x_i2c_init();
