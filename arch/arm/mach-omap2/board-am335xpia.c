@@ -216,8 +216,38 @@ static struct pinmux_config usb1_pin_mux[] = {
 
 /* pinmux for special gpios */
 static struct pinmux_config km_e2_gpios_pin_mux[] = {
+	/* Ext. RESET */
+	{"gpmc_clk.gpio2_1",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
 	/* USB OC */
-	{"mii1_rxd1.gpio2_20",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	{"mii1_rxd1.gpio2_20",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET1 */
+	{"lcd_vsync.gpio2_22",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET2 */
+	{"lcd_hsync.gpio2_23",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* WDI */
+	{"lcd_pclk.gpio2_24",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	/* 24V FAIL */
+	{"lcd_ac_bias_en.gpio2_25",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	/* FRAM WP */
+	{"mcasp0_ahclkx.gpio3_21",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* CLEAR_RESET */
+	{"lcd_data3.gpio2_9",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
+	/* WD_RESET */
+	{"gpmc_ad14.gpio1_14",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* PB_RESET */
+	{"mii1_col.gpio3_0",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* *S_ASAUS */
+	{"mii1_crs.gpio3_1",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_A */
+	{"mii1_rxerr.gpio3_2",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_B */
+	{"mii1_rxdv.gpio3_4",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* Wartung */
+	{"mii1_txd3.gpio0_16",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	/* KSB_TERM2 */
+	{"gpmc_csn1.gpio1_30",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
+	{NULL, 0},
+};
 	{NULL, 0},
 };
 
@@ -498,10 +528,46 @@ struct pia_gpios {
 	int export :1;
 	int value  :1;
 };
-
+#define E2_GPIO_EXT_RESET	GPIO_TO_PIN(2, 1)
+#define E2_GPIO_USB_OC		GPIO_TO_PIN(2, 20)
+#define E2_GPIO_WDI		GPIO_TO_PIN(2, 24)
+#define E2_GPIO_24V_FAIL	GPIO_TO_PIN(2, 25)
+#define E2_GPIO_CLEAR_RESET	GPIO_TO_PIN(2, 9)
+#define E2_GPIO_WD_RESET	GPIO_TO_PIN(1, 14)
+#define E2_GPIO_PB_RESET	GPIO_TO_PIN(3, 0)
+#define E2_GPIO_S_ASAUS		GPIO_TO_PIN(3, 1)
+#define E2_GPIO_230V_A		GPIO_TO_PIN(3, 2)
+#define E2_GPIO_230V_B		GPIO_TO_PIN(3, 4)
+#define E2_GPIO_WARTUNG		GPIO_TO_PIN(0, 16)
+#define E2_GPIO_KSB_TERM1	GPIO_TO_PIN(2, 21)
+#define E2_GPIO_KSB_TERM2	GPIO_TO_PIN(1, 30)
 static struct gpio km_e2_gpios[] = {
-	{ GPIO_TO_PIN(2, 20), GPIOF_IN, "usb_oc" },
+	{ E2_GPIO_EXT_RESET,	GPIOF_OUT_INIT_HIGH, "ext_reset" },
+	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
+	{ GPIO_TO_PIN(2, 22),	GPIOF_OUT_INIT_HIGH, "wd_set1" },
+	{ GPIO_TO_PIN(2, 23),	GPIOF_OUT_INIT_LOW,  "wd_set2" },
+	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ GPIO_TO_PIN(3, 21),	GPIOF_OUT_INIT_LOW,  "fram_wp" },
+	{ E2_GPIO_CLEAR_RESET,	GPIOF_OUT_INIT_HIGH, "clear_reset" },
+	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
+	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
+	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
+	{ E2_GPIO_230V_A,	GPIOF_IN, "230v_a" },
+	{ E2_GPIO_230V_B,	GPIOF_IN, "230v_b" },
+	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
+	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term1" },
+	{ E2_GPIO_KSB_TERM2,	GPIOF_OUT_INIT_LOW, "ksb_term2" },
 };
+
+static void pia_print_gpio_state(const char *msg, int gpio, int on)
+{
+	int val = gpio_get_value(gpio);
+	if (val >= 0)
+		pr_info("  %s: %s\n", msg, (val == on ? "ON!" : "OFF."));
+	else
+		pr_warn("  %s: Unable to read GPIO!\n", msg);
+}
 static void km_e2_gpios_init(void)
 {
 	int i;
@@ -517,6 +583,21 @@ static void km_e2_gpios_init(void)
 		pr_info("piA335x: GPIO init %s\n", km_e2_gpios[i].label);
 		gpio_export(km_e2_gpios[i].gpio, 0);
 	}
+	pr_info("E2 GPIO Status:\n");
+	pia_print_gpio_state("WD_RESET: ", E2_GPIO_WD_RESET, 0);
+	pia_print_gpio_state("WD_RESET: ", E2_GPIO_PB_RESET, 0);
+	pr_info("  external Watchdog: OFF.\n");
+	gpio_set_value(E2_GPIO_CLEAR_RESET, 0); /* high to low */
+	pr_info("    RESET flags cleared.\n");
+
+	pia_print_gpio_state("USB_OC:   ", E2_GPIO_USB_OC, 0);
+	/* TODO check active low/high */
+	pia_print_gpio_state("24V Fail: ", E2_GPIO_24V_FAIL, 1);
+	pia_print_gpio_state("*S_ASAUS: ", E2_GPIO_S_ASAUS, 1);
+	pia_print_gpio_state("230V_A:   ", E2_GPIO_230V_A, 1);
+	pia_print_gpio_state("230V_B:   ", E2_GPIO_230V_B, 1);
+	pia_print_gpio_state("WARTUNG:  ", E2_GPIO_WARTUNG, 1);
+}
 }
 
 #define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
@@ -640,8 +721,9 @@ static void setup_e2(void)
 	mii2_init();
 	usb0_init();
 	usb1_init();
-	km_e2_gpios_init();
 	nand_init();
+
+	km_e2_gpios_init();
 	km_e2_rs485_init();
 
 	pr_info("piA335x: cpsw_init\n");
