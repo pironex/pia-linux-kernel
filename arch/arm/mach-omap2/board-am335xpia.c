@@ -285,7 +285,7 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 };
 
 /* SPI1 */
-static struct pinmux_config km_e2_spi1_pin_mux[] = {
+static struct pinmux_config km_e2_spi01_pin_mux[] = {
 	/* SPI0 */
 	{"spi0_sclk.spi0_sclk", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL
 			| AM33XX_INPUT_EN},
@@ -718,45 +718,55 @@ static void km_e2_can_init(void)
 static struct mcp251x_platform_data km_e2_mcp2515_data = {
 	.oscillator_frequency = 25E6 ,
 };
-//static struct omap2_mcspi_device_config km_e2_mcp2515_cfg = {
-//	.turbo_mode	= 0,
-//};
-static struct spi_board_info km_e1_spi_info[] = {
+static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
+	.turbo_mode	= 0,
+	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
+};
+static struct spi_board_info km_e1_spi0_info[] = {
 	{	/* LS7366, max 8 MHz */
 		.modalias      = "spidev",
-		.bus_num         = 0,
+		.bus_num         = 1,
 		.chip_select     = 0,
+		.controller_data = &km_e2_spi_def_cfg,
 		.max_speed_hz    = 5E6, /* 5MHz */
 	},
 	{
-		.modalias      = "spidev",
-		.bus_num         = 0,
-		.chip_select     = 1,
-		.max_speed_hz    = 1E6, /* 1MHz */
-	},
-	{
-		.modalias      = "mcp2515",
-		.bus_num       = 1,
-		.chip_select   = 0,
-		.max_speed_hz  = 5E6,
-		.mode          = SPI_MODE_0,
-		.irq           = OMAP_GPIO_IRQ(KM_E2_CAN2_INT_GPIO),
-		//.controller_data = &km_e2_mcp2515_cfg,
-		.platform_data = &km_e2_mcp2515_data,
-	},
-	{
+		/* APS only MISO used */
 		.modalias      = "spidev",
 		.bus_num         = 1,
 		.chip_select     = 1,
+		.controller_data = &km_e2_spi_def_cfg,
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
 
+static struct spi_board_info km_e1_spi1_info[] = {
+	{
+		/* 3rd CAN device */
+		.modalias      = "mcp2515",
+		.bus_num       = 2,
+		.chip_select   = 0,
+		.max_speed_hz  = 8E6, /* 5 MHz */
+		.mode          = SPI_MODE_0,
+		.irq           = OMAP_GPIO_IRQ(KM_E2_CAN2_INT_GPIO),
+		.controller_data = &km_e2_spi_def_cfg,
+		.platform_data = &km_e2_mcp2515_data,
+	},
+	{
+		/* external Header */
+		.modalias      = "spidev",
+		.bus_num         = 2,
+		.chip_select     = 1,
+		.max_speed_hz    = 1E6, /* 1MHz */
+	},
+};
 static void km_e2_spi1_init(void)
 {
-	setup_pin_mux(km_e2_spi1_pin_mux);
-	spi_register_board_info(km_e1_spi_info,
-			ARRAY_SIZE(km_e1_spi_info));
+	setup_pin_mux(km_e2_spi01_pin_mux);
+	spi_register_board_info(km_e1_spi0_info,
+			ARRAY_SIZE(km_e1_spi0_info));
+	spi_register_board_info(km_e1_spi1_info,
+			ARRAY_SIZE(km_e1_spi1_info));
 }
 
 #define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
