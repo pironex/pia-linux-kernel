@@ -1116,8 +1116,8 @@ static void __init pia335x_init(void)
 {
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
-	pia335x_clkout2_enable();
 	omap_serial_init();
+	pia335x_clkout2_enable();
 	pr_info("piA335x: i2c_init\n");
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
