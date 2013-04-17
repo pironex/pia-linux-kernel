@@ -1910,7 +1910,7 @@ static const struct clksel_rate div8_rates[] = {
 	{ .div = 5, .val = 4, .flags = RATE_IN_AM33XX },
 	{ .div = 6, .val = 5, .flags = RATE_IN_AM33XX },
 	{ .div = 7, .val = 6, .flags = RATE_IN_AM33XX },
-	{ .div = 8, .val = 7, .flags = RATE_IN_AM33XX },
+	/* not supported{ .div = 8, .val = 7, .flags = RATE_IN_AM33XX },*/
 	{ .div = 0 },
 };
 
