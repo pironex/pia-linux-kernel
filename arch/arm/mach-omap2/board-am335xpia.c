@@ -291,7 +291,7 @@ static struct pinmux_config km_e2_spi01_pin_mux[] = {
 			| AM33XX_INPUT_EN},
 	{"spi0_d0.spi0_d0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
 			| AM33XX_INPUT_EN},
-	{"spi0_d1.spi0_d1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL
+	{"spi0_d1.spi0_d1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
 			| AM33XX_INPUT_EN},
 	{"spi0_cs0.spi0_cs0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
 			| AM33XX_INPUT_EN},
