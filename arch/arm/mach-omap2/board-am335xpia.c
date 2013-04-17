@@ -315,7 +315,10 @@ static struct pinmux_config km_e2_spi01_pin_mux[] = {
 };
 
 /** CLKOUT2 */
+/* divisor 8 not supported according to TI (error in TRM)
 #define SYS_CLKOUT2_PARENT	"per_192mhz_clk"
+*/
+#define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
 static void pia335x_clkout2_enable(void)
 {
 #if 0
