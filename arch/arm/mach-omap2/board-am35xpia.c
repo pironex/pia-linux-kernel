@@ -1260,10 +1260,14 @@ static struct omap_board_mux board_mux[] __initdata = {
 	/*        GPIO 136 */
 	//FIXME OMAP3_MUX(SDMMC2_DAT4, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
+	/* UART 2 (RS232/RS485) */
+	OMAP3_MUX(UART2_TX, OMAP_MUX_MODE0 | OMAP_PIN_OUTPUT),
+	OMAP3_MUX(UART2_RX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
+
 	/* UART 4 tx */
 	OMAP3_MUX(SAD2D_MCAD1, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
 	/* UART 4 rx */
-	OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT),
+	OMAP3_MUX(SAD2D_MCAD4, OMAP_MUX_MODE2 | OMAP_PIN_INPUT_PULLUP),
 	/* UART 4 rts */
 	OMAP3_MUX(SAD2D_MCAD2, OMAP_MUX_MODE2 | OMAP_PIN_OUTPUT),
 	/* UART 4 cts */
@@ -2074,7 +2078,7 @@ static int __init pia35x_version_detect(void)
 
 	/* reset to mode 0 */
 	gpio_free(GPIO_VERSION_DETECT);
-	omap_mux_init_signal("uart1_rx.uart1_rx", OMAP_PIN_INPUT);
+	omap_mux_init_signal("uart1_rx.uart1_rx", OMAP_PIN_INPUT_PULLUP);
 
 	return pia35x_version;
 }
