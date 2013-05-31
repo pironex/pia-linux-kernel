@@ -54,6 +54,9 @@
 #include <video/omap-panel-generic-dpi.h>
 #include <video/omap-panel-dvi.h>
 
+#include <plat/mcspi.h>
+#include <linux/spi/spi.h>
+
 #include "mux.h"
 #include "control.h"
 #include "hsmmc.h"
@@ -174,6 +177,41 @@ static struct omap_dss_device pia35x_lcd_device = {
 	.reset_gpio         = -EINVAL,
 	.data               = &pia35x_lcd_panel_sharp,
 };
+
+#if defined(CONFIG_PANEL_DISPLAYTECH_DT028A) || \
+    defined(CONFIG_PANEL_DISPLAYTECH_DT028A_MODULE)
+static struct panel_generic_dpi_data pia35x_lcd_panel_dt028 = {
+	.name        = "displaytech_dt028a_panel",
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+
+static struct omap2_mcspi_device_config dt028a_mcspi_config = {
+	.turbo_mode	= 0,
+	.single_channel	= 1,
+};
+
+static struct spi_board_info pia35x_spi_dt_board_info[] __initdata = {
+	[0] = {
+		.modalias	= "dt028a",
+		.bus_num	= 3,
+		.chip_select	= 0,
+		.max_speed_hz	= 1000000,
+		.controller_data = &dt028a_mcspi_config,
+	},
+};
+static struct omap_dss_device pia35x_lcd_device_dt028 = {
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "lcd",
+	.driver_name        = "displaytech_dt028a_panel",
+	.phy.dpi.data_lines = 18,
+	.reset_gpio         = -EINVAL,
+	.data               = &pia35x_lcd_panel_dt028,
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+#endif
+
 #define PIA_LCD
 #else
 static struct omap_dss_device pia35x_lcd_device = {
@@ -291,6 +329,7 @@ static void __init pia35x_touch_init(void)
 			ARRAY_SIZE(pia35x_i2c3_tsc2007));
 }
 
+#define GPIO_DISP_RESET 102
 static void __init pia35x_display_init(void)
 {
 	int ret;
@@ -307,11 +346,34 @@ static void __init pia35x_display_init(void)
 		use_lcd = 0;
 	} else if (0 == strncmp(lcdboard_name, "pia_lcd_dem", 11)) {
 		pia35x_lcd_device.data = &pia35x_lcd_panel_dem;
+#if defined(CONFIG_PANEL_DISPLAYTECH_DT028A) || \
+    defined(CONFIG_PANEL_DISPLAYTECH_DT028A_MODULE)
 	} else if (0 == strncmp(lcdboard_name, "pia_lcd_dt028", 13)) {
+		pia35x_dss_devices[0] = &pia35x_lcd_device_dt028;
+		//pia35x_lcd_device.data = &pia35x_lcd_panel_dt028;
+		//pia35x_lcd_device.phy.dpi.data_lines = 18;
+#endif
 	}
 
 	/* the tsc device address changed for revision 1 display expansions */
 	if (use_lcd && rev == 1) {
+		pia35x_i2c3_tsc2007[0].addr = 0x48;
+	} else if (0 == strncmp(lcdboard_name, "pia_lcd_dt028", 13)) {
+		//pia35x_dss_devices[0] = &pia35x_lcd_dt_device;
+		if ((ret = gpio_request_one(GPIO_DISP_RESET,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH,"lcd-reset")) != 0) {
+			pr_warning("%s: GPIO_DISP_RESET request failed: %d\n",
+					__func__, ret);
+		} else {
+			omap_mux_init_gpio(GPIO_DISP_RESET, OMAP_PIN_OUTPUT);
+			gpio_export(GPIO_DISP_RESET, false);
+		}
+		gpio_set_value(GPIO_DISP_RESET, 0);
+		msleep(10);  // required
+		gpio_set_value(GPIO_DISP_RESET, 1);
+		msleep(120); // required
+		spi_register_board_info(pia35x_spi_dt_board_info,
+			ARRAY_SIZE(pia35x_spi_dt_board_info));
 		pia35x_i2c3_tsc2007[0].addr = 0x48;
 	}
 
@@ -378,8 +440,6 @@ extern int *mcspi2_cs_gpios;
 
 /** piA-MotorControl **/
 #if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
-#include <plat/mcspi.h>
-#include <linux/spi/spi.h>
 
 //#define SYS_CLKOUT2_PARENT	"omap_54m_fck"
 #define SYS_CLKOUT2_PARENT	"cm_96m_fck"
@@ -629,9 +689,6 @@ static inline void __init pia35x_bt_init(void) { return; }
 #endif /* CONFIG_WL1271_SDIO */
 
 /* RFID */
-#include <plat/mcspi.h>
-#include <linux/spi/spi.h>
-
 #define GPIO_RFID_IRQ    14
 #define GPIO_RFID_POWER  18
 #define GPIO_RFID_SPI_CS 174
