@@ -328,6 +328,25 @@ static struct panel_config generic_dpi_panels[] = {
 				OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IEO |
 				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
 		.name = "dem_480272d",
+	},
+	{
+		{
+			.x_res = 240,
+			.y_res = 320,
+
+			.pixel_clock	= 6350,
+			.hsw		= 9,
+			.hfp		= 9,
+			.hbp		= 19,
+
+			.vsw		= 1,
+			.vfp		= 3,
+			.vbp		= 1,
+		},
+		.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+			OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IPC |
+			OMAP_DSS_LCD_ONOFF,
+		.name ="dt028",
 	}
 };
 
