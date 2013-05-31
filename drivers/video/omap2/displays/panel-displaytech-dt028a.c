@@ -28,7 +28,7 @@
 #include <linux/backlight.h>
 #include <linux/fb.h>
 
-#include <plat/display.h>
+#include <video/omapdss.h>
 
 /* ILI9341 registers (incomplete) */
 #define READ_DISPLAY_ID			0x04
@@ -469,6 +469,7 @@ static int dt_panel_probe(struct omap_dss_device *dssdev)
 	/* backlight */
 	props.fb_blank = FB_BLANK_UNBLANK;
 	props.power = FB_BLANK_UNBLANK;
+	props.type = BACKLIGHT_RAW;
 
 	bldev = backlight_device_register("dt028a", &md->spi->dev,
 			md, &dt028a_bl_ops, &props);

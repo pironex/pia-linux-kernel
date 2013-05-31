@@ -4,7 +4,7 @@ obj-$(CONFIG_PANEL_LGPHILIPS_LB035Q02) += panel-lgphilips-lb035q02.o
 obj-$(CONFIG_PANEL_SHARP_LS037V7DW01) += panel-sharp-ls037v7dw01.o
 obj-$(CONFIG_PANEL_NEC_NL8048HL11_01B) += panel-nec-nl8048hl11-01b.o
 #obj-$(CONFIG_PANEL_DEM_480272D) += panel-dem-480272d.o
-#obj-$(CONFIG_PANEL_DISPLAYTECH_DT028A) += panel-displaytech-dt028a.o
+obj-$(CONFIG_PANEL_DISPLAYTECH_DT028A) += panel-displaytech-dt028a.o
 
 obj-$(CONFIG_PANEL_TAAL) += panel-taal.o
 obj-$(CONFIG_PANEL_PICODLP) +=  panel-picodlp.o
