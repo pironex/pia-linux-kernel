@@ -877,8 +877,8 @@ static struct spi_board_info pia35x_spi_measure_info[] __initdata = {
 #define GPIO_MESS_NMI		14
 static struct gpio pia35x_measurement_gpios[] = {
 	{ GPIO_MESS_RSTOUT,  GPIOF_DIR_IN, "mess.rstout"   },
-	{ GPIO_MESS_RESET, GPIOF_DIR_OUT | GPIOF_INIT_LOW, "mess.reset"  },
-	{ GPIO_MESS_NMI, GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "mess.nmi" },
+	{ GPIO_MESS_RESET, GPIOF_DIR_IN, "mess.reset"  },
+	{ GPIO_MESS_NMI, GPIOF_DIR_IN, "mess.nmi" },
 };
 
 static int __init pia35x_measurement_amplifier_init(void)
@@ -903,7 +903,7 @@ static int __init pia35x_measurement_amplifier_init(void)
 		/* GPIOF_DIR_IN is 1 */
 		omap_mux_init_gpio(gpio, OMAP_MUX_MODE4	| (flags & GPIOF_DIR_IN) ?
 						OMAP_PIN_INPUT_PULLDOWN : OMAP_PIN_OUTPUT);
-		gpio_export(gpio, false);
+		gpio_export(gpio, true);
 	}
 
 	spi_register_board_info(pia35x_spi_measure_info,
