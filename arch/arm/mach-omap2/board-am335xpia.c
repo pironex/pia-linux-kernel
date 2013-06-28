@@ -111,6 +111,13 @@ struct pinmux_config {
 	int val; /* Options for the mux register value */
 };
 
+/* pinmux for led device */
+static struct pinmux_config gpio_led_mux[] = {
+	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{NULL, 0},
+};
+
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
 *			details for all its pins.
@@ -153,7 +160,65 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* Module pin mux for mmc0 */
+
+/* Module pin mux for LCDC on board KM MMI*/
+static struct pinmux_config lcdc_pin_mux[] = {
+	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+								   | AM33XX_PULL_DISA},
+	{"lcd_data1.lcd_data1",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data2.lcd_data2",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data3.lcd_data3",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data4.lcd_data4",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data5.lcd_data5",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data6.lcd_data6",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data7.lcd_data7",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data8.lcd_data8",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data9.lcd_data9",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data10.lcd_data10",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data11.lcd_data11",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data12.lcd_data12",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data13.lcd_data13",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data14.lcd_data14",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data15.lcd_data15",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"gpmc_ad8.lcd_data16",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad9.lcd_data17",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad10.lcd_data18",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad11.lcd_data19",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad12.lcd_data20",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad13.lcd_data21",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad14.lcd_data22",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad15.lcd_data23",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"lcd_vsync.lcd_vsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"gpmc_be1n.gpmc_be1n", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
+static void lcdc_init(void)
+{
+	setup_pin_mux(lcdc_pin_mux);
+
+	return;
+}
+
+/* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config mmc0_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -581,6 +646,85 @@ static struct pca9633_platform_data km_e2_leds2_data = {
 	.outdrv = PCA9633_OPEN_DRAIN,
 };
 
+/* Module pin mux for mmc0 on board am335x_MMI*/
+static struct pinmux_config mmi_mmc0_pin_mux[] = {
+	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	/* write protect */
+	//{"mii1_txclk.gpio3_9", AM33XX_PIN_INPUT_PULLUP},
+	/* card detect */
+	//{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+static struct omap2_hsmmc_info pia335x_mmc_mmi[] __initdata = {
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = -EINVAL,	//disable CD
+		.gpio_wp        = -EINVAL,	//disable WP FIXME: check, if WP is really disabled
+		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
+		.nonremovable	= true,	//disable CD
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{}      /* Terminator */
+};
+
+static void mmi_mmc0_init(void)
+{
+	setup_pin_mux(mmi_mmc0_pin_mux);
+
+	omap2_hsmmc_init(pia335x_mmc_mmi);
+	return;
+}
+
+/**
+ * AM33xx LEDs
+ */
+static struct gpio_led gpio_leds[] = {
+	{
+		.name			= "am335x:KM_MMI:usr1",
+		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "am335x:KM_MMI:usr2",
+		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
+	},
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds		= gpio_leds,
+	.num_leds	= ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_led_info,
+	},
+};
+
+static void gpio_led_init(void)
+{
+	int err;
+
+	setup_pin_mux(gpio_led_mux);
+	err = platform_device_register(&leds_gpio);
+	if (err)
+		pr_err("failed to register gpio led device\n");
+}
+
 static void km_e2_leds_init(void)
 {
 	int gpio = GPIO_TO_PIN(3, 17);
@@ -910,6 +1054,42 @@ static void setup_e2(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
+#if 0	//FIXME: Do we need CLKOUT2?
+/* Enable clkout2 */
+static struct pinmux_config clkout2_pin_mux[] = {
+	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
+static void clkout2_enable(int evm_id, int profile)
+{
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
+#endif
+
+static void setup_mmi(void)
+{
+	pr_info("piA335x: Setup KM MMI.\n");
+
+	pia335x_rtc_init();
+
+	mmi_mmc0_init();
+
+	pr_info("piA335x: cpsw_init\n");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+
+}
+
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
@@ -960,6 +1140,13 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		//daughter_brd_detected = false;
 		if(!strncmp("0.01", config.version, 4)) {
 			setup_e2();
+		} else {
+			pr_info("piA335x: Unknown board revision %.4s\n",
+					config.version);
+		}
+	} else if(!strncmp("PIA335MI", config.name, 8)) {
+		if(!strncmp("0.01", config.version, 4)) {
+			setup_mmi();
 		} else {
 			pr_info("piA335x: Unknown board revision %.4s\n",
 					config.version);
@@ -1124,6 +1311,8 @@ static void __init pia335x_init(void)
 	omap_sdrc_init(NULL, NULL);
 	pr_info("piA335x: musb_init\n");
 	usb_musb_init(&musb_board_data);
+	gpio_led_init();
+	lcdc_init();
 
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
