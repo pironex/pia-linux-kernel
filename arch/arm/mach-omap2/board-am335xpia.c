@@ -207,7 +207,8 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"gpmc_be1n.gpmc_be1n", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"gpmc_be1n.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
@@ -1085,8 +1086,9 @@ static void setup_mmi(void)
 
 	mmi_mmc0_init();
 
-	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+	//TODO: add DaVinci Ethernet init
+	//pr_info("piA335x: cpsw_init\n");
+	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 }
 
