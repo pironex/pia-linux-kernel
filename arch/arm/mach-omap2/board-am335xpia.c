@@ -212,10 +212,148 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{NULL, 0},
 };
 
-static void lcdc_init(void)
+/* piA335x_MMI: LCD GPIOs */
+#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
+#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+
+static int pia335x_lcd_enable(struct omap_dss_device *dssdev)
 {
+	gpio_set_value(GPIO_LCD_DISP, 1);
+	//msleep(1000);
+	pr_info("pia335x: enabling LCD\n");
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+
+	return 0;
+}
+
+static void pia335x_lcd_disable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	pr_info("pia335x: disabling LCD\n");
+	gpio_set_value(GPIO_LCD_DISP, 0);
+}
+
+/* LCD: J043WQCN0101 */
+static struct panel_generic_dpi_data pia335x_lcd_panel = {
+	.name               = "J043WQCN0101",
+	.platform_enable    = pia335x_lcd_enable,
+	.platform_disable   = pia335x_lcd_disable,
+};
+
+static struct omap_dss_device pia335x_lcd_device = {
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "lcd",
+	.driver_name        = "generic_dpi_panel",
+	.phy.dpi.data_lines = 24,
+	.reset_gpio         = -EINVAL,
+	.data               = &pia335x_lcd_panel,
+};
+
+static struct omap_dss_device *pia335x_dss_devices[] = {
+	&pia335x_lcd_device,
+};
+
+static struct omap_dss_board_info pia335x_dss_data = {
+	.num_devices     = ARRAY_SIZE(pia335x_dss_devices),
+	.devices         = pia335x_dss_devices,
+	.default_device  = &pia335x_lcd_device,
+};
+
+
+/* Touch interface */
+/*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
+    defined(CONFIG_TOUCHSCREEN_TSC2007)*/
+#if 0
+//TODO: add touch driver for J043WQCN0101 Display
+
+/* Pen Down IRQ, low active */
+#define GPIO_LCD_PENDOWN GPIO_TO_PIN(2,0);
+static int pia335x_j043wqcn_pendown(void)
+{
+	return !gpio_get_value(GPIO_LCD_PENDOWN);
+}
+
+static int pia335x_j043wqcn_init_hw(void)
+{
+	int gpio = GPIO_LCD_PENDOWN;
+	int ret = 0;
+	pr_info("pia335x_init: init J043WQCN0101\n");
+	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "j043wqcn_pen_down");
+	if (ret < 0) {
+		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
+		return ret;
+	}
+	gpio_set_debounce(gpio, 0xa);
+	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
+
+	return ret;
+}
+
+static struct j043wqcn_platform_data j043wqcn_info = {
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = pia335x_j043wqcn_pendown,
+	.init_platform_hw = pia335x_j043wqcn_init_hw,
+};
+
+/* FIXME: i2c bus */
+static struct i2c_board_info __initdata pia335x_i2c1_j043wqcn[] = {
+	{
+		I2C_BOARD_INFO("j043wqcn", 0x4B),	/* TODO: which i2c-address? */
+		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.platform_data = &j043wqcn_info,
+	},
+};
+
+static void __init pia335x_touch_init(void)
+{
+	pr_info("pia335x_init: init touch controller J043WQCN0101\n");
+	i2c_register_board_info(1, pia335x_i2c1_j043wqcn,
+			ARRAY_SIZE(pia335x_i2c1_j043wqcn));
+}
+#else
+static void __init pia335x_touch_init(void)
+{}
+#endif
+
+static void pia335x_lcd_init(void)
+{
+	int ret;
+	int use_lcd = 1;
+
 	setup_pin_mux(lcdc_pin_mux);
 
+	pia335x_dss_data.default_device = &pia335x_lcd_device;
+
+	/* backlight GPIO */
+	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
+		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+		omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_BACKLIGHT, true);
+	}
+
+	/* DISPLAY_EN GPIO */
+	if ((ret = gpio_request_one(GPIO_LCD_DISP,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_BACKLIGHT);
+		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_DISP, 1);
+		omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_DISP, true);
+	}
+
+	pr_info("pia335x_init: init LCD\n");
+
+	/* initialize touch interface only for LCD display */
+	if (use_lcd)
+		pia335x_touch_init();
 	return;
 }
 
