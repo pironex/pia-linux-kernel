@@ -1270,14 +1270,14 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		if(!strncmp("0.01", config.version, 4)) {
 			setup_e2();
 		} else {
-			pr_info("piA335x: Unknown board revision %.4s\n",
+			pr_info("PIA335E2: Unknown board revision %.4s\n",
 					config.version);
 		}
 	} else if(!strncmp("PIA335MI", config.name, 8)) {
 		if(!strncmp("0.01", config.version, 4)) {
 			setup_mmi();
 		} else {
-			pr_info("piA335x: Unknown board revision %.4s\n",
+			pr_info("PIA335MI: Unknown board revision %.4s\n",
 					config.version);
 		}
 	}
