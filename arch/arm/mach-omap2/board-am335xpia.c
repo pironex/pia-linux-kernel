@@ -1214,8 +1214,8 @@ static void setup_mmi(void)
 	pia335x_mmc[0].nonremovable	= true,
 
 	//TODO: add DaVinci Ethernet init
-	//pr_info("piA335x: cpsw_init\n");
-	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+	pr_info("piA335x: cpsw_init\n");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 }
 
