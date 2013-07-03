@@ -1217,6 +1217,9 @@ static void setup_mmi(void)
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
+	gpio_led_init();
+	pia335x_lcd_init();
+
 }
 
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
@@ -1224,6 +1227,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
 	/* generic board detection triggered by eeprom init */
 	int ret;
+	int i;
 	char tmp[10];
 
 	pr_info("piA335x: setup\n");
@@ -1440,9 +1444,6 @@ static void __init pia335x_init(void)
 	omap_sdrc_init(NULL, NULL);
 	pr_info("piA335x: musb_init\n");
 	usb_musb_init(&musb_board_data);
-	gpio_led_init();
-	lcdc_init();
-
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
