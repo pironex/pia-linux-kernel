@@ -902,7 +902,7 @@ static int __init pia35x_measurement_amplifier_init(void)
 
 		/* GPIOF_DIR_IN is 1 */
 		omap_mux_init_gpio(gpio, OMAP_MUX_MODE4	| (flags & GPIOF_DIR_IN) ?
-						OMAP_PIN_INPUT_PULLDOWN : OMAP_PIN_OUTPUT);
+						OMAP_PIN_INPUT : OMAP_PIN_OUTPUT);
 		gpio_export(gpio, true);
 	}
 
