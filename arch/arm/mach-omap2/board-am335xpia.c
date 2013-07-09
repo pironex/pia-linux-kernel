@@ -319,7 +319,7 @@ static struct pinmux_config km_e2_spi01_pin_mux[] = {
 #define SYS_CLKOUT2_PARENT	"per_192mhz_clk"
 */
 #define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
-static void pia335x_clkout2_enable(void)
+static void km_e2_clkout2_enable(void)
 {
 #if 0
 	/* code to enable default 32k clock output*/
@@ -900,6 +900,8 @@ static void setup_e2(void)
 	usb1_init();
 	nand_init();
 
+	km_e2_clkout2_enable();
+
 	km_e2_gpios_init();
 	km_e2_can_init();
 	km_e2_spi1_init();
@@ -1117,14 +1119,12 @@ static void __init pia335x_init(void)
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
 	omap_serial_init();
-	pia335x_clkout2_enable();
 	pr_info("piA335x: i2c_init\n");
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
 	pr_info("piA335x: musb_init\n");
 	usb_musb_init(&musb_board_data);
-
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
