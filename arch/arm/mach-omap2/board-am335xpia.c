@@ -153,8 +153,8 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* Module pin mux for mmc0 */
-static struct pinmux_config mmc0_pin_mux[] = {
+/* Module pin mux for mmc0 on board am335x_E2 */
+static struct pinmux_config mmc0_e2_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -482,32 +482,6 @@ static void mii2_init(void)
 	setup_pin_mux(mii2_pin_mux);
 }
 
-static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
-	{
-		.mmc            = 1,
-		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = GPIO_TO_PIN(0, 17),
-		.gpio_wp        = GPIO_TO_PIN(3, 9),
-		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
-	},
-	{
-		.mmc            = 0,	/* will be set at runtime */
-	},
-	{
-		.mmc            = 0,	/* will be set at runtime */
-	},
-	{}      /* Terminator */
-};
-
-static void mmc0_init(void)
-{
-	pr_info("piA335x: %s\n", __func__);
-	setup_pin_mux(mmc0_pin_mux);
-
-	omap2_hsmmc_init(pia335x_mmc);
-	return;
-}
-
 /** I2C1 */
 static struct led_info km_e2_leds1_config[] = {
 	{
@@ -580,6 +554,53 @@ static struct pca9633_platform_data km_e2_leds2_data = {
 	},
 	.outdrv = PCA9633_OPEN_DRAIN,
 };
+
+/* Module pin mux for mmc0 on board am335x_MMI*/
+static struct pinmux_config mmc0_mmi_pin_mux[] = {
+	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	/* write protect */
+	//{"mii1_txclk.gpio3_9", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	/* card detect */
+	//{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = GPIO_TO_PIN(0, 17),
+		.gpio_wp        = GPIO_TO_PIN(3, 9),
+		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{}      /* Terminator */
+};
+
+static void mmc0_init(int pia_id)
+{
+	switch(pia_id) {
+	case PIA335_KM_E2:
+		setup_pin_mux(mmc0_e2_pin_mux);
+		break;
+	case PIA335_KM_MMI:
+		setup_pin_mux(mmc0_mmi_pin_mux);
+		break;
+	}
+
+	omap2_hsmmc_init(pia335x_mmc);
+	return;
+}
 
 static void km_e2_leds_init(void)
 {
@@ -894,7 +915,7 @@ static void setup_e2(void)
 	};*/
 	pia335x_rtc_init();
 	km_e2_i2c2_init(); /* second i2c bus */
-	mmc0_init();
+	mmc0_init(PIA335_KM_E2);
 	mii2_init();
 	usb0_init();
 	usb1_init();
