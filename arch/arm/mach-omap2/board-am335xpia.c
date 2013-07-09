@@ -66,6 +66,9 @@ static char am335x_mac_addr[2][ETH_ALEN];
 /* Convert GPIO signal to GPIO pin number */
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
 
+#define PIA335_KM_E2		20
+#define PIA335_KM_MMI		21
+
 /*
 * EVM Config held in On-Board eeprom device.
 *
