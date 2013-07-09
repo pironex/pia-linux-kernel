@@ -48,6 +48,9 @@
 #include <plat/mmc.h>
 #include <plat/mcspi.h>
 #include <plat/nand.h>
+#include <video/omapdss.h>
+#include <video/omap-panel-generic-dpi.h>
+#include <video/omap-panel-dvi.h>
 
 #include "board-flash.h"
 #include "common.h"
@@ -163,6 +166,106 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+
+/* Module pin mux for LCDC on board KM MMI*/
+static struct pinmux_config lcdc_pin_mux[] = {
+	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+								   | AM33XX_PULL_DISA},
+	{"lcd_data1.lcd_data1",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data2.lcd_data2",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data3.lcd_data3",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data4.lcd_data4",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data5.lcd_data5",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data6.lcd_data6",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data7.lcd_data7",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data8.lcd_data8",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data9.lcd_data9",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data10.lcd_data10",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data11.lcd_data11",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data12.lcd_data12",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data13.lcd_data13",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data14.lcd_data14",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"lcd_data15.lcd_data15",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
+							   | AM33XX_PULL_DISA},
+	{"gpmc_ad8.lcd_data16",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad9.lcd_data17",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad10.lcd_data18",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad11.lcd_data19",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad12.lcd_data20",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad13.lcd_data21",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad14.lcd_data22",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ad15.lcd_data23",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
+	{"lcd_vsync.lcd_vsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{"gpmc_be1n.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
+/* piA335x_MMI: LCD GPIOs */
+#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
+#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+
+static int pia335x_lcd_enable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(GPIO_LCD_DISP, 1);
+	//msleep(1000);
+	pr_info("pia335x: enabling LCD\n");
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+
+	return 0;
+}
+
+static void pia335x_lcd_disable(struct omap_dss_device *dssdev)
+{
+	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	pr_info("pia335x: disabling LCD\n");
+	gpio_set_value(GPIO_LCD_DISP, 0);
+}
+
+/* LCD: J043WQCN0101 */
+static struct panel_generic_dpi_data pia335x_lcd_panel = {
+	.name               = "J043WQCN0101",
+	.platform_enable    = pia335x_lcd_enable,
+	.platform_disable   = pia335x_lcd_disable,
+};
+
+static struct omap_dss_device pia335x_lcd_device = {
+	.type               = OMAP_DISPLAY_TYPE_DPI,
+	.name               = "lcd",
+	.driver_name        = "generic_dpi_panel",
+	.phy.dpi.data_lines = 24,
+	.reset_gpio         = -EINVAL,
+	.data               = &pia335x_lcd_panel,
+};
+
+static struct omap_dss_device *pia335x_dss_devices[] = {
+	&pia335x_lcd_device,
+};
+
+static struct omap_dss_board_info pia335x_dss_data = {
+	.num_devices     = ARRAY_SIZE(pia335x_dss_devices),
+	.devices         = pia335x_dss_devices,
+	.default_device  = &pia335x_lcd_device,
+};
+
+
 /* Touch interface */
 /*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
     defined(CONFIG_TOUCHSCREEN_TSC2007)*/
@@ -219,6 +322,47 @@ static void __init pia335x_touch_init(void)
 static void __init pia335x_touch_init(void)
 {}
 #endif
+
+static void pia335x_lcd_init(void)
+{
+	int ret;
+	int use_lcd = 1;
+
+	setup_pin_mux(lcdc_pin_mux);
+
+	pia335x_dss_data.default_device = &pia335x_lcd_device;
+
+	/* backlight GPIO */
+	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
+		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+		omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_BACKLIGHT, true);
+	}
+
+	/* DISPLAY_EN GPIO */
+	if ((ret = gpio_request_one(GPIO_LCD_DISP,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_BACKLIGHT);
+		return;
+	} else {
+		//gpio_direction_output(GPIO_LCD_DISP, 1);
+		omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+		gpio_export(GPIO_LCD_DISP, true);
+	}
+
+	pr_info("pia335x_init: init LCD\n");
+
+	/* initialize touch interface only for LCD display */
+	if (use_lcd)
+		pia335x_touch_init();
+
+	return;
+}
 
 /* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config mmc0_e2_pin_mux[] = {
