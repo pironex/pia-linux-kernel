@@ -111,6 +111,13 @@ struct pinmux_config {
 	int val; /* Options for the mux register value */
 };
 
+/* pinmux for led device */
+static struct pinmux_config gpio_led_mux[] = {
+	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{NULL, 0},
+};
+
 /*
 * @pin_mux - single module pin-mux structure which defines pin-mux
 *			details for all its pins.
@@ -600,6 +607,44 @@ static void mmc0_init(int pia_id)
 
 	omap2_hsmmc_init(pia335x_mmc);
 	return;
+}
+
+/**
+ * AM33xx LEDs
+ */
+static struct gpio_led gpio_leds[] = {
+	{
+		.name			= "am335x:KM_MMI:usr1",
+		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "am335x:KM_MMI:usr2",
+		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
+	},
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+	.leds		= gpio_leds,
+	.num_leds	= ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &gpio_led_info,
+	},
+};
+
+static void gpio_led_init(void)
+{
+	int err;
+
+	setup_pin_mux(gpio_led_mux);
+	err = platform_device_register(&leds_gpio);
+	if (err)
+		pr_err("failed to register gpio led device\n");
 }
 
 static void km_e2_leds_init(void)
