@@ -1182,6 +1182,30 @@ static void setup_e2(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
+static void setup_mmi(void)
+{
+	pr_info("piA335x: Setup KM MMI.\n");
+
+	pia335x_rtc_init();
+
+	mmc0_init(PIA335_KM_MMI);
+
+	/* KM MMI has Micro-SD slot which doesn't have Write Protect pin */
+	pia335x_mmc[0].gpio_wp = -EINVAL;
+
+	/* KM MMI has Micro-SD slot which doesn't have Card Detect pin */
+	pia335x_mmc[0].gpio_cd = -EINVAL,
+	pia335x_mmc[0].nonremovable	= true,
+
+	//TODO: add DaVinci Ethernet init
+	pr_info("piA335x: cpsw_init\n");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+
+	gpio_led_init();
+	pia335x_lcd_init();
+
+}
+
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
@@ -1233,7 +1257,14 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		if(!strncmp("0.01", config.version, 4)) {
 			setup_e2();
 		} else {
-			pr_info("piA335x: Unknown board revision %.4s\n",
+			pr_info("PIA335E2: Unknown board revision %.4s\n",
+					config.version);
+		}
+	} else if(!strncmp("PIA335MI", config.name, 8)) {
+		if(!strncmp("0.01", config.version, 4)) {
+			setup_mmi();
+		} else {
+			pr_info("PIA335MI: Unknown board revision %.4s\n",
 					config.version);
 		}
 	}
