@@ -786,7 +786,8 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
 		.gpio_cd        = GPIO_TO_PIN(0, 17),
-		.gpio_wp        = GPIO_TO_PIN(3, 9),
+		 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
+		.gpio_wp        = -1,
 		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
 	},
 	{
