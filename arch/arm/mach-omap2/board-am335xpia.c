@@ -163,6 +163,63 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* Touch interface */
+/*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
+    defined(CONFIG_TOUCHSCREEN_TSC2007)*/
+#if 0
+//TODO: add touch driver for J043WQCN0101 Display
+
+/* Pen Down IRQ, low active */
+#define GPIO_LCD_PENDOWN GPIO_TO_PIN(2,0);
+static int pia335x_j043wqcn_pendown(void)
+{
+	return !gpio_get_value(GPIO_LCD_PENDOWN);
+}
+
+static int pia335x_j043wqcn_init_hw(void)
+{
+	int gpio = GPIO_LCD_PENDOWN;
+	int ret = 0;
+	pr_info("pia335x_init: init J043WQCN0101\n");
+	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "j043wqcn_pen_down");
+	if (ret < 0) {
+		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
+		return ret;
+	}
+	gpio_set_debounce(gpio, 0xa);
+	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
+	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
+
+	return ret;
+}
+
+static struct j043wqcn_platform_data j043wqcn_info = {
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = pia335x_j043wqcn_pendown,
+	.init_platform_hw = pia335x_j043wqcn_init_hw,
+};
+
+/* FIXME: i2c bus */
+static struct i2c_board_info __initdata pia335x_i2c1_j043wqcn[] = {
+	{
+		I2C_BOARD_INFO("j043wqcn", 0x4B),	/* TODO: which i2c-address? */
+		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.platform_data = &j043wqcn_info,
+	},
+};
+
+static void __init pia335x_touch_init(void)
+{
+	pr_info("pia335x_init: init touch controller J043WQCN0101\n");
+	i2c_register_board_info(1, pia335x_i2c1_j043wqcn,
+			ARRAY_SIZE(pia335x_i2c1_j043wqcn));
+}
+#else
+static void __init pia335x_touch_init(void)
+{}
+#endif
+
 /* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config mmc0_e2_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
