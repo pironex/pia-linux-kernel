@@ -325,35 +325,32 @@ static void __init pia335x_touch_init(void)
 
 static void pia335x_lcd_init(void)
 {
-	int ret;
 	int use_lcd = 1;
+	int gpio;
 
 	setup_pin_mux(lcdc_pin_mux);
 
 	pia335x_dss_data.default_device = &pia335x_lcd_device;
 
 	/* backlight GPIO */
-	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
-			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
-		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+	gpio = GPIO_LCD_BACKLIGHT;
+	if (gpio_request(gpio, "lcd-backlight") < 0) {
+		pr_err("Failed to request gpio for lcd-backlight");
 		return;
-	} else {
-		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
-		omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
-		gpio_export(GPIO_LCD_BACKLIGHT, true);
 	}
 
+	gpio_direction_output(gpio, 0);
+	gpio_export(gpio, 0);
+
 	/* DISPLAY_EN GPIO */
-	if ((ret = gpio_request_one(GPIO_LCD_DISP,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
-		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
-		gpio_free(GPIO_LCD_BACKLIGHT);
+	gpio = GPIO_LCD_DISP;
+	if (gpio_request(gpio, "lcd-disp") < 0) {
+		pr_err("Failed to request gpio for lcd-disp");
 		return;
-	} else {
-		//gpio_direction_output(GPIO_LCD_DISP, 1);
-		omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
-		gpio_export(GPIO_LCD_DISP, true);
 	}
+
+	gpio_direction_output(gpio, 0);
+	gpio_export(gpio, 0);
 
 	pr_info("pia335x_init: init LCD\n");
 
