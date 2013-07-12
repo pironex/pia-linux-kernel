@@ -68,6 +68,12 @@ static struct clockdomain *gfx_l3_clkdm, *gfx_l4ls_clkdm;
 static int m3_state = M3_STATE_UNKNOWN;
 static int m3_version = M3_VERSION_UNKNOWN;
 
+static char *am33xx_i2c_sleep_sequence, *am33xx_i2c_wake_sequence;
+static u32 i2s_sleep_seq_sz, i2s_wake_seq_sz;
+static u32 i2s_sleep_scll, i2s_sleep_sclh;
+static u32 i2s_wake_scll, i2s_wake_sclh;
+struct omap_hwmod *i2c1_oh;
+
 static int am33xx_ipc_cmd(struct a8_wkup_m3_ipc_data *);
 static int am33xx_verify_lp_state(int);
 static void am33xx_m3_state_machine_reset(void);
@@ -600,6 +606,190 @@ void am33xx_push_sram_idle(void)
 					(am33xx_do_wfi, am33xx_do_wfi_sz);
 }
 
+/*
+ * I2C Sleep/wake sequence
+ * Each sequence is a series of I2C transfers in the form:
+ * u8 length | u8 chip address | u8 byte0/reg addr | u8 byte 1 | u8 byte n ...
+
+ * The length indicates the number of bytes to transfer, including the register
+ * address. The length of the sequence is limited by the amount of space
+ * reserved in SRAM, 127 bytes.
+
+ * @sleep_seq = i2c payload for sleep sequence
+ * @ssz = sleep sequence payload size
+ * @wake_seq = i2c payload for wakeup sequence
+ * @wsz = wakeup sequence payload size
+ *
+ * Important
+ *	Data Integrity & size value is assumed to be present & valid.
+ *	No serious checking is done here. (only array presence & size check is
+ *	done here)
+ */
+void am33xx_core_vg_scale_i2c_seq_fillup(char *sleep_seq, size_t ssz,
+					 char *wake_seq, size_t wsz)
+{
+	/* Initializa the local variables. (may be for modular approach) */
+	am33xx_i2c_sleep_sequence = NULL;
+	am33xx_i2c_wake_sequence = NULL;
+
+	/* check for payload presence */
+	if (!sleep_seq || !wake_seq)
+		return;
+
+	/* check the allowed range. Keep last 1 byte for sentinel */
+	if ((ssz > (sram_sleep_data_sz - 1)) || (wsz > (sram_wake_data_sz - 1)))
+		return;
+
+	/* copy the sequence address & size for later use */
+	am33xx_i2c_sleep_sequence = sleep_seq;
+	am33xx_i2c_wake_sequence = wake_seq;
+	i2s_sleep_seq_sz = ssz;
+	i2s_wake_seq_sz = wsz;
+}
+
+void am33xx_fill_i2c_scl_sch(u32 *sleep_scll, u32 *sleep_sclh,
+			     u32 *wake_scll, u32 *wake_sclh)
+{
+	*sleep_scll = i2s_sleep_scll;
+	*sleep_sclh = i2s_sleep_sclh;
+	*wake_scll = i2s_wake_scll;
+	*wake_sclh = i2s_wake_sclh;
+}
+
+static int calculate_i2c0_scl_sch(unsigned short sleep_speed_khz,
+						unsigned short wake_speed_khz)
+{
+	const int xtal_freqs_array[] = {19200, 24000, 25000, 26000};
+	int index;
+	int xtal_freq, n2_div, per_clkoutm2, i2c_fclk;
+	int scl, scll, sclh;
+
+	if (!sleep_speed_khz || !wake_speed_khz)
+		return -1;
+
+	/* Calculate I2C0 functional clock */
+	index = omap_ctrl_readl(AM33XX_CONTROL_STATUS_OFF);
+	index &= AM33XX_CONTROL_STATUS_SYSBOOT1_MASK;
+	index >>= AM33XX_CONTROL_STATUS_SYSBOOT1_SHIFT;
+	xtal_freq = xtal_freqs_array[index];
+
+	n2_div = readl(AM33XX_CM_CLKSEL_DPLL_PERIPH);
+	n2_div &= AM33XX_DPLL_PER_DIV_MASK;
+	n2_div >>= AM33XX_DPLL_DIV_SHIFT;
+	per_clkoutm2 = xtal_freq / (n2_div + 1);
+	i2c_fclk = per_clkoutm2 / 4;
+
+	/* calculate scl/sch for sleep */
+	scl = i2c_fclk / (sleep_speed_khz ? : 1);
+	scll = scl - (scl / 3) - 7;
+	if (scll < 0)
+		scll = 0;
+	if (scll > 255)
+		scll = 255;
+	i2s_sleep_scll = scll;
+	sclh = (scl / 3) - 5;
+	if (sclh < 0)
+		sclh = 0;
+	if (sclh > 255)
+		sclh = 255;
+	i2s_sleep_sclh = sclh;
+
+	/* calculate scl/sch for wake */
+	scl = i2c_fclk / (wake_speed_khz ? : 1);
+	scll = scl - (scl / 3) - 7;
+	if (scll < 0)
+		scll = 0;
+	if (scll > 255)
+		scll = 255;
+	i2s_wake_scll = scll;
+	sclh = (scl / 3) - 5;
+	if (sclh < 0)
+		sclh = 0;
+	if (sclh > 255)
+		sclh = 255;
+	i2s_wake_sclh = sclh;
+
+	return 0;
+}
+
+/* Load the sleep/wake sequences */
+static int am33xx_fill_i2c_sequences(void)
+{
+	u32 bytes_to_copy;
+	u8 *sleep_seqp, *wake_seqp;
+	unsigned short sleep_speed_khz, wake_speed_khz;
+
+	/*
+	 * 1st 2 bytes of the sequence contains the operating freq by i2c.
+	 * calculate the i2c scl & sch register values for later use
+	 */
+	sleep_speed_khz = (am33xx_i2c_sleep_sequence[0] & 0xff) |
+					(am33xx_i2c_sleep_sequence[1] << 8);
+	am33xx_i2c_sleep_sequence += 2;
+
+	wake_speed_khz = (am33xx_i2c_wake_sequence[0] & 0xff)  |
+					(am33xx_i2c_wake_sequence[1] << 8);
+	am33xx_i2c_wake_sequence += 2;
+
+	if (calculate_i2c0_scl_sch(sleep_speed_khz, wake_speed_khz) < 0)
+		return -1;
+
+	/*
+	 * first zero/clear the sequence storage and then copy sequence taking
+	 * minimum of platfrom-payload-size & pre-allocated-sram-area.
+	 *
+	 * Remember -
+	 * At this point, assembly code is already relocated into SRAM and the
+	 * compile-time addresses are not valid. Re-calculate the offset using
+	 * relocated address.
+	 */
+	sleep_seqp = (char *)(am33xx_do_wfi_sram + sram_sleep_data_start + 4);
+	memset(sleep_seqp, 0, sram_sleep_data_sz);
+	bytes_to_copy = min(sram_sleep_data_sz, i2s_sleep_seq_sz);
+	memcpy(sleep_seqp, am33xx_i2c_sleep_sequence, bytes_to_copy);
+
+	wake_seqp = (char *)(am33xx_do_wfi_sram + sram_wake_data_start + 4);
+	memset(wake_seqp, 0, sram_wake_data_sz);
+	bytes_to_copy = min(sram_wake_data_sz, i2s_wake_seq_sz);
+	memcpy(wake_seqp, am33xx_i2c_wake_sequence, bytes_to_copy);
+
+	return 0;
+}
+
+static int am33xx_setup_core_vg_scaling(void)
+{
+	int ret;
+
+	if (!am33xx_i2c_sleep_sequence || !am33xx_i2c_wake_sequence)
+		return -EINVAL;
+
+	ret = am33xx_map_i2c0();
+	if (ret) {
+		pr_err("pm: Err(%d). Could not ioremap i2c0\n", ret);
+		return ret;
+	}
+
+	/* i2c hwmod address starts from 1 */
+	i2c1_oh = omap_hwmod_lookup("i2c1");
+	if (!i2c1_oh) {
+		pr_err("pm: Err(%d). Could not lookup i2c0 hwmod\n", ret);
+		return -ENODEV;
+	}
+
+	if (am33xx_fill_i2c_sequences() < 0)
+		return -1;
+
+	/*
+	 * Only enable the core voltage scaling if
+	 *	- i2c0 is mapped
+	 *	- i2c0 hwmod is available
+	 *	- i2c sleep & wake sequence are available
+	 */
+	suspend_cfg_param_list[NEEDS_CORE_VOLTAGE_SCALING] = true;
+
+	return 0;
+}
+
 static int __init am33xx_pm_init(void)
 {
 	int ret;
@@ -609,12 +799,18 @@ static int __init am33xx_pm_init(void)
 	u32 evm_id;
 
 #endif
+
 	if (!cpu_is_am33xx())
 		return -ENODEV;
 
 	pr_info("Power Management for AM33XX family\n");
 
 #ifdef CONFIG_SUSPEND
+
+	ret = am33xx_setup_core_vg_scaling();
+	if (ret)
+		pr_err("pm: Err (%d) setting core voltage setting\n", ret);
+
 /* Read SDRAM_CONFIG register to determine Memory Type */
 	base = am33xx_get_ram_base();
 	reg = readl(base + EMIF4_0_SDRAM_CONFIG);

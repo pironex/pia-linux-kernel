@@ -2624,6 +2624,23 @@ static void evm_init_cpld(void)
 	i2c_add_driver(&cpld_reg_driver);
 }
 
+static void __iomem *am33xx_i2c0_base;
+
+int am33xx_map_i2c0(void)
+{
+	am33xx_i2c0_base = ioremap(AM33XX_I2C0_BASE, SZ_4K);
+
+	if (!am33xx_i2c0_base)
+		return -ENOMEM;
+
+	return 0;
+}
+
+void __iomem *am33xx_get_i2c0_base(void)
+{
+	return am33xx_i2c0_base;
+}
+
 static void __init am335x_evm_i2c_init(void)
 {
 	/* Initially assume General Purpose EVM Config */

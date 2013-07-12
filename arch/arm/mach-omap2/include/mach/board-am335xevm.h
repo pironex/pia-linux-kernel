@@ -45,5 +45,7 @@ int am335x_evm_get_id(void);
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
 void am33xx_d_can_init(unsigned int instance);
 
+void am33xx_core_vg_scale_i2c_seq_fillup(char *sleep_seq, size_t ssz,
+					 char *wake_seq, size_t wsz);
 #endif
 #endif
