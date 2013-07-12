@@ -2277,6 +2277,18 @@ static void am335x_opp_update(void)
 	}
 }
 
+static char tps65910_core_vg_scale_sleep_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x1f, /* Set VDD2 to 0.95V */
+	0x0,
+};
+
+static char tps65910_core_vg_scale_wake_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x2b, /* Set VDD2 to 1.1V */
+	0x0,
+};
+
 static void setup_general_purpose_evm(void)
 {
 	u32 prof_sel = am335x_get_profile_selection();
@@ -2295,6 +2307,12 @@ static void setup_general_purpose_evm(void)
 	/* Atheros Tx Clk delay Phy fixup */
 	phy_register_fixup_for_uid(AM335X_EVM_PHY_ID, AM335X_EVM_PHY_MASK,
 				   am33xx_evm_tx_clk_dly_phy_fixup);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
 }
 
 static void setup_ind_auto_motor_ctrl_evm(void)
