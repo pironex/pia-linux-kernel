@@ -2334,6 +2334,32 @@ static void setup_beaglebone_old(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_RMII, NULL, NULL);
 }
 
+static char tps65217_core_vg_scale_sleep_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 1 */
+	0x02, 0x24, 0x10, 0x02, /* Set DCDC3 to 0.95V */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 2 */
+	0x02, 0x24, 0x10, 0x02, /* Set DCDC3 to 0.95V */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 1 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 2 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x0,
+};
+
+static char tps65217_core_vg_scale_wake_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 1 */
+	0x02, 0x24, 0x10, 0x08, /* Set DCDC3 to 1.1V */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 2 */
+	0x02, 0x24, 0x10, 0x08, /* Set DCDC3 to 1.1V */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 1 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 2 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x0,
+};
+
 /* BeagleBone after Rev A3 */
 static void setup_beaglebone(void)
 {
@@ -2348,6 +2374,13 @@ static void setup_beaglebone(void)
 	regulator_has_full_constraints();
 
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65217_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65217_core_vg_scale_sleep_seq),
+				tps65217_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65217_core_vg_scale_wake_seq));
+
 }
 
 /* EVM - Starter Kit */
