@@ -304,7 +304,7 @@ static struct panel_config generic_dpi_panels[] = {
 			.x_res = 480,
 			.y_res = 272,
 
-			.pixel_clock	= 9000,
+			.pixel_clock	= 12000,
 
 			#if 0 // closes to datasheet, works but slight flickering
 				.hsw		= 2,
@@ -324,6 +324,11 @@ static struct panel_config generic_dpi_panels[] = {
 				.vbp		= 1,
 			#endif
 		},
+		.acbi			= 0x0,
+		.acb			= 0x0,
+		.power_on_delay		= 100,
+		.power_off_delay	= 100,
+
 		.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
 				OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IEO |
 				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
