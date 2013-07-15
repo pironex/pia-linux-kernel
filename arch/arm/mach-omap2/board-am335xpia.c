@@ -1144,6 +1144,58 @@ static int pia335x_rtc_init(void)
 	return 0;
 }
 
+/* Accelerometer LIS331DLH */
+#include <linux/lis3lv02d.h>
+
+static struct lis3lv02d_platform_data lis331dlh_pdata = {
+	.click_flags = LIS3_CLICK_SINGLE_X |
+			LIS3_CLICK_SINGLE_Y |
+			LIS3_CLICK_SINGLE_Z,
+	.wakeup_flags = LIS3_WAKEUP_X_LO | LIS3_WAKEUP_X_HI |
+			LIS3_WAKEUP_Y_LO | LIS3_WAKEUP_Y_HI |
+			LIS3_WAKEUP_Z_LO | LIS3_WAKEUP_Z_HI,
+	.irq_cfg = LIS3_IRQ1_CLICK | LIS3_IRQ2_CLICK,
+	.wakeup_thresh	= 10,
+	.click_thresh_x = 10,
+	.click_thresh_y = 10,
+	.click_thresh_z = 10,
+	.g_range	= 2,
+	.st_min_limits[0] = 120,
+	.st_min_limits[1] = 120,
+	.st_min_limits[2] = 140,
+	.st_max_limits[0] = 550,
+	.st_max_limits[1] = 550,
+	.st_max_limits[2] = 750,
+};
+
+static struct i2c_board_info lis331dlh_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("lis331dlh", 0x18),
+		.platform_data = &lis331dlh_pdata,
+	},
+};
+
+static void lis331dlh_init(void)
+{
+	struct i2c_adapter *adapter;
+	struct i2c_client *client;
+	unsigned int i2c_instance;
+
+	i2c_instance = 1;
+
+	/* I2C adapter request */
+	adapter = i2c_get_adapter(i2c_instance);
+	if (!adapter) {
+		pr_err("failed to get adapter i2c%u\n", i2c_instance);
+		return;
+	}
+
+	client = i2c_new_device(adapter, lis331dlh_i2c_boardinfo);
+	if (!client)
+		pr_err("failed to register lis331dlh to i2c%u\n", i2c_instance);
+
+	i2c_put_adapter(adapter);
+}
 static void setup_e2(void)
 {
 	pr_info("piA335x: Setup KM E2.\n");
