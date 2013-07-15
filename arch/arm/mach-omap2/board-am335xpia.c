@@ -224,50 +224,6 @@ static struct pinmux_config lcdc_pin_mux[] = {
 #define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
 #define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
 
-static int pia335x_lcd_enable(struct omap_dss_device *dssdev)
-{
-	gpio_set_value(GPIO_LCD_DISP, 1);
-	//msleep(1000);
-	pr_info("pia335x: enabling LCD\n");
-	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
-
-	return 0;
-}
-
-static void pia335x_lcd_disable(struct omap_dss_device *dssdev)
-{
-	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
-	pr_info("pia335x: disabling LCD\n");
-	gpio_set_value(GPIO_LCD_DISP, 0);
-}
-
-/* LCD: J043WQCN0101 */
-static struct panel_generic_dpi_data pia335x_lcd_panel = {
-	.name               = "J043WQCN0101",
-	.platform_enable    = pia335x_lcd_enable,
-	.platform_disable   = pia335x_lcd_disable,
-};
-
-static struct omap_dss_device pia335x_lcd_device = {
-	.type               = OMAP_DISPLAY_TYPE_DPI,
-	.name               = "lcd",
-	.driver_name        = "generic_dpi_panel",
-	.phy.dpi.data_lines = 24,
-	.reset_gpio         = -EINVAL,
-	.data               = &pia335x_lcd_panel,
-};
-
-static struct omap_dss_device *pia335x_dss_devices[] = {
-	&pia335x_lcd_device,
-};
-
-static struct omap_dss_board_info pia335x_dss_data = {
-	.num_devices     = ARRAY_SIZE(pia335x_dss_devices),
-	.devices         = pia335x_dss_devices,
-	.default_device  = &pia335x_lcd_device,
-};
-
-
 /* Touch interface */
 /*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
     defined(CONFIG_TOUCHSCREEN_TSC2007)*/
