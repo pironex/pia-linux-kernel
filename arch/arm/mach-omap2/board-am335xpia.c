@@ -31,6 +31,7 @@
 #include <linux/pwm/pwm.h>
 #include <linux/reboot.h>
 #include <linux/platform_data/leds-pca9633.h>
+#include <video/da8xx-fb.h>
 
 #include <mach/hardware.h>
 
@@ -48,6 +49,7 @@
 #include <plat/mmc.h>
 #include <plat/mcspi.h>
 #include <plat/nand.h>
+#include <plat/lcdc.h>
 #include <video/omapdss.h>
 #include <video/omap-panel-generic-dpi.h>
 #include <video/omap-panel-dvi.h>
@@ -170,7 +172,7 @@ static struct pinmux_config clkout2_pin_mux[] = {
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-								   | AM33XX_PULL_DISA},
+							   | AM33XX_PULL_DISA},
 	{"lcd_data1.lcd_data1",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
 							   | AM33XX_PULL_DISA},
 	{"lcd_data2.lcd_data2",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
@@ -323,43 +325,125 @@ static void __init pia335x_touch_init(void)
 {}
 #endif
 
-static void pia335x_lcd_init(void)
+static const struct display_panel disp_panel = {
+	WVGA,
+	32,
+	32,
+	COLOR_ACTIVE,
+};
+
+static struct lcd_ctrl_config lcd_cfg = {
+	&disp_panel,
+	.ac_bias		= 255,
+	.ac_bias_intrpt		= 0,
+	.dma_burst_sz		= 16,
+	.bpp			= 32,
+	.fdd			= 0x80,
+	.tft_alt_mode		= 0,
+	.stn_565_mode		= 0,
+	.mono_8bit_mode		= 0,
+	.invert_line_clock	= 1,
+	.invert_frm_clock	= 1,
+	.sync_edge		= 0,
+	.sync_ctrl		= 1,
+	.raster_order		= 0,
+};
+
+struct da8xx_lcdc_platform_data  pia335x_NHD_480272MF_ATXI_pdata = {
+	.manu_name              = "NHD",
+	.controller_data        = &lcd_cfg,
+	.type                   = "NHD-4.3-ATXI#-T-1",
+};
+
+static int __init conf_disp_pll(int rate)
+{
+	struct clk *disp_pll;
+	int ret = -EINVAL;
+
+	disp_pll = clk_get(NULL, "dpll_disp_ck");
+	if (IS_ERR(disp_pll)) {
+		pr_err("Cannot clk_get disp_pll\n");
+		goto out;
+	}
+
+	ret = clk_set_rate(disp_pll, rate);
+	clk_put(disp_pll);
+out:
+	return ret;
+}
+
+
+static void pia335x_mmi_lcd_power_ctrl(int val) {
+	if (!gpio_is_valid(GPIO_LCD_BACKLIGHT)) {
+		pr_warn("LCD power control: invalid GPIO: %d\n", val);
+		return;
+	}
+
+	if (val == 0) {
+		pr_info("Turning off LCD\n");
+		gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	} else {
+		pr_info("Turning on LCD\n");
+		gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+	}
+}
+
+static void pia335x_lcd_init(int id)
 {
 	int ret;
-	int use_lcd = 1;
-
+	//int use_lcd = 1;
+	struct da8xx_lcdc_platform_data *lcdc_pdata;
 	setup_pin_mux(lcdc_pin_mux);
 
-	pia335x_dss_data.default_device = &pia335x_lcd_device;
-
-	/* backlight GPIO */
-	if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
-			GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
-		pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+	if (conf_disp_pll(300000000)) {
+		pr_info("Failed configure display PLL, not attempting to"
+				"register LCDC\n");
 		return;
-	} else {
-		//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
-		omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
-		gpio_export(GPIO_LCD_BACKLIGHT, true);
 	}
+	switch (id) {
+	case PIA335_KM_MMI:
+		pia335x_NHD_480272MF_ATXI_pdata.panel_power_ctrl =
+				pia335x_mmi_lcd_power_ctrl;
+		/* backlight GPIO */
+		if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
+				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
+			pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+			return;
+		} else {
+			//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+			omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+			gpio_export(GPIO_LCD_BACKLIGHT, true);
+		}
 
-	/* DISPLAY_EN GPIO */
-	if ((ret = gpio_request_one(GPIO_LCD_DISP,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
-		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
-		gpio_free(GPIO_LCD_BACKLIGHT);
-		return;
-	} else {
-		//gpio_direction_output(GPIO_LCD_DISP, 1);
-		omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
-		gpio_export(GPIO_LCD_DISP, true);
-	}
+		/* DISPLAY_EN GPIO */
+		if ((ret = gpio_request_one(GPIO_LCD_DISP,
+				GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
+			pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+			gpio_free(GPIO_LCD_BACKLIGHT);
+			return;
+		} else {
+			//gpio_direction_output(GPIO_LCD_DISP, 1);
+			omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+			gpio_export(GPIO_LCD_DISP, true);
+		}
 
-	pr_info("pia335x_init: init LCD\n");
+		pr_info("pia335x_init: init LCD\n");
+		lcdc_pdata = &pia335x_NHD_480272MF_ATXI_pdata;
 
-	/* initialize touch interface only for LCD display */
-	if (use_lcd)
+		/* initialize touch interface only for LCD display */
 		pia335x_touch_init();
+		break;
+	default:
+		pr_err("LCDC not supported on this device (%d)\n", id);
+		return;
+	}
+
+	if (am33xx_register_lcdc(lcdc_pdata))
+		pr_info("Failed to register LCDC device\n");
+
+	if (am33xx_register_mfd_tscadc(&tscadc))
+		pr_err("failed to register touchscreen device\n");
+	return;
 
 	return;
 }
@@ -1203,7 +1287,7 @@ static void setup_mmi(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 	gpio_led_init();
-	pia335x_lcd_init();
+	pia335x_lcd_init(PIA335_KM_MMI);
 
 }
 
