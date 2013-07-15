@@ -213,7 +213,7 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"gpmc_be1n.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"gpmc_ben1.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
