@@ -342,7 +342,7 @@ config MACH_AM335XIAEVM
 	depends on SOC_OMAPAM33XX
 	default y
 
-config MACH_AM335XPIA
+config MACH_PIA_AM335X
 	bool "pironex piA-AM335X boards"
 	depends on SOC_OMAPAM33XX
 	default y
