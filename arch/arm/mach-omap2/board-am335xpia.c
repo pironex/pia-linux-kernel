@@ -1208,12 +1208,10 @@ static void setup_e2(void)
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
-		{mfd_tscadc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 		{mcasp1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
 		{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
-		{wl12xx_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{NULL, 0, 0},
 	};*/
@@ -1256,7 +1254,6 @@ static void setup_mmi(void)
 	pia335x_mmc[0].gpio_cd = -EINVAL,
 	pia335x_mmc[0].nonremovable	= true,
 
-	//TODO: add DaVinci Ethernet init
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
