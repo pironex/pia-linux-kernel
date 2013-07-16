@@ -1187,6 +1187,17 @@ static int pia335x_rtc_init(void)
 	return 0;
 }
 
+static struct omap_musb_board_data musb_board_data = {
+	.interface_type	= MUSB_INTERFACE_ULPI,
+	/*
+	 * mode[0:3] = USB0PORT's mode
+	 * mode[4:7] = USB1PORT's mode
+	 */
+	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
+	.power		= 500,
+	.instances	= 1,
+};
+
 static void setup_e2(void)
 {
 	pr_info("piA335x: Setup KM E2.\n");
@@ -1218,6 +1229,9 @@ static void setup_e2(void)
 	km_e2_spi1_init();
 	km_e2_rs485_init();
 	km_e2_ls7366_init();
+
+	pr_info("piA335x: musb_init\n");
+	usb_musb_init(&musb_board_data);
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
@@ -1321,17 +1335,6 @@ out:
 	pr_err("PIA335x: Board identification failed... Halting...\n");
 	machine_halt();
 }
-
-static struct omap_musb_board_data musb_board_data = {
-	.interface_type	= MUSB_INTERFACE_ULPI,
-	/*
-	 * mode[0:3] = USB0PORT's mode
-	 * mode[4:7] = USB1PORT's mode
-	 */
-	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
-	.power		= 500,
-	.instances	= 1,
-};
 
 /**
  * I2C devices
@@ -1465,8 +1468,6 @@ static void __init pia335x_init(void)
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
-	pr_info("piA335x: musb_init\n");
-	usb_musb_init(&musb_board_data);
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
