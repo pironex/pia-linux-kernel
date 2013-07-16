@@ -1340,7 +1340,7 @@ static struct omap_musb_board_data musb_board_data = {
 static struct at24_platform_data pia335x_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
-	.flags          = AT24_FLAG_TAKE8ADDR,
+	.flags          = 0,
 	.setup          = pia335x_setup,
 	.context        = (void *)NULL,
 };
