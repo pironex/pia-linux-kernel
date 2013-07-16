@@ -146,22 +146,25 @@ static struct omap_board_mux board_mux[] __initdata = {
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	/* I2C1*/
-	AM33XX_MUX(UART0_CTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	AM33XX_MUX(UART0_RTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	/* RS485 / UART3 */
-	AM33XX_MUX(MII1_RXD2, OMAP_MUX_MODE1 | AM33XX_PULL_ENBL),
-	AM33XX_MUX(MII1_RXD3, OMAP_MUX_MODE1 | AM33XX_INPUT_EN),
-	/* PMIC INT */
-	AM33XX_MUX(MII1_TXD0, OMAP_MUX_MODE7 | AM33XX_INPUT_EN |
-			AM33XX_PULL_UP | AM33XX_PULL_ENBL),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
 #define	board_mux	NULL
 #endif
+
+static struct pinmux_config km_e2_board_pin_mux[] = {
+	/* RS485 / UART3 */
+	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP },
+	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
+	/* PMIC INT */
+	{ "mii1_txd0.gpio0_28", AM33XX_PIN_INPUT_PULLUP },
+	/* I2C1*/
+	{ "uart0_ctsn.i2c1_sda",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart0_rtsn.i2c1_scl",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{NULL, 0},
+};
 
 static struct pinmux_config clkout2_pin_mux[] = {
 	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
@@ -1214,6 +1217,7 @@ static void setup_e2(void)
 		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{NULL, 0, 0},
 	};*/
+	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
 	km_e2_i2c2_init(); /* second i2c bus */
 	mmc0_init(PIA335_KM_E2);
