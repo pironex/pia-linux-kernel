@@ -123,7 +123,7 @@ static bool edt_ft5x06_ts_check_crc(struct edt_ft5x06_ts_data *tsdata,
 		crc ^= buf[i];
 
 	if (crc != buf[buflen-1]) {
-		dev_err_ratelimited(&tsdata->client->dev,
+		dev_err(&tsdata->client->dev,
 				    "crc error: 0x%02x expected, got 0x%02x\n",
 				    crc, buf[buflen-1]);
 		return false;
@@ -147,13 +147,13 @@ static irqreturn_t edt_ft5x06_ts_isr(int irq, void *dev_id)
 					sizeof(cmd), &cmd,
 					sizeof(rdbuf), rdbuf);
 	if (error) {
-		dev_err_ratelimited(dev, "Unable to fetch data, error: %d\n",
+		dev_err(dev, "Unable to fetch data, error: %d\n",
 				    error);
 		goto out;
 	}
 
 	if (rdbuf[0] != 0xaa || rdbuf[1] != 0xaa || rdbuf[2] != 26) {
-		dev_err_ratelimited(dev, "Unexpected header: %02x%02x%02x!\n",
+		dev_err(dev, "Unexpected header: %02x%02x%02x!\n",
 				    rdbuf[0], rdbuf[1], rdbuf[2]);
 		goto out;
 	}
@@ -894,7 +894,18 @@ static struct i2c_driver edt_ft5x06_ts_driver = {
 	.remove   = __devexit_p(edt_ft5x06_ts_remove),
 };
 
-module_i2c_driver(edt_ft5x06_ts_driver);
+static int __init ft5x06_touch_init(void)
+{
+	return i2c_add_driver(&edt_ft5x06_ts_driver);
+}
+module_init(ft5x06_touch_init);
+
+static void __exit ft5x06_touch_exit(void)
+{
+	i2c_del_driver(&edt_ft5x06_ts_driver);
+}
+module_exit(ft5x06_touch_exit);
+//module_i2c_driver(edt_ft5x06_ts_driver);
 
 MODULE_AUTHOR("Simon Budig <simon.budig@kernelconcepts.de>");
 MODULE_DESCRIPTION("EDT FT5x06 I2C Touchscreen Driver");
