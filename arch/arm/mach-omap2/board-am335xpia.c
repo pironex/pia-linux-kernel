@@ -31,6 +31,7 @@
 #include <linux/pwm/pwm.h>
 #include <linux/reboot.h>
 #include <linux/platform_data/leds-pca9633.h>
+#include <video/da8xx-fb.h>
 
 #include <mach/hardware.h>
 
@@ -48,6 +49,7 @@
 #include <plat/mmc.h>
 #include <plat/mcspi.h>
 #include <plat/nand.h>
+#include <plat/lcdc.h>
 #include <video/omapdss.h>
 #include <video/omap-panel-generic-dpi.h>
 #include <video/omap-panel-dvi.h>
@@ -144,22 +146,25 @@ static struct omap_board_mux board_mux[] __initdata = {
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
 	AM33XX_MUX(I2C0_SCL, OMAP_MUX_MODE0 | AM33XX_SLEWCTRL_SLOW |
 			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	/* I2C1*/
-	AM33XX_MUX(UART0_CTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	AM33XX_MUX(UART0_RTSN, OMAP_MUX_MODE3 | AM33XX_SLEWCTRL_SLOW |
-			AM33XX_INPUT_EN | AM33XX_PIN_OUTPUT),
-	/* RS485 / UART3 */
-	AM33XX_MUX(MII1_RXD2, OMAP_MUX_MODE1 | AM33XX_PULL_ENBL),
-	AM33XX_MUX(MII1_RXD3, OMAP_MUX_MODE1 | AM33XX_INPUT_EN),
-	/* PMIC INT */
-	AM33XX_MUX(MII1_TXD0, OMAP_MUX_MODE7 | AM33XX_INPUT_EN |
-			AM33XX_PULL_UP | AM33XX_PULL_ENBL),
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
 #else
 #define	board_mux	NULL
 #endif
+
+static struct pinmux_config km_e2_board_pin_mux[] = {
+	/* RS485 / UART3 */
+	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP },
+	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
+	/* PMIC INT */
+	{ "mii1_txd0.gpio0_28", AM33XX_PIN_INPUT_PULLUP },
+	/* I2C1*/
+	{ "uart0_ctsn.i2c1_sda",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart0_rtsn.i2c1_scl",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{NULL, 0},
+};
 
 static struct pinmux_config clkout2_pin_mux[] = {
 	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
@@ -170,7 +175,7 @@ static struct pinmux_config clkout2_pin_mux[] = {
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-								   | AM33XX_PULL_DISA},
+							   | AM33XX_PULL_DISA},
 	{"lcd_data1.lcd_data1",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
 							   | AM33XX_PULL_DISA},
 	{"lcd_data2.lcd_data2",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
@@ -221,50 +226,6 @@ static struct pinmux_config lcdc_pin_mux[] = {
 /* piA335x_MMI: LCD GPIOs */
 #define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
 #define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
-
-static int pia335x_lcd_enable(struct omap_dss_device *dssdev)
-{
-	gpio_set_value(GPIO_LCD_DISP, 1);
-	//msleep(1000);
-	pr_info("pia335x: enabling LCD\n");
-	gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
-
-	return 0;
-}
-
-static void pia335x_lcd_disable(struct omap_dss_device *dssdev)
-{
-	gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
-	pr_info("pia335x: disabling LCD\n");
-	gpio_set_value(GPIO_LCD_DISP, 0);
-}
-
-/* LCD: J043WQCN0101 */
-static struct panel_generic_dpi_data pia335x_lcd_panel = {
-	.name               = "J043WQCN0101",
-	.platform_enable    = pia335x_lcd_enable,
-	.platform_disable   = pia335x_lcd_disable,
-};
-
-static struct omap_dss_device pia335x_lcd_device = {
-	.type               = OMAP_DISPLAY_TYPE_DPI,
-	.name               = "lcd",
-	.driver_name        = "generic_dpi_panel",
-	.phy.dpi.data_lines = 24,
-	.reset_gpio         = -EINVAL,
-	.data               = &pia335x_lcd_panel,
-};
-
-static struct omap_dss_device *pia335x_dss_devices[] = {
-	&pia335x_lcd_device,
-};
-
-static struct omap_dss_board_info pia335x_dss_data = {
-	.num_devices     = ARRAY_SIZE(pia335x_dss_devices),
-	.devices         = pia335x_dss_devices,
-	.default_device  = &pia335x_lcd_device,
-};
-
 
 /* Touch interface */
 /*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
@@ -323,40 +284,122 @@ static void __init pia335x_touch_init(void)
 {}
 #endif
 
-static void pia335x_lcd_init(void)
-{
-	int use_lcd = 1;
-	int gpio;
+static const struct display_panel disp_panel = {
+	WVGA,
+	32,
+	32,
+	COLOR_ACTIVE,
+};
 
+static struct lcd_ctrl_config lcd_cfg = {
+	&disp_panel,
+	.ac_bias		= 255,
+	.ac_bias_intrpt		= 0,
+	.dma_burst_sz		= 16,
+	.bpp			= 32,
+	.fdd			= 0x80,
+	.tft_alt_mode		= 0,
+	.stn_565_mode		= 0,
+	.mono_8bit_mode		= 0,
+	.invert_line_clock	= 1,
+	.invert_frm_clock	= 1,
+	.sync_edge		= 0,
+	.sync_ctrl		= 1,
+	.raster_order		= 0,
+};
+
+struct da8xx_lcdc_platform_data  km_mmi_lcd_pdata = {
+	/* display is a J043WQCN0101, works as NHD-4.3-ATXI */
+	.manu_name              = "NHD",
+	.controller_data        = &lcd_cfg,
+	.type                   = "NHD-4.3-ATXI#-T-1",
+};
+
+static int __init conf_disp_pll(int rate)
+{
+	struct clk *disp_pll;
+	int ret = -EINVAL;
+
+	disp_pll = clk_get(NULL, "dpll_disp_ck");
+	if (IS_ERR(disp_pll)) {
+		pr_err("Cannot clk_get disp_pll\n");
+		goto out;
+	}
+
+	ret = clk_set_rate(disp_pll, rate);
+	clk_put(disp_pll);
+out:
+	return ret;
+}
+
+
+static void pia335x_mmi_lcd_power_ctrl(int val) {
+	if (!gpio_is_valid(GPIO_LCD_BACKLIGHT)) {
+		pr_warn("LCD power control: invalid GPIO: %d\n", val);
+		return;
+	}
+
+	if (val == 0) {
+		pr_info("Turning off LCD\n");
+		gpio_set_value(GPIO_LCD_BACKLIGHT, 0);
+	} else {
+		pr_info("Turning on LCD\n");
+		gpio_set_value(GPIO_LCD_BACKLIGHT, 1);
+	}
+}
+
+static void pia335x_lcd_init(int id)
+{
+	int ret;
+	//int use_lcd = 1;
+	struct da8xx_lcdc_platform_data *lcdc_pdata;
 	setup_pin_mux(lcdc_pin_mux);
 
-	pia335x_dss_data.default_device = &pia335x_lcd_device;
+	if (conf_disp_pll(300000000)) {
+		pr_info("Failed configure display PLL, not attempting to"
+				"register LCDC\n");
+		return;
+	}
+	switch (id) {
+	case PIA335_KM_MMI:
+		km_mmi_lcd_pdata.panel_power_ctrl =
+				pia335x_mmi_lcd_power_ctrl;
+		/* backlight GPIO */
+		if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
+				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
+			pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
+			return;
+		} else {
+			//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
+			omap_mux_init_gpio(GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
+			gpio_export(GPIO_LCD_BACKLIGHT, true);
+		}
 
-	/* backlight GPIO */
-	gpio = GPIO_LCD_BACKLIGHT;
-	if (gpio_request(gpio, "lcd-backlight") < 0) {
-		pr_err("Failed to request gpio for lcd-backlight");
+		/* DISPLAY_EN GPIO */
+	if ((ret = gpio_request_one(GPIO_LCD_DISP,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_BACKLIGHT);
+			return;
+		} else {
+			//gpio_direction_output(GPIO_LCD_DISP, 1);
+			omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
+			gpio_export(GPIO_LCD_DISP, true);
+		}
+		lcdc_pdata = &km_mmi_lcd_pdata;
+
+		break;
+	default:
+		pr_err("LCDC not supported on this device (%d)\n", id);
 		return;
 	}
 
-	gpio_direction_output(gpio, 0);
-	gpio_export(gpio, 0);
-
-	/* DISPLAY_EN GPIO */
-	gpio = GPIO_LCD_DISP;
-	if (gpio_request(gpio, "lcd-disp") < 0) {
-		pr_err("Failed to request gpio for lcd-disp");
-		return;
-	}
-
-	gpio_direction_output(gpio, 0);
-	gpio_export(gpio, 0);
-
-	pr_info("pia335x_init: init LCD\n");
+	pr_info("pia335x_init: init LCD: %s\n", lcdc_pdata->type);
+	if (am33xx_register_lcdc(lcdc_pdata))
+		pr_info("Failed to register LCDC device\n");
 
 	/* initialize touch interface only for LCD display */
-	if (use_lcd)
-		pia335x_touch_init();
+	pia335x_touch_init();
 
 	return;
 }
@@ -1144,6 +1187,17 @@ static int pia335x_rtc_init(void)
 	return 0;
 }
 
+static struct omap_musb_board_data musb_board_data = {
+	.interface_type	= MUSB_INTERFACE_ULPI,
+	/*
+	 * mode[0:3] = USB0PORT's mode
+	 * mode[4:7] = USB1PORT's mode
+	 */
+	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
+	.power		= 500,
+	.instances	= 1,
+};
+
 /* Accelerometer LIS331DLH */
 #include <linux/lis3lv02d.h>
 
@@ -1203,15 +1257,14 @@ static void setup_e2(void)
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
-		{mfd_tscadc_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 		{mcasp1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
 		{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
-		{wl12xx_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{NULL, 0, 0},
 	};*/
+	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
 	km_e2_i2c2_init(); /* second i2c bus */
 	mmc0_init(PIA335_KM_E2);
@@ -1227,6 +1280,9 @@ static void setup_e2(void)
 	km_e2_spi1_init();
 	km_e2_rs485_init();
 	km_e2_ls7366_init();
+
+	pr_info("piA335x: musb_init\n");
+	usb_musb_init(&musb_board_data);
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
@@ -1247,13 +1303,12 @@ static void setup_mmi(void)
 	pia335x_mmc[0].gpio_cd = -EINVAL,
 	pia335x_mmc[0].nonremovable	= true,
 
-	//TODO: add DaVinci Ethernet init
 	lis331dlh_init();
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 	gpio_led_init();
-	pia335x_lcd_init();
+	pia335x_lcd_init(PIA335_KM_MMI);
 
 }
 
@@ -1332,17 +1387,6 @@ out:
 	machine_halt();
 }
 
-static struct omap_musb_board_data musb_board_data = {
-	.interface_type	= MUSB_INTERFACE_ULPI,
-	/*
-	 * mode[0:3] = USB0PORT's mode
-	 * mode[4:7] = USB1PORT's mode
-	 */
-	.mode           = (MUSB_HOST << 4) | MUSB_OTG,
-	.power		= 500,
-	.instances	= 1,
-};
-
 /**
  * I2C devices
  */
@@ -1350,7 +1394,7 @@ static struct omap_musb_board_data musb_board_data = {
 static struct at24_platform_data pia335x_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
-	.flags          = AT24_FLAG_TAKE8ADDR,
+	.flags          = 0,
 	.setup          = pia335x_setup,
 	.context        = (void *)NULL,
 };
@@ -1474,8 +1518,6 @@ static void __init pia335x_init(void)
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
-	pr_info("piA335x: musb_init\n");
-	usb_musb_init(&musb_board_data);
 	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
