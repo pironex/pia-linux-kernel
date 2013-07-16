@@ -1250,6 +1250,85 @@ static void lis331dlh_init(void)
 
 	i2c_put_adapter(adapter);
 }
+
+/*
+ * Audio
+ */
+/* Module pin mux for mcasp0 */
+static struct pinmux_config mcasp0_pin_mux[] = {
+	/* Audio.BCLK */
+	{"mcasp0.aclkx.mcasp0_aclkx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
+	/* Audio.FSX */
+	{"mcasp0.fsx.mcasp0_fsx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
+	/* Audio.DIN */
+	{"mcasp0.aclkr.mcasp0_axr2", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
+	/* Audio.DOUT */
+	{"mcasp0.ahclkx.mcasp0_axr3", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
+	{NULL, 0},
+};
+
+static u8 am335x_iis_serializer_direction1[] = {
+	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,	RX_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+};
+
+static struct snd_platform_data am335x_km_mmi_snd_data1 = {
+	.tx_dma_offset	= 0x46000000,	/* McASP1 */
+	.rx_dma_offset	= 0x46000000,
+	.op_mode	= DAVINCI_MCASP_IIS_MODE,
+	.num_serializer	= ARRAY_SIZE(am335x_iis_serializer_direction1),
+	.tdm_slots	= 2,
+	.serial_dir	= am335x_iis_serializer_direction1,
+	.asp_chan_q	= EVENTQ_2,
+	.version	= MCASP_VERSION_3,
+	.txnumevt	= 1,
+	.rxnumevt	= 1,
+};
+
+/* Setup McASP 0 */
+static void mcasp0_init(int pia_id)
+{
+	/* Configure McASP */
+	setup_pin_mux(mcasp0_pin_mux);
+	switch (pia_id) {
+	case PIA335_KM_MMI:
+		am335x_register_mcasp(&am335x_km_mmi_snd_data1, 0);
+		break;
+	default:
+		break;
+	}
+
+	return;
+}
+
+static struct i2c_board_info tlv320aic3x_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
+	},
+};
+
+static void tlv320aic3x_i2c_init(void)
+{
+	struct i2c_adapter *adapter;
+	struct i2c_client *client;
+	unsigned int i2c_instance = 1;
+
+	/* I2C adapter request */
+	adapter = i2c_get_adapter(i2c_instance);
+	if (!adapter) {
+		pr_err("failed to get adapter i2c%u\n", i2c_instance);
+		return;
+	}
+
+	client = i2c_new_device(adapter, tlv320aic3x_i2c_boardinfo);
+	if (!client)
+		pr_err("failed to register tlv320aic3x to i2c%u\n", i2c_instance);
+
+	i2c_put_adapter(adapter);
+}
+
 static void setup_e2(void)
 {
 	pr_info("piA335x: Setup KM E2.\n");
@@ -1304,12 +1383,14 @@ static void setup_mmi(void)
 	pia335x_mmc[0].nonremovable	= true,
 
 	lis331dlh_init();
+	tlv320aic3x_i2c_init();
+	mcasp0_init(PIA335_KM_MMI);
+
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 	gpio_led_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
-
 }
 
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
