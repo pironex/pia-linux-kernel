@@ -308,7 +308,8 @@ static struct lcd_ctrl_config lcd_cfg = {
 	.raster_order		= 0,
 };
 
-struct da8xx_lcdc_platform_data  pia335x_NHD_480272MF_ATXI_pdata = {
+struct da8xx_lcdc_platform_data  km_mmi_lcd_pdata = {
+	/* display is a J043WQCN0101, works as NHD-4.3-ATXI */
 	.manu_name              = "NHD",
 	.controller_data        = &lcd_cfg,
 	.type                   = "NHD-4.3-ATXI#-T-1",
@@ -361,7 +362,7 @@ static void pia335x_lcd_init(int id)
 	}
 	switch (id) {
 	case PIA335_KM_MMI:
-		pia335x_NHD_480272MF_ATXI_pdata.panel_power_ctrl =
+		km_mmi_lcd_pdata.panel_power_ctrl =
 				pia335x_mmi_lcd_power_ctrl;
 		/* backlight GPIO */
 		if ((ret = gpio_request_one(GPIO_LCD_BACKLIGHT,
@@ -385,24 +386,20 @@ static void pia335x_lcd_init(int id)
 			omap_mux_init_gpio(GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
 			gpio_export(GPIO_LCD_DISP, true);
 		}
+		lcdc_pdata = &km_mmi_lcd_pdata;
 
-		pr_info("pia335x_init: init LCD\n");
-		lcdc_pdata = &pia335x_NHD_480272MF_ATXI_pdata;
-
-		/* initialize touch interface only for LCD display */
-		pia335x_touch_init();
 		break;
 	default:
 		pr_err("LCDC not supported on this device (%d)\n", id);
 		return;
 	}
 
+	pr_info("pia335x_init: init LCD: %s\n", lcdc_pdata->type);
 	if (am33xx_register_lcdc(lcdc_pdata))
 		pr_info("Failed to register LCDC device\n");
 
-	if (am33xx_register_mfd_tscadc(&tscadc))
-		pr_err("failed to register touchscreen device\n");
-	return;
+	/* initialize touch interface only for LCD display */
+	pia335x_touch_init();
 
 	return;
 }
