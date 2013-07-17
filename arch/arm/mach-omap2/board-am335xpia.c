@@ -285,9 +285,7 @@ static int pia335x_j043wqcn_init_hw(void)
 		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
 		return ret;
 	}
-//	gpio_set_debounce(gpio, 0xa);
 	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-//	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
 
 	return ret;
 }
