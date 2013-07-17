@@ -1391,7 +1391,9 @@ static void setup_e2(void)
 
 static void setup_mmi(void)
 {
-	pr_info("piA335x: Setup KM MMI.\n");
+	pr_info("piA335x MMI: Setup KM MMI.\n");
+
+	setup_pin_mux(km_mmi_gpio_pin_mux);
 
 	pia335x_rtc_init();
 
