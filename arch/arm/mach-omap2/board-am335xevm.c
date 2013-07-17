@@ -2415,6 +2415,13 @@ static void setup_starterkit(void)
 	/* Atheros Tx Clk delay Phy fixup */
 	phy_register_fixup_for_uid(AM335X_EVM_PHY_ID, AM335X_EVM_PHY_MASK,
 				   am33xx_evm_tx_clk_dly_phy_fixup);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
+
 }
 
 static void am335x_setup_daughter_board(struct memory_accessor *m, void *c)
