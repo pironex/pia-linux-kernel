@@ -168,6 +168,35 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* GPIO pin mux for KM MMI */
+/* MMI: Watchdog */
+#define GPIO_MMI_WDI		GPIO_TO_PIN(1, 0)
+#define GPIO_MMI_WD_SET1	GPIO_TO_PIN(1, 1)
+#define GPIO_MMI_WD_SET2	GPIO_TO_PIN(1, 2)
+/* MMI: LCD GPIOs */
+#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
+#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+#define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
+/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
+/* MMI: TPS */
+#define GPIO_MMI_PMIC_INT	GPIO_TO_PIN(2, 1)
+#define GPIO_MMI_PMIC_WAKE	GPIO_TO_PIN(3,16)
+
+
+static struct pinmux_config km_mmi_gpio_pin_mux[] = {
+	/* PMIC INT   2_1 */
+	/* PMIC SLEEP 3_16 */
+	/* WDI        1_0 */
+	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
+	/* WD_SET1  1_1 */
+	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
+	/* WD_SET2	1_2 */
+	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
+	/* 3.3V_Fail 3_20 */
+	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	/* XDMA_EVENT_INTR0 CLKOUT2 not used */
+	{NULL, 0},
+};
 
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
@@ -215,23 +244,31 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	/* display enable GPIO */
 	{"gpmc_ben1.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	/* backlight GPIO */
 	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
-/* piA335x_MMI: LCD GPIOs */
-#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
-#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+/* Touch GPIOs */
+static struct pinmux_config km_mmi_touch_pin_mux[] = {
+	/* touch INT */
+	{"gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
+	/* touch wake */
+	{"gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 
-/* Touch interface */
-/*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
-    defined(CONFIG_TOUCHSCREEN_TSC2007)*/
-#if 0
-//TODO: add touch driver for J043WQCN0101 Display
+/* Touch interface FT5406 */
+#if defined(CONFIG_TOUCHSCREEN_EDT_FT5X06) || \
+	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 
-/* Pen Down IRQ, low active */
-#define GPIO_LCD_PENDOWN GPIO_TO_PIN(2,0);
+static struct edt_ft5x06_platform_data pia335x_mmi_touch_data = {
+	.irq_pin		= GPIO_LCD_PENDOWN,
+	.reset_pin		= -1,
+};
+
 static int pia335x_j043wqcn_pendown(void)
 {
 	return !gpio_get_value(GPIO_LCD_PENDOWN);
@@ -247,26 +284,16 @@ static int pia335x_j043wqcn_init_hw(void)
 		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
 		return ret;
 	}
-	gpio_set_debounce(gpio, 0xa);
 	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
 
 	return ret;
 }
 
-static struct j043wqcn_platform_data j043wqcn_info = {
-	.model = 2007,
-	.x_plate_ohms = 180,
-	.get_pendown_state = pia335x_j043wqcn_pendown,
-	.init_platform_hw = pia335x_j043wqcn_init_hw,
-};
-
-/* FIXME: i2c bus */
 static struct i2c_board_info __initdata pia335x_i2c1_j043wqcn[] = {
-	{
-		I2C_BOARD_INFO("j043wqcn", 0x4B),	/* TODO: which i2c-address? */
+	{	/* j043wqcn */
+		I2C_BOARD_INFO("edt_ft5x06", 0x4B),	/* TODO: which i2c-address? */
 		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
-		.platform_data = &j043wqcn_info,
+		.platform_data = &pia335x_mmi_touch_data,
 	},
 };
 
