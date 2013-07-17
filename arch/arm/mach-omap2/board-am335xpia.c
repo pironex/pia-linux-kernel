@@ -153,9 +153,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 #endif
 
 static struct pinmux_config km_e2_board_pin_mux[] = {
-	/* RS485 / UART3 */
-	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP },
-	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
 	/* PMIC INT */
 	{ "mii1_txd0.gpio0_28", AM33XX_PIN_INPUT_PULLUP },
 	/* I2C1*/
@@ -528,10 +525,9 @@ static struct pinmux_config km_e2_leds_pin_mux[] = {
 };
 
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
-	/* signal not implemented in mux33xx.c
-	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
-	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},*/
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
+	{"mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
