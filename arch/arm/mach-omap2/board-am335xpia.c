@@ -1254,6 +1254,17 @@ static void lis331dlh_init(void)
 /*
  * Audio
  */
+
+/* Enable clkout1 */
+static struct pinmux_config clkout1_pin_mux[] = {
+	/*
+	 * Setting clkout1 pin-mux manually will allow user
+	 * to extract raw oscillator clock (Master_OSC)
+	 */
+	{"xdma_event_intr0.clkout1", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
 /* Module pin mux for mcasp0 */
 static struct pinmux_config mcasp0_pin_mux[] = {
 	/* Audio.BCLK */
@@ -1383,6 +1394,9 @@ static void setup_mmi(void)
 	pia335x_mmc[0].nonremovable	= true,
 
 	lis331dlh_init();
+	/* Enable clkout1 */
+	setup_pin_mux(clkout1_pin_mux);
+	/* Register TLV320AIC3106 on I2C-1 */
 	tlv320aic3x_i2c_init();
 	mcasp0_init(PIA335_KM_MMI);
 
