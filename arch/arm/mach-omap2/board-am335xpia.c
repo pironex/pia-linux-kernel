@@ -842,6 +842,10 @@ static void mmc0_init(int pia_id)
 		setup_pin_mux(mmc0_e2_pin_mux);
 		break;
 	case PIA335_KM_MMI:
+		/* not used on KM MMI */
+		pia335x_mmc[0].gpio_wp = -EINVAL;
+		pia335x_mmc[0].gpio_cd = -EINVAL,
+		pia335x_mmc[0].nonremovable = true,
 		setup_pin_mux(mmc0_mmi_pin_mux);
 		break;
 	}
@@ -1370,13 +1374,6 @@ static void setup_mmi(void)
 	pia335x_rtc_init();
 
 	mmc0_init(PIA335_KM_MMI);
-
-	/* KM MMI has Micro-SD slot which doesn't have Write Protect pin */
-	pia335x_mmc[0].gpio_wp = -EINVAL;
-
-	/* KM MMI has Micro-SD slot which doesn't have Card Detect pin */
-	pia335x_mmc[0].gpio_cd = -EINVAL,
-	pia335x_mmc[0].nonremovable	= true,
 
 	lis331dlh_init();
 	tlv320aic3x_i2c_init();
