@@ -566,12 +566,9 @@ static ssize_t edt_ft5x06_debugfs_raw_data_read(struct file *file,
 	}
 
 	read = min_t(size_t, count, tsdata->raw_bufsize - *off);
-	if (copy_to_user(buf, tsdata->raw_buffer + *off, read)) {
-		error = -EFAULT;
-		goto out;
-	}
-
-	*off += read;
+	error = copy_to_user(buf, tsdata->raw_buffer + *off, read);
+	if (!error)
+		*off += read;
 out:
 	mutex_unlock(&tsdata->mutex);
 	return error ?: read;
