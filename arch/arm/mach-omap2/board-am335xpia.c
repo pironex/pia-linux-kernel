@@ -169,6 +169,11 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* MMI: LCD GPIOs */
+#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
+#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+#define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
+/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
 
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
@@ -216,21 +221,25 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	/* display enable GPIO */
 	{"gpmc_ben1.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	/* backlight GPIO */
 	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
-/* piA335x_MMI: LCD GPIOs */
-#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
-#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+/* Touch GPIOs */
+static struct pinmux_config km_mmi_touch_pin_mux[] = {
+	/* touch INT */
+	{"gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
+	/* touch wake */
+	{"gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 
 /* Touch interface FT5406 */
 #if defined(CONFIG_TOUCHSCREEN_EDT_FT5X06) || \
 	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
-/* Pen Down IRQ, low active */
-#define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
-#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)
 
 static struct edt_ft5x06_platform_data pia335x_mmi_touch_data = {
 	.irq_pin		= GPIO_LCD_PENDOWN,
