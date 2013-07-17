@@ -169,11 +169,35 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* GPIO pin mux for KM MMI */
+/* MMI: Watchdog */
+#define GPIO_MMI_WDI		GPIO_TO_PIN(1, 0)
+#define GPIO_MMI_WD_SET1	GPIO_TO_PIN(1, 1)
+#define GPIO_MMI_WD_SET2	GPIO_TO_PIN(1, 2)
 /* MMI: LCD GPIOs */
 #define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
 #define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
 #define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
 /*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
+/* MMI: TPS */
+#define GPIO_MMI_PMIC_INT	GPIO_TO_PIN(2, 1)
+#define GPIO_MMI_PMIC_WAKE	GPIO_TO_PIN(3,16)
+
+
+static struct pinmux_config km_mmi_gpio_pin_mux[] = {
+	/* PMIC INT   2_1 */
+	/* PMIC SLEEP 3_16 */
+	/* WDI        1_0 */
+	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
+	/* WD_SET1  1_1 */
+	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
+	/* WD_SET2	1_2 */
+	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
+	/* 3.3V_Fail 3_20 */
+	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	/* XDMA_EVENT_INTR0 CLKOUT2 not used */
+	{NULL, 0},
+};
 
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
