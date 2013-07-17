@@ -399,10 +399,10 @@ static void pia335x_lcd_init(int id)
 		}
 
 		/* DISPLAY_EN GPIO */
-		if ((ret = gpio_request_one(GPIO_LCD_DISP,
-				GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
-			pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
-			gpio_free(GPIO_LCD_BACKLIGHT);
+	if ((ret = gpio_request_one(GPIO_LCD_DISP,
+			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
+		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
+		gpio_free(GPIO_LCD_BACKLIGHT);
 			return;
 		} else {
 			//gpio_direction_output(GPIO_LCD_DISP, 1);
@@ -1280,16 +1280,27 @@ static void lis331dlh_init(void)
 /*
  * Audio
  */
+
+/* Enable clkout1 */
+static struct pinmux_config clkout1_pin_mux[] = {
+	/*
+	 * Setting clkout1 pin-mux manually will allow user
+	 * to extract raw oscillator clock (Master_OSC)
+	 */
+	{"xdma_event_intr0.clkout1", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
 /* Module pin mux for mcasp0 */
 static struct pinmux_config mcasp0_pin_mux[] = {
 	/* Audio.BCLK */
-	{"mcasp0.aclkx.mcasp0_aclkx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mcasp0_aclkx.mcasp0_aclkx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
 	/* Audio.FSX */
-	{"mcasp0.fsx.mcasp0_fsx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mcasp0_fsx.mcasp0_fsx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
 	/* Audio.DIN */
-	{"mcasp0.aclkr.mcasp0_axr2", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mcasp0_aclkr.mcasp0_axr2", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
 	/* Audio.DOUT */
-	{"mcasp0.ahclkx.mcasp0_axr3", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
+	{"mcasp0_ahclkx.mcasp0_axr3", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLDOWN},
 	{NULL, 0},
 };
 
@@ -1404,6 +1415,9 @@ static void setup_mmi(void)
 	mmc0_init(PIA335_KM_MMI);
 
 	lis331dlh_init();
+	/* Enable clkout1 */
+	setup_pin_mux(clkout1_pin_mux);
+	/* Register TLV320AIC3106 on I2C-1 */
 	tlv320aic3x_i2c_init();
 	mcasp0_init(PIA335_KM_MMI);
 
