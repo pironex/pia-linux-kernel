@@ -892,6 +892,7 @@ static struct gpio_led gpio_leds[] = {
 	{
 		.name			= "am335x:KM_MMI:usr2",
 		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
+		.default_trigger	= "mmc0",
 	},
 };
 
