@@ -27,6 +27,9 @@
 #ifdef CONFIG_MACH_AM335XEVM
 #include <mach/board-am335xevm.h>
 #endif
+#ifdef CONFIG_MACH_PIA_AM335X
+#include <mach/board-am335xpia.h>
+#endif
 
 #include "davinci-pcm.h"
 #include "davinci-i2s.h"
@@ -66,8 +69,11 @@ static int evm_hw_params(struct snd_pcm_substream *substream,
 		else
 #endif
 			sysclk = 12000000;
-	else if (machine_is_pia_am335x())
-		sysclk = 24000000;
+#ifdef CONFIG_MACH_PIA_AM335X
+	else if (machine_is_pia_am335x() &&
+			am335x_pia_get_id() == PIA335_KM_MMI)
+			sysclk = 24000000;
+#endif
 	else
 		return -EINVAL;
 
@@ -374,10 +380,15 @@ static int __init evm_init(void)
 			evm_snd_dev_data = &am335x_evm_sk_snd_soc_card;
 #endif
 		index = 0;
-	} else if (machine_is_pia_am335x()) {
+	}
+#ifdef CONFIG_MACH_PIA_AM335X
+	else if (machine_is_pia_am335x() &&
+			am335x_pia_get_id() == PIA335_KM_MMI) {
 		evm_snd_dev_data = &am335x_km_mmi_snd_soc_card;
 		index = 0;
-	} else
+		}
+#endif
+	else
 		return -EINVAL;
 
 	evm_snd_device = platform_device_alloc("soc-audio", index);
