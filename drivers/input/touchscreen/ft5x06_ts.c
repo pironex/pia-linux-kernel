@@ -434,6 +434,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	struct input_dev *input_dev;
 	u8 reg_value;
 	u8 reg_addr;
+	char txbuf[2];
 	int err;
 
 	if (!pdata) {
@@ -570,6 +571,14 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	if (err < 0)
 		dev_err(&client->dev, "report rate read failed");
 	dev_info(&client->dev, "[FTS] report rate is %dHz.\n", reg_value * 10);
+
+	txbuf[0] = FT5X06_REG_THGROUP;
+	txbuf[1] = pdata->touch_threshold / 4;
+	dev_info(&client->dev, "[FTS] Setting touch threshold to %d.\n",
+			pdata->touch_threshold);
+	err = ft5x06_i2c_write(client, &reg_value, 1);
+	if (err < 0)
+		dev_err(&client->dev, "threshold write failed: %d", err);
 
 	reg_addr = FT5X06_REG_THGROUP;
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);

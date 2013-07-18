@@ -24,6 +24,7 @@ struct ft5x06_ts_platform_data {
 	u32 y_max;
 	u32 irq_gpio;
 	u32 reset_gpio;
+	u16  touch_threshold;
 	int (*power_init) (bool);
 	int (*power_on) (bool);
 };
