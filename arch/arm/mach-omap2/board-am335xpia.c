@@ -153,9 +153,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 #endif
 
 static struct pinmux_config km_e2_board_pin_mux[] = {
-	/* RS485 / UART3 */
-	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP },
-	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
 	/* PMIC INT */
 	{ "mii1_txd0.gpio0_28", AM33XX_PIN_INPUT_PULLUP },
 	/* I2C1*/
@@ -171,6 +168,35 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* GPIO pin mux for KM MMI */
+/* MMI: Watchdog */
+#define GPIO_MMI_WDI		GPIO_TO_PIN(1, 0)
+#define GPIO_MMI_WD_SET1	GPIO_TO_PIN(1, 1)
+#define GPIO_MMI_WD_SET2	GPIO_TO_PIN(1, 2)
+/* MMI: LCD GPIOs */
+#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
+#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+#define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
+/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
+/* MMI: TPS */
+#define GPIO_MMI_PMIC_INT	GPIO_TO_PIN(2, 1)
+#define GPIO_MMI_PMIC_WAKE	GPIO_TO_PIN(3,16)
+
+
+static struct pinmux_config km_mmi_gpio_pin_mux[] = {
+	/* PMIC INT   2_1 */
+	/* PMIC SLEEP 3_16 */
+	/* WDI        1_0 */
+	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
+	/* WD_SET1  1_1 */
+	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
+	/* WD_SET2	1_2 */
+	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
+	/* 3.3V_Fail 3_20 */
+	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	/* XDMA_EVENT_INTR0 CLKOUT2 not used */
+	{NULL, 0},
+};
 
 /* Module pin mux for LCDC on board KM MMI*/
 static struct pinmux_config lcdc_pin_mux[] = {
@@ -218,66 +244,63 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	/* display enable GPIO */
 	{"gpmc_ben1.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	/* backlight GPIO */
 	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
-/* piA335x_MMI: LCD GPIOs */
-#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
-#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+#include <linux/input/ft5x06_ts.h>
 
-/* Touch interface */
-/*#if defined(CONFIG_INPUT_TOUCHSCREEN) && \
-    defined(CONFIG_TOUCHSCREEN_TSC2007)*/
-#if 0
-//TODO: add touch driver for J043WQCN0101 Display
-
-/* Pen Down IRQ, low active */
-#define GPIO_LCD_PENDOWN GPIO_TO_PIN(2,0);
-static int pia335x_j043wqcn_pendown(void)
-{
-	return !gpio_get_value(GPIO_LCD_PENDOWN);
-}
-
-static int pia335x_j043wqcn_init_hw(void)
-{
-	int gpio = GPIO_LCD_PENDOWN;
-	int ret = 0;
-	pr_info("pia335x_init: init J043WQCN0101\n");
-	ret = gpio_request_one(gpio, GPIOF_DIR_IN, "j043wqcn_pen_down");
-	if (ret < 0) {
-		pr_err("Failed to request GPIO_LCD_PENDOWN: %d\n", ret);
-		return ret;
-	}
-	gpio_set_debounce(gpio, 0xa);
-	omap_mux_init_gpio(GPIO_LCD_PENDOWN, OMAP_PIN_INPUT_PULLUP);
-	irq_set_irq_type(OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN), IRQ_TYPE_EDGE_FALLING);
-
-	return ret;
-}
-
-static struct j043wqcn_platform_data j043wqcn_info = {
-	.model = 2007,
-	.x_plate_ohms = 180,
-	.get_pendown_state = pia335x_j043wqcn_pendown,
-	.init_platform_hw = pia335x_j043wqcn_init_hw,
+/* Touch GPIOs */
+static struct pinmux_config km_mmi_touch_pin_mux[] = {
+	/* touch INT */
+	{"gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
+	/* touch wake */
+	{"gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
 };
 
-/* FIXME: i2c bus */
-static struct i2c_board_info __initdata pia335x_i2c1_j043wqcn[] = {
+/* Touch interface FT5406 */
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
+	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
+static struct ft5x06_ts_platform_data km_mmi_touch_data = {
+	.x_max    = 480,
+	.y_max    = 272,
+	.irq_gpio = GPIO_LCD_PENDOWN,
+	.irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+};
+static struct i2c_board_info km_mmi_i2c1_touch[] = {
 	{
-		I2C_BOARD_INFO("j043wqcn", 0x4B),	/* TODO: which i2c-address? */
+		/* j043wqcn */
+		I2C_BOARD_INFO("ft5x06_ts", 0x38),
 		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
-		.platform_data = &j043wqcn_info,
-	},
+		.platform_data = &km_mmi_touch_data,
+	}
 };
 
-static void __init pia335x_touch_init(void)
+static void pia335x_touch_init(void)
 {
-	pr_info("pia335x_init: init touch controller J043WQCN0101\n");
-	i2c_register_board_info(1, pia335x_i2c1_j043wqcn,
-			ARRAY_SIZE(pia335x_i2c1_j043wqcn));
+	struct i2c_adapter *adapter;
+	struct i2c_client *client;
+
+	pr_info("pia335x_init: init touch controller FT5x06\n");
+
+	setup_pin_mux(km_mmi_touch_pin_mux);
+
+	/* I2C adapter request */
+	adapter = i2c_get_adapter(1);
+	if (!adapter) {
+		pr_err("failed to get adapter i2c%u\n", 1);
+		return;
+	}
+	client = i2c_new_device(adapter, km_mmi_i2c1_touch);
+
+	if (!client)
+		pr_err("failed to register ft5x06 to i2c%u\n", 1);
+
+	i2c_put_adapter(adapter);
 }
 #else
 static void __init pia335x_touch_init(void)
@@ -528,10 +551,9 @@ static struct pinmux_config km_e2_leds_pin_mux[] = {
 };
 
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
-	/* signal not implemented in mux33xx.c
-	{"mii1_rxd2.uart3_txd", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLUP},
-	{"mii1_rxd3.uart3_rxd", OMAP_MUX_MODE1 | AM33XX_PULL_ENBL},*/
 	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
+	{"mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -862,6 +884,10 @@ static void mmc0_init(int pia_id)
 		setup_pin_mux(mmc0_e2_pin_mux);
 		break;
 	case PIA335_KM_MMI:
+		/* not used on KM MMI */
+		pia335x_mmc[0].gpio_wp = -EINVAL;
+		pia335x_mmc[0].gpio_cd = -EINVAL,
+		pia335x_mmc[0].nonremovable = true,
 		setup_pin_mux(mmc0_mmi_pin_mux);
 		break;
 	}
@@ -1396,21 +1422,16 @@ static void setup_e2(void)
 
 static void setup_mmi(void)
 {
-	pr_info("piA335x: Setup KM MMI.\n");
+	pr_info("piA335x MMI: Setup KM MMI.\n");
+
+	setup_pin_mux(km_mmi_gpio_pin_mux);
 
 	pia335x_rtc_init();
 
 	mmc0_init(PIA335_KM_MMI);
 
-	/* KM MMI has Micro-SD slot which doesn't have Write Protect pin */
-	pia335x_mmc[0].gpio_wp = -EINVAL;
-
-	/* KM MMI has Micro-SD slot which doesn't have Card Detect pin */
-	pia335x_mmc[0].gpio_cd = -EINVAL,
-	pia335x_mmc[0].nonremovable	= true,
 
 	km_mmi_clkout2_enable();
-
 	lis331dlh_init();
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);
