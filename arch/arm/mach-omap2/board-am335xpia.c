@@ -624,6 +624,22 @@ static void km_e2_clkout2_enable(void)
 	setup_pin_mux(clkout2_pin_mux);
 }
 
+static void km_mmi_clkout2_enable(void)
+{
+	/* code to enable default 32k clock output*/
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
+
 /* NAND partition information */
 static struct mtd_partition pia335x_nand_partitions[] = {
 /* All the partition sizes are listed in terms of NAND block size */
@@ -1392,6 +1408,8 @@ static void setup_mmi(void)
 	/* KM MMI has Micro-SD slot which doesn't have Card Detect pin */
 	pia335x_mmc[0].gpio_cd = -EINVAL,
 	pia335x_mmc[0].nonremovable	= true,
+
+	km_mmi_clkout2_enable();
 
 	lis331dlh_init();
 	/* Enable clkout1 */
