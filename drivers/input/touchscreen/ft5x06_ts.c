@@ -560,20 +560,20 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	/*get some register information */
 	reg_addr = FT5X06_REG_FW_VER;
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);
-	if (err)
+	if (err < 0)
 		dev_err(&client->dev, "version read failed");
 
 	dev_info(&client->dev, "[FTS] Firmware version = 0x%x\n", reg_value);
 
 	reg_addr = FT5X06_REG_POINT_RATE;
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);
-	if (err)
+	if (err < 0)
 		dev_err(&client->dev, "report rate read failed");
 	dev_info(&client->dev, "[FTS] report rate is %dHz.\n", reg_value * 10);
 
 	reg_addr = FT5X06_REG_THGROUP;
 	err = ft5x06_i2c_read(client, &reg_addr, 1, &reg_value, 1);
-	if (err)
+	if (err < 0)
 		dev_err(&client->dev, "threshold read failed");
 	dev_dbg(&client->dev, "[FTS] touch threshold is %d.\n", reg_value * 4);
 
