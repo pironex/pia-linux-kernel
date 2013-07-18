@@ -34,6 +34,7 @@
 #include <video/da8xx-fb.h>
 
 #include <mach/hardware.h>
+#include <mach/board-am335xpia.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -70,9 +71,6 @@ static char am335x_mac_addr[2][ETH_ALEN];
 
 /* Convert GPIO signal to GPIO pin number */
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
-
-#define PIA335_KM_E2		20
-#define PIA335_KM_MMI		21
 
 /*
 * EVM Config held in On-Board eeprom device.
@@ -112,6 +110,19 @@ struct pia335x_eeprom_config {
 };
 static struct pia335x_eeprom_config config;
 
+static int am33xx_piaid = -EINVAL;
+
+/*
+* am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
+*
+* Note:
+*	returns -EINVAL if Board detection hasn't happened yet.
+*/
+int am335x_pia_get_id(void)
+{
+	return am33xx_piaid;
+}
+EXPORT_SYMBOL(am335x_pia_get_id);
 
 /** PINMUX **/
 struct pinmux_config {
@@ -1385,6 +1396,7 @@ static void tlv320aic3x_i2c_init(void)
 static void setup_e2(void)
 {
 	pr_info("piA335x: Setup KM E2.\n");
+	am33xx_piaid = PIA335_KM_E2;
 	/* EVM - Starter Kit */
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -1423,6 +1435,7 @@ static void setup_e2(void)
 static void setup_mmi(void)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
+	am33xx_piaid = PIA335_KM_MMI;
 
 	setup_pin_mux(km_mmi_gpio_pin_mux);
 
