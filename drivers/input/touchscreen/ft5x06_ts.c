@@ -199,6 +199,15 @@ static void ft5x06_report_value(struct ft5x06_ts_data *data)
 		input_mt_sync(data->input_dev);
 	}
 
+	input_report_abs(data->input_dev, ABS_X, event->x[0]);
+	input_report_abs(data->input_dev, ABS_Y, event->y[0]);
+	if (event->touch_event[0] == 0 || event->touch_event[0] == 2) {
+		event->pressure = FT_PRESS;
+	} else {
+		event->pressure = 0;
+	}
+	input_report_abs(data->input_dev, ABS_PRESSURE, event->pressure);
+
 	input_report_key(data->input_dev, BTN_TOUCH, !!fingerdown);
 	input_sync(data->input_dev);
 }
@@ -473,6 +482,14 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	__set_bit(EV_KEY, input_dev->evbit);
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(BTN_TOUCH, input_dev->keybit);
+
+	/* For single touch */
+	input_set_abs_params(input_dev, ABS_X,
+			     0, pdata->x_max, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y,
+			     0, pdata->y_max, 0, 0);
+	input_set_abs_params(input_dev, ABS_PRESSURE,
+			     0, FT_PRESS, 0, 0);
 
 	input_mt_init_slots(input_dev, CFG_MAX_TOUCH_POINTS);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0,
