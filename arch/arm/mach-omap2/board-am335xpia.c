@@ -34,6 +34,7 @@
 #include <video/da8xx-fb.h>
 
 #include <mach/hardware.h>
+#include <mach/board-am335xpia.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -70,9 +71,6 @@ static char am335x_mac_addr[2][ETH_ALEN];
 
 /* Convert GPIO signal to GPIO pin number */
 #define GPIO_TO_PIN(bank, gpio) (32 * (bank) + (gpio))
-
-#define PIA335_KM_E2		20
-#define PIA335_KM_MMI		21
 
 /*
 * EVM Config held in On-Board eeprom device.
@@ -112,6 +110,19 @@ struct pia335x_eeprom_config {
 };
 static struct pia335x_eeprom_config config;
 
+static int am33xx_piaid = -EINVAL;
+
+/*
+* am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
+*
+* Note:
+*	returns -EINVAL if Board detection hasn't happened yet.
+*/
+int am335x_pia_get_id(void)
+{
+	return am33xx_piaid;
+}
+EXPORT_SYMBOL(am335x_pia_get_id);
 
 /** PINMUX **/
 struct pinmux_config {
@@ -642,6 +653,22 @@ static void km_e2_clkout2_enable(void)
 	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
 			clk_get_rate(sys_clkout2));
 	clk_enable(sys_clkout2);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
+
+static void km_mmi_clkout2_enable(void)
+{
+	/* code to enable default 32k clock output*/
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
 
 	setup_pin_mux(clkout2_pin_mux);
 }
@@ -1370,6 +1397,7 @@ static void tlv320aic3x_i2c_init(void)
 static void setup_e2(void)
 {
 	pr_info("piA335x: Setup KM E2.\n");
+	am33xx_piaid = PIA335_KM_E2;
 	/* EVM - Starter Kit */
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -1408,6 +1436,7 @@ static void setup_e2(void)
 static void setup_mmi(void)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
+	am33xx_piaid = PIA335_KM_MMI;
 
 	setup_pin_mux(km_mmi_gpio_pin_mux);
 
@@ -1415,6 +1444,8 @@ static void setup_mmi(void)
 
 	mmc0_init(PIA335_KM_MMI);
 
+
+	km_mmi_clkout2_enable();
 	lis331dlh_init();
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);

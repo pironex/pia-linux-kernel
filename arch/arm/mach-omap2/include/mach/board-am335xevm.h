@@ -26,7 +26,6 @@
 #define BEAGLE_BONE_A3		3
 #define EVM_SK			4
 #define GEN_PURP_DDR3_EVM	5
-#define PIA335_KM_E2		20
 
 /* REVIST : check posibility of PROFILE_(x) syntax usage */
 #define PROFILE_NONE	-1	/* Few EVM doesn't have profiles */
