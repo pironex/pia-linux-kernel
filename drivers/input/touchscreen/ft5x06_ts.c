@@ -196,8 +196,6 @@ static void ft5x06_report_value(struct ft5x06_ts_data *data)
 		input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR,
 				 event->pressure);
 		input_mt_sync(data->input_dev);
-		pr_info("x/y[%d] = %u/%u, p = %u\n", i, event->x[i],
-				event->y[i], event->pressure);
 	}
 
 	input_report_key(data->input_dev, BTN_TOUCH, !!fingerdown);
@@ -471,12 +469,6 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	input_set_drvdata(input_dev, data);
 	i2c_set_clientdata(client, data);
 
-/*
-	set_bit(EV_KEY, input_dev->evbit);
-	set_bit(EV_ABS, input_dev->evbit);
-	set_bit(BTN_MISC, input_dev->keybit);
-	set_bit(BTN_TOUCH, input_dev->keybit);
-*/
 	__set_bit(EV_KEY, input_dev->evbit);
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(BTN_TOUCH, input_dev->keybit);
