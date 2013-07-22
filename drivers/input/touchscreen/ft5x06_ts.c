@@ -20,6 +20,7 @@
 
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/input/mt.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
@@ -473,6 +474,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	__set_bit(EV_ABS, input_dev->evbit);
 	__set_bit(BTN_TOUCH, input_dev->keybit);
 
+	input_mt_init_slots(input_dev, CFG_MAX_TOUCH_POINTS);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0,
 			     pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0,
