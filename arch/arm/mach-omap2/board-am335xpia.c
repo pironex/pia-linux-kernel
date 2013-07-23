@@ -1585,7 +1585,7 @@ static void __init pia335x_i2c_init(void)
 {
 	/* I2C1 must be muxed in u-boot */
 	pr_info("piA335x: %s", __func__);
-	omap_register_i2c_bus(1, 100, pia335x_i2c0_boardinfo,
+	omap_register_i2c_bus(1, 400, pia335x_i2c0_boardinfo,
 				ARRAY_SIZE(pia335x_i2c0_boardinfo));
 }
 
