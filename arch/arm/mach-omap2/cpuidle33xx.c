@@ -54,11 +54,14 @@ static void am33xx_save_ddr_power(int enter, bool pdown)
 
 	val = __raw_readl(emif_base + EMIF4_0_SDRAM_MGMT_CTRL);
 
+	/* Self refresh enable & timer value should be pre-masked */
+	val &= ~(EMIF4_0_PWR_MGMT_MODE_MASK | EMIF4_0_SLF_RFRSH_TMR_MASK);
+
 	/* TODO: Choose the mode based on memory type */
 	if (enter)
-		val = SELF_REFRESH_ENABLE(64);
+		val |= SELF_REFRESH_ENABLE(15);
 	else
-		val = SELF_REFRESH_DISABLE;
+		val |= SELF_REFRESH_DISABLE;
 
 	__raw_writel(val, emif_base + EMIF4_0_SDRAM_MGMT_CTRL);
 }
