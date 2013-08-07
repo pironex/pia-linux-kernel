@@ -32,13 +32,10 @@
 #define AM33XX_CPUIDLE_MAX_STATES	2
 
 struct am33xx_ops {
-	void (*enter) (u32 flags);
-	void (*exit) (u32 flags);
+	void (*enter) (void);
+	void (*exit) (void);
 	u32 flags;
 };
-
-/* fields in am33xx_ops.flags */
-#define AM33XX_CPUIDLE_FLAGS_DDR2_PWDN	BIT(0)
 
 static struct cpuidle_driver am33xx_idle_driver = {
 	.name	= "cpuidle-am33xx",
@@ -48,7 +45,7 @@ static struct cpuidle_driver am33xx_idle_driver = {
 static DEFINE_PER_CPU(struct cpuidle_device, am33xx_cpuidle_device);
 static void __iomem *emif_base;
 
-static void am33xx_save_ddr_power(int enter, bool pdown)
+static void am33xx_save_ddr_power(int enter)
 {
 	u32 val;
 
@@ -66,14 +63,14 @@ static void am33xx_save_ddr_power(int enter, bool pdown)
 	__raw_writel(val, emif_base + EMIF4_0_SDRAM_MGMT_CTRL);
 }
 
-static void am33xx_c2state_enter(u32 flags)
+static void am33xx_c2state_enter(void)
 {
-	am33xx_save_ddr_power(1, !!(flags & AM33XX_CPUIDLE_FLAGS_DDR2_PWDN));
+	am33xx_save_ddr_power(1);
 }
 
-static void am33xx_c2state_exit(u32 flags)
+static void am33xx_c2state_exit(void)
 {
-	am33xx_save_ddr_power(0, !!(flags & AM33XX_CPUIDLE_FLAGS_DDR2_PWDN));
+	am33xx_save_ddr_power(0);
 }
 
 static struct am33xx_ops am33xx_states[AM33XX_CPUIDLE_MAX_STATES] = {
@@ -96,12 +93,12 @@ static int am33xx_enter_idle(struct cpuidle_device *dev,
 	do_gettimeofday(&before);
 
 	if (ops && ops->enter)
-		ops->enter(ops->flags);
+		ops->enter();
 
 	/* Wait for interrupt state */
 	cpu_do_idle();
 	if (ops && ops->exit)
-		ops->exit(ops->flags);
+		ops->exit();
 
 	do_gettimeofday(&after);
 	local_irq_enable();
@@ -144,8 +141,6 @@ static int __init am33xx_cpuidle_probe(struct platform_device *pdev)
 	driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
 	strcpy(driver->states[1].name, "DDR SR");
 	strcpy(driver->states[1].desc, "WFI and DDR Self Refresh");
-	if (pdata->ddr2_pdown)
-		am33xx_states[1].flags |= AM33XX_CPUIDLE_FLAGS_DDR2_PWDN;
 	cpuidle_set_statedata(&device->states_usage[1], &am33xx_states[1]);
 
 	device->state_count = AM33XX_CPUIDLE_MAX_STATES;
