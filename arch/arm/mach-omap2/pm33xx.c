@@ -46,6 +46,8 @@
 #include "powerdomain.h"
 
 void (*am33xx_do_wfi_sram)(u32 *);
+void (*am33xx_do_wfi_cpuidle)(void);
+
 
 #define DS_MODE		DS0_ID	/* DS0/1_ID */
 #define MODULE_DISABLE	0x0
@@ -419,6 +421,43 @@ clear_old_status:
 	return ret;
 }
 
+int am33xx_setup_cpuidle(void)
+{
+	int ret = 0;
+
+	am33xx_lp_ipc.resume_addr = 0x0;
+	am33xx_lp_ipc.sleep_mode  = CPUIDLE_ID;
+	am33xx_lp_ipc.ipc_data1	  = DS_IPC_DEFAULT;
+	am33xx_lp_ipc.ipc_data2   = DS_IPC_DEFAULT;
+
+	am33xx_ipc_cmd(&am33xx_lp_ipc);
+
+	m3_state = M3_STATE_MSG_FOR_CPUIDLE;
+
+	local_irq_enable();
+	omap_mbox_enable_irq(m3_mbox, IRQ_RX);
+
+	ret = omap_mbox_msg_send(m3_mbox, 0xABCDABCD);
+	if (ret) {
+		pr_err("Err (%d) Could not update M3 about cpuidle!!!\n", ret);
+		omap_mbox_disable_irq(m3_mbox, IRQ_RX);
+	}
+
+	return ret;
+}
+
+void am33xx_enter_cpuidle(void)
+{
+	am33xx_do_wfi_cpuidle();
+
+	omap_mbox_msg_rx_flush(m3_mbox);
+
+	if (m3_mbox->ops->ack_irq)
+		m3_mbox->ops->ack_irq(m3_mbox, IRQ_RX);
+
+	omap_mbox_disable_irq(m3_mbox, IRQ_RX);
+}
+
 /*
  * Dummy notifier for the mailbox
  * TODO: Can this be completely removed?
@@ -453,6 +492,12 @@ static irqreturn_t wkup_m3_txev_handler(int irq, void *unused)
 			m3_mbox->ops->ack_irq(m3_mbox, IRQ_RX);
 		complete(&a8_m3_sync);
 	} else if (m3_state == M3_STATE_MSG_FOR_LP) {
+		omap_mbox_msg_rx_flush(m3_mbox);
+		if (m3_mbox->ops->ack_irq)
+			m3_mbox->ops->ack_irq(m3_mbox, IRQ_RX);
+		complete(&a8_m3_sync);
+	} else if (m3_state == M3_STATE_MSG_FOR_CPUIDLE) {
+		pr_err("IRQ %d Not expected in CPUIdle state\n", irq);
 		omap_mbox_msg_rx_flush(m3_mbox);
 		if (m3_mbox->ops->ack_irq)
 			m3_mbox->ops->ack_irq(m3_mbox, IRQ_RX);
@@ -604,6 +649,9 @@ void am33xx_push_sram_idle(void)
 {
 	am33xx_do_wfi_sram = (void *)omap_sram_push
 					(am33xx_do_wfi, am33xx_do_wfi_sz);
+
+	am33xx_do_wfi_cpuidle = (void *)omap_sram_push
+				(am33xx_sram_cpuidle, am33xx_sram_cpuidle_sz);
 }
 
 /*

@@ -27,15 +27,10 @@
 
 #include <plat/emif.h>
 
+#include "pm.h"
 #include "cpuidle33xx.h"
 
 #define AM33XX_CPUIDLE_MAX_STATES	2
-
-struct am33xx_ops {
-	void (*enter) (void);
-	void (*exit) (void);
-	u32 flags;
-};
 
 static struct cpuidle_driver am33xx_idle_driver = {
 	.name	= "cpuidle-am33xx",
@@ -43,62 +38,28 @@ static struct cpuidle_driver am33xx_idle_driver = {
 };
 
 static DEFINE_PER_CPU(struct cpuidle_device, am33xx_cpuidle_device);
-static void __iomem *emif_base;
-
-static void am33xx_save_ddr_power(int enter)
-{
-	u32 val;
-
-	val = __raw_readl(emif_base + EMIF4_0_SDRAM_MGMT_CTRL);
-
-	/* Self refresh enable & timer value should be pre-masked */
-	val &= ~(EMIF4_0_PWR_MGMT_MODE_MASK | EMIF4_0_SLF_RFRSH_TMR_MASK);
-
-	/* TODO: Choose the mode based on memory type */
-	if (enter)
-		val |= SELF_REFRESH_ENABLE(15);
-	else
-		val |= SELF_REFRESH_DISABLE;
-
-	__raw_writel(val, emif_base + EMIF4_0_SDRAM_MGMT_CTRL);
-}
-
-static void am33xx_c2state_enter(void)
-{
-	am33xx_save_ddr_power(1);
-}
-
-static void am33xx_c2state_exit(void)
-{
-	am33xx_save_ddr_power(0);
-}
-
-static struct am33xx_ops am33xx_states[AM33XX_CPUIDLE_MAX_STATES] = {
-	[1] = {
-		.enter	= am33xx_c2state_enter,
-		.exit	= am33xx_c2state_exit,
-	},
-};
 
 /* Actual code that puts the SoC in different idle states */
 static int am33xx_enter_idle(struct cpuidle_device *dev,
 				struct cpuidle_driver *drv, int index)
 {
-	struct cpuidle_state_usage *state_usage = &dev->states_usage[index];
-	struct am33xx_ops *ops = cpuidle_get_statedata(state_usage);
 	struct timeval before, after;
-	int idle_time;
+	int idle_time, ret = 0;
 
-	local_irq_disable();
-	do_gettimeofday(&before);
+	if (index == 0) {
+		local_irq_disable();
+		do_gettimeofday(&before);
 
-	if (ops && ops->enter)
-		ops->enter();
+		/* Wait for interrupt state */
+		cpu_do_idle();
+	} else {
+		ret = am33xx_setup_cpuidle();
 
-	/* Wait for interrupt state */
-	cpu_do_idle();
-	if (ops && ops->exit)
-		ops->exit();
+		local_irq_disable();
+		do_gettimeofday(&before);
+		if (!ret)
+			am33xx_enter_cpuidle();
+	}
 
 	do_gettimeofday(&after);
 	local_irq_enable();
@@ -124,8 +85,6 @@ static int __init am33xx_cpuidle_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-	emif_base = pdata->emif_base;
-
 	/* Wait for interrupt state */
 	driver->states[0].enter = am33xx_enter_idle;
 	driver->states[0].exit_latency = 1;
@@ -136,12 +95,11 @@ static int __init am33xx_cpuidle_probe(struct platform_device *pdev)
 
 	/* Wait for interrupt and DDR self refresh state */
 	driver->states[1].enter = am33xx_enter_idle;
-	driver->states[1].exit_latency = 100;
+	driver->states[1].exit_latency = 950 + 150;
 	driver->states[1].target_residency = 10000;
 	driver->states[1].flags = CPUIDLE_FLAG_TIME_VALID;
 	strcpy(driver->states[1].name, "DDR SR");
-	strcpy(driver->states[1].desc, "WFI and DDR Self Refresh");
-	cpuidle_set_statedata(&device->states_usage[1], &am33xx_states[1]);
+	strcpy(driver->states[1].desc, "WFI and MPU Clock Off");
 
 	device->state_count = AM33XX_CPUIDLE_MAX_STATES;
 	driver->state_count = AM33XX_CPUIDLE_MAX_STATES;

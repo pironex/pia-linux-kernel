@@ -60,12 +60,14 @@ struct a8_wkup_m3_ipc_data {
 
 #define	DS0_ID				0x3
 #define DS1_ID				0x5
+#define CPUIDLE_ID			0x10
 
 #define M3_STATE_UNKNOWN		-1
 #define M3_STATE_RESET			0
 #define M3_STATE_INITED			1
 #define M3_STATE_MSG_FOR_LP		2
 #define M3_STATE_MSG_FOR_RESET		3
+#define M3_STATE_MSG_FOR_CPUIDLE	4
 
 #define VTP_CTRL_READY		(0x1 << 5)
 #define VTP_CTRL_ENABLE		(0x1 << 6)

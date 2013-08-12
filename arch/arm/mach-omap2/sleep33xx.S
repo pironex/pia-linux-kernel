@@ -1370,3 +1370,74 @@ clk_mode_core_val:
 
 ENTRY(am33xx_do_wfi_sz)
 	.word	. - am33xx_do_wfi
+
+
+	.align 3
+ENTRY(am33xx_sram_cpuidle)
+	stmfd   sp!, {r4 - r11, lr}     @ save registers on stack
+
+	/* This ensures isb */
+	ldr	r0, cpuidle_dcache_flush
+	blx	r0
+
+	/* Same as v7_flush_icache_all - saving a branch */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0	@ I+BTB cache invalidate
+
+	/*
+	 * For the MPU WFI to be registered as an interrupt
+	 * to WKUP_M3, MPU_CLKCTRL.MODULEMODE needs to be set
+	 * to DISABLED
+	 */
+	ldr	r1, virt_mpu_clkctrl
+	ldr	r2, [r1]
+	bic	r2, r2, #0x03
+	str	r2, [r1]
+
+	/*
+	 * Execute an ISB instruction to ensure that all of the
+	 * CP15 register changes have been committed.
+	 */
+	isb
+
+	/*
+	 * Execute a barrier instruction to ensure that all cache,
+	 * TLB and branch predictor maintenance operations issued
+	 * have completed.
+	 */
+	dsb
+	dmb
+
+	/*
+	 * Execute a WFI instruction and wait until the
+	 * STANDBYWFI output is asserted to indicate that the
+	 * CPU is in idle and low power state. CPU can specualatively
+	 * prefetch the instructions so add NOPs after WFI. Thirteen
+	 * NOPs as per Cortex-A8 pipeline.
+	 */
+	wfi
+
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+	ldmfd   sp!, {r4 - r11, pc}     @ restore regs and return
+
+cpuidle_dcache_flush:
+	.word   v7_flush_dcache_all
+
+virt_mpu_clkctrl:
+	.word	AM33XX_CM_MPU_MPU_CLKCTRL
+
+ENTRY(am33xx_sram_cpuidle_sz)
+	.word   . - am33xx_sram_cpuidle
