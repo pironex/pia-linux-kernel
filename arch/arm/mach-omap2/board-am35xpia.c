@@ -62,8 +62,6 @@
 #include "hsmmc.h"
 #include "board-flash.h"
 
-
-
 enum {
 	PIA_AM3505,
 	PIA_X_AM3517,
@@ -909,6 +907,72 @@ static inline void __init pia35x_ioexp_init(void) {
 	pr_err("pia35x: piA-IO Expander driver PCA9672 missing\n");
 }
 #endif /* CONFIG_GPIO_PCF857X */
+
+/** piA_Plus_Messverstaerker (measurement amplifier) **/
+#if defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
+#include <plat/mcspi.h>
+#include <linux/spi/spi.h>
+
+static struct omap2_mcspi_device_config pia35x_measurement_cfg = {
+	.turbo_mode       = 0,
+	.single_channel   = 1,
+};
+
+static struct spi_board_info pia35x_spi_measure_info[] __initdata = {
+	/* Measurement SPI */
+	{
+		.modalias        = "spidev",
+		.bus_num         = 2,
+		.chip_select     = 0,
+		.max_speed_hz    = 5000000, /* 5MHz */
+		.controller_data = &pia35x_measurement_cfg,
+	}
+};
+
+#define GPIO_MESS_RSTOUT	182
+#define GPIO_MESS_RESET  	105
+#define GPIO_MESS_NMI		14
+static struct gpio pia35x_measurement_gpios[] = {
+	{ GPIO_MESS_RSTOUT,  GPIOF_DIR_IN, "mess.rstout"   },
+	{ GPIO_MESS_RESET, GPIOF_DIR_IN, "mess.reset"  },
+	{ GPIO_MESS_NMI, GPIOF_DIR_IN, "mess.nmi" },
+};
+
+static int __init pia35x_measurement_amplifier_init(void)
+{
+	int err = 0, i;
+	unsigned int gpio;
+	unsigned long flags;
+
+	pr_info("pia35x: Initializing piA-MeasurementAmplifier board");
+
+	/* GPIOs */
+	if (0 != (err = gpio_request_array(pia35x_measurement_gpios,
+			ARRAY_SIZE(pia35x_measurement_gpios)))) {
+		pr_warning("pia35x: unable to request Measurement Amplifier GPIOs: %d", err);
+		return -1;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pia35x_measurement_gpios); i++) {
+		gpio  = pia35x_measurement_gpios[i].gpio;
+		flags = pia35x_measurement_gpios[i].flags;
+
+		/* GPIOF_DIR_IN is 1 */
+		omap_mux_init_gpio(gpio, OMAP_MUX_MODE4	| (flags & GPIOF_DIR_IN) ?
+						OMAP_PIN_INPUT : OMAP_PIN_OUTPUT);
+		gpio_export(gpio, true);
+	}
+
+	spi_register_board_info(pia35x_spi_measure_info,
+				ARRAY_SIZE(pia35x_spi_measure_info));
+
+	return 0;
+}
+#else
+static inline void int __init pia35x_measurement_amplifier_init(void) { return; }
+#endif /* CONFIG_SPI_SPIDEV */
+
+
 
 /** piA-EMS_IO **/
 #if (defined(CONFIG_GPIO_PCF857X) || defined(CONFIG_GPIO_PCF857X_MODULE)) && \
@@ -2214,6 +2278,10 @@ static int __init pia35x_expansion_init(void)
 				break;
 		}
 		pia35x_ems_io_init(revision);
+		ret++;
+	} else if (0 == strcmp(expansionboard_name, "pia_mess")) {
+		pr_info("Expansion board pia_mess found...\n");
+		pia35x_measurement_amplifier_init();
 		ret++;
 	}
 
