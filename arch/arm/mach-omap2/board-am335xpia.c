@@ -846,9 +846,9 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{}      /* Terminator */
 };
 
-static void mmc0_init(int pia_id)
+static void mmc0_init(void)
 {
-	switch(pia_id) {
+	switch(am33xx_piaid) {
 	case PIA335_KM_E2:
 		if (am33xx_piarev == 1) {
 			pia335x_mmc[0].gpio_cd = GPIO_TO_PIN(0, 17);
@@ -1502,7 +1502,7 @@ static void setup_e2(void)
 	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
 	km_e2_i2c2_init(); /* second i2c bus */
-	mmc0_init(PIA335_KM_E2);
+	mmc0_init();
 	mii2_init();
 	usb0_init();
 	if (am33xx_piarev == 1) {
@@ -1538,8 +1538,7 @@ static void setup_mmi(void)
 
 	pia335x_rtc_init();
 
-	mmc0_init(PIA335_KM_MMI);
-
+	mmc0_init();
 
 	km_mmi_clkout2_enable();
 	lis331dlh_init();
