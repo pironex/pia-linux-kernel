@@ -111,6 +111,7 @@ struct pia335x_eeprom_config {
 static struct pia335x_eeprom_config config;
 
 static int am33xx_piaid = -EINVAL;
+static int am33xx_piarev = -EINVAL;
 
 /*
 * am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
@@ -978,7 +979,8 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 		.platform_data = &km_e2_leds2_data,
 	},
 	{
-		I2C_BOARD_INFO("tmp422", 0x4C),
+		/* rev 0.01 is using tmp422 */
+		I2C_BOARD_INFO("tmp421", 0x4C),
 	},
 	{	I2C_BOARD_INFO("24c256", 0x52),
 		.platform_data = &e2_km_fram_info,
@@ -1066,8 +1068,9 @@ static void km_e2_gpios_init(void)
 	/* TODO check active low/high */
 	pia_print_gpio_state("24V Fail: ", E2_GPIO_24V_FAIL, 1);
 	pia_print_gpio_state("*S_ASAUS: ", E2_GPIO_S_ASAUS, 1);
-	pia_print_gpio_state("230V_A:   ", E2_GPIO_230V_A, 1);
-	pia_print_gpio_state("230V_B:   ", E2_GPIO_230V_B, 1);
+	pia_print_gpio_state("230V_Test:   ", E2_GPIO_230V_A, 1);
+	if (am33xx_piarev == 1)
+		pia_print_gpio_state("230V_B:   ", E2_GPIO_230V_B, 1);
 	pia_print_gpio_state("WARTUNG:  ", E2_GPIO_WARTUNG, 1);
 }
 
@@ -1396,18 +1399,25 @@ static void tlv320aic3x_i2c_init(void)
 
 static void setup_e2(void)
 {
-	pr_info("piA335x: Setup KM E2.\n");
+	//daughter_brd_detected = false;
 	am33xx_piaid = PIA335_KM_E2;
+	if (0 == strncmp("0.01", config.version, 4)) {
+		am33xx_piarev = 1;
+	} else if (0 == strncmp("0.02", config.version, 4)) {
+		am33xx_piarev = 2;
+	} else {
+		pr_warn("PIA335E2: Unknown board revision %.4s, using "
+				"rev 2 configuration\n",
+				config.version);
+		am33xx_piarev = 2;
+	}
+	pr_info("piA335x: Setup KM E2 rev %d\n", am33xx_piarev);
 	/* EVM - Starter Kit */
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
-		{mmc1_wl12xx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
 		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
-		{mcasp1_init,   DEV_ON_BASEBOARD, PROFILE_ALL},
-		{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
-		{NULL, 0, 0},
 	};*/
 	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
@@ -1415,18 +1425,24 @@ static void setup_e2(void)
 	mmc0_init(PIA335_KM_E2);
 	mii2_init();
 	usb0_init();
-	usb1_init();
+	if (am33xx_piarev == 1) {
+		usb1_init();
+		km_e2_clkout2_enable();
+	}
 	nand_init();
 
-	km_e2_clkout2_enable();
 
 	km_e2_gpios_init();
 	km_e2_can_init();
 	km_e2_spi1_init();
 	km_e2_rs485_init();
-	km_e2_ls7366_init();
+	if (am33xx_piarev == 1)
+		km_e2_ls7366_init();
 
 	pr_info("piA335x: musb_init\n");
+	/* since 0.02 only USB0 is used */
+	if (am33xx_piarev > 1)
+		musb_board_data.mode = MUSB_HOST;
 	usb_musb_init(&musb_board_data);
 
 	pr_info("piA335x: cpsw_init\n");
@@ -1507,13 +1523,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	pr_info("Board version: %s\n", tmp);
 
 	if (!strncmp("PIA335E2", config.name, 8)) {
-		//daughter_brd_detected = false;
-		if(!strncmp("0.01", config.version, 4)) {
-			setup_e2();
-		} else {
-			pr_info("PIA335E2: Unknown board revision %.4s\n",
-					config.version);
-		}
+		setup_e2();
 	} else if(!strncmp("PIA335MI", config.name, 8)) {
 		if(!strncmp("0.01", config.version, 4)) {
 			setup_mmi();
