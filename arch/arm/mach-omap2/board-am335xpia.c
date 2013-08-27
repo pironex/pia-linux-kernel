@@ -1523,7 +1523,6 @@ static void setup_e2(void)
 	}
 	nand_init();
 
-
 	km_e2_gpios_init();
 	km_e2_can_init();
 	km_e2_spi_init();
@@ -1538,7 +1537,8 @@ static void setup_e2(void)
 	usb_musb_init(&musb_board_data);
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
+	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:00");
 }
 
 static void setup_mmi(void)
