@@ -936,8 +936,9 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 	}
 };
 
-static void km_e2_i2c2_init(void)
+static void km_e2_i2c1_init(void)
 {
+	/* I2C1 is the second bus */
 	setup_pin_mux(km_e2_leds_pin_mux);
 	km_e2_leds_init();
 	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
@@ -1521,7 +1522,7 @@ static void setup_e2(void)
 	};*/
 	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
-	km_e2_i2c2_init(); /* second i2c bus */
+	km_e2_i2c1_init(); /* second i2c bus */
 	mmc0_init();
 	mii2_init();
 	usb0_init();
