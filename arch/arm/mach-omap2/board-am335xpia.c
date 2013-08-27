@@ -534,29 +534,19 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 };
 
 /* SPI1 */
-static struct pinmux_config km_e2_spi01_pin_mux[] = {
+static struct pinmux_config km_e2_spi_pin_mux[] = {
 	/* SPI0 */
-	{"spi0_sclk.spi0_sclk", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL
-			| AM33XX_INPUT_EN},
-	{"spi0_d0.spi0_d0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
-			| AM33XX_INPUT_EN},
-	{"spi0_d1.spi0_d1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
-			| AM33XX_INPUT_EN},
-	{"spi0_cs0.spi0_cs0", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
-			| AM33XX_INPUT_EN},
-	{"spi0_cs1.spi0_cs1", OMAP_MUX_MODE0 | AM33XX_PULL_ENBL | AM33XX_PULL_UP
-			| AM33XX_INPUT_EN},
-	/* SPI1 */
-	{"mcasp0_aclkx.spi1_sclk", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
-			| AM33XX_INPUT_EN},
-	{"mcasp0_fsx.spi1_d0", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
-			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
-	{"mcasp0_axr0.spi1_d1", OMAP_MUX_MODE3 | AM33XX_PULL_ENBL
-			| AM33XX_INPUT_EN},
-	{"rmii1_refclk.spi1_cs0", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL
-			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
-	{"ecap0_in_pwm0_out.spi1_cs1", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL
-			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
+	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d1.spi0_d1",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_cs0.spi0_cs0",	AM33XX_PIN_INPUT_PULLUP }, /* only rev 0.01 */
+	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP }, /* APS */
+	/* SPI1 - only on exp. header since rev 0.02 */
+	{"mcasp0_aclkx.spi1_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_fsx.spi1_d0", 		AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_axr0.spi1_d1",		AM33XX_PIN_INPUT_PULLUP },
+	{"rmii1_refclk.spi1_cs0",	AM33XX_PIN_INPUT_PULLUP },
+	{"ecap0_in_pwm0_out.spi1_cs1",	AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1174,14 +1164,8 @@ static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
 	.turbo_mode	= 0,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
 };
-static struct spi_board_info km_e1_spi0_info[] = {
-	{	/* LS7366, max 8 MHz */
-		.modalias      = "spidev",
-		.bus_num         = 1,
-		.chip_select     = 0,
-		.controller_data = &km_e2_spi_def_cfg,
-		.max_speed_hz    = 5E6, /* 5MHz */
-	},
+
+static struct spi_board_info km_e2_spi_aps_info[] = {
 	{
 		/* APS only MISO used */
 		.modalias      = "spidev",
@@ -1192,7 +1176,17 @@ static struct spi_board_info km_e1_spi0_info[] = {
 	},
 };
 
-static struct spi_board_info km_e1_spi1_info[] = {
+static struct spi_board_info km_e2_spi_qenc_info[] = {
+	{	/* LS7366, max 8 MHz */
+		.modalias      = "spidev",
+		.bus_num         = 1,
+		.chip_select     = 0,
+		.controller_data = &km_e2_spi_def_cfg,
+		.max_speed_hz    = 5E6, /* 5MHz */
+	},
+};
+
+static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 	{
 		/* 3rd CAN device */
 		.modalias      = "mcp2515",
@@ -1204,6 +1198,18 @@ static struct spi_board_info km_e1_spi1_info[] = {
 		.controller_data = &km_e2_spi_def_cfg,
 		.platform_data = &km_e2_mcp2515_data,
 	},
+};
+
+static struct spi_board_info km_e2_spi1_0_info[] = {
+	{
+		/* external Header */
+		.modalias      = "spidev",
+		.bus_num         = 2,
+		.chip_select     = 0,
+		.max_speed_hz    = 1E6, /* 1MHz */
+	},
+};
+static struct spi_board_info km_e2_spi1_1_info[] = {
 	{
 		/* external Header */
 		.modalias      = "spidev",
@@ -1212,13 +1218,27 @@ static struct spi_board_info km_e1_spi1_info[] = {
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
-static void km_e2_spi1_init(void)
+static void km_e2_spi_init(void)
 {
-	setup_pin_mux(km_e2_spi01_pin_mux);
-	spi_register_board_info(km_e1_spi0_info,
-			ARRAY_SIZE(km_e1_spi0_info));
-	spi_register_board_info(km_e1_spi1_info,
-			ARRAY_SIZE(km_e1_spi1_info));
+	setup_pin_mux(km_e2_spi_pin_mux);
+	spi_register_board_info(km_e2_spi_aps_info,
+			ARRAY_SIZE(km_e2_spi_aps_info));
+
+	if (am33xx_piarev == 1) {
+		/* CAN device only on rev 0.01 */
+		spi_register_board_info(km_e2_spi_mcp2515_info,
+				ARRAY_SIZE(km_e2_spi_mcp2515_info));
+		/* quad encoder only on rev 0.01 */
+		spi_register_board_info(km_e2_spi_qenc_info,
+				ARRAY_SIZE(km_e2_spi_qenc_info));
+	} else {
+		/* expansion header */
+		spi_register_board_info(km_e2_spi1_0_info,
+				ARRAY_SIZE(km_e2_spi1_0_info));
+	}
+	/* expansion header - all revisions */
+	spi_register_board_info(km_e2_spi1_1_info,
+			ARRAY_SIZE(km_e2_spi1_1_info));
 }
 
 static void km_e2_rs485_init(void)
@@ -1514,7 +1534,7 @@ static void setup_e2(void)
 
 	km_e2_gpios_init();
 	km_e2_can_init();
-	km_e2_spi1_init();
+	km_e2_spi_init();
 	km_e2_rs485_init();
 	if (am33xx_piarev == 1)
 		km_e2_ls7366_init();
