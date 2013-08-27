@@ -447,10 +447,12 @@ static struct pinmux_config mmc0_e2_pin_mux[] = {
 	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+#if 0 /* only used on REV 0.01 boards, kept for reference */
 	/* write protect */
 	{"mii1_txclk.gpio3_9", AM33XX_PIN_INPUT_PULLUP},
 	/* card detect */
 	{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
+#endif
 	{NULL, 0},
 };
 
@@ -508,49 +510,12 @@ static struct pinmux_config usb1_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* pinmux for special gpios */
-static struct pinmux_config km_e2_gpios_pin_mux[] = {
-	/* Ext. RESET */
-	{"gpmc_clk.gpio2_1",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* USB OC */
-	{"mii1_rxd1.gpio2_20",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* WD_SET1 */
-	{"lcd_vsync.gpio2_22",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* WD_SET2 */
-	{"lcd_hsync.gpio2_23",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* WDI */
-	{"lcd_pclk.gpio2_24",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* 24V FAIL */
-	{"lcd_ac_bias_en.gpio2_25",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* FRAM WP */
-	{"mcasp0_ahclkx.gpio3_21",OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* CLEAR_RESET */
-	{"lcd_data3.gpio2_9",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP },
-	/* WD_RESET */
-	{"gpmc_ad14.gpio1_14",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* PB_RESET */
-	{"mii1_col.gpio3_0",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* *S_ASAUS */
-	{"mii1_crs.gpio3_1",      OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* 230V_A */
-	{"mii1_rxerr.gpio3_2",    OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* 230V_B */
-	{"mii1_rxdv.gpio3_4",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* Wartung */
-	{"mii1_txd3.gpio0_16",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	/* KSB_TERM2 */
-	{"gpmc_csn1.gpio1_30",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
-	{NULL, 0},
-};
-
 /* E2 CAN 0+1 */
 static struct pinmux_config km_e2_can_pin_mux[] = {
 	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
 	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
 	{"uart1_rxd.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
 	{"uart1_txd.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
-	/* KSB_TERM */
-	{"mii1_rxd0.gpio2_21",     OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLDOWN },
 	{NULL, 0},
 };
 
@@ -563,7 +528,6 @@ static struct pinmux_config km_e2_leds_pin_mux[] = {
 };
 
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
-	{"lcd_data11.gpio2_17", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
 	{"mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
@@ -593,9 +557,6 @@ static struct pinmux_config km_e2_spi01_pin_mux[] = {
 			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
 	{"ecap0_in_pwm0_out.spi1_cs1", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL
 			| AM33XX_PULL_UP | AM33XX_INPUT_EN},
-	// can2 interrupt line MCP2515
-	{"mcasp0_axr1.gpio3_20", OMAP_MUX_MODE7 | AM33XX_PULL_ENBL
-			| AM33XX_INPUT_EN},
 	{NULL, 0},
 };
 
@@ -864,10 +825,6 @@ static struct pinmux_config mmc0_mmi_pin_mux[] = {
 	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	/* write protect */
-	//{"mii1_txclk.gpio3_9", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
-	/* card detect */
-	//{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -875,10 +832,10 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
 		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = GPIO_TO_PIN(0, 17),
-		 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
+		.gpio_cd        = -1,
 		.gpio_wp        = -1,
 		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
+		.nonremovable = true,
 	},
 	{
 		.mmc            = 0,	/* will be set at runtime */
@@ -893,13 +850,15 @@ static void mmc0_init(int pia_id)
 {
 	switch(pia_id) {
 	case PIA335_KM_E2:
+		if (am33xx_piarev == 1) {
+			pia335x_mmc[0].gpio_cd = GPIO_TO_PIN(0, 17);
+			 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
+			pia335x_mmc[0].nonremovable = false;
+		}
 		setup_pin_mux(mmc0_e2_pin_mux);
 		break;
 	case PIA335_KM_MMI:
 		/* not used on KM MMI */
-		pia335x_mmc[0].gpio_wp = -EINVAL;
-		pia335x_mmc[0].gpio_cd = -EINVAL,
-		pia335x_mmc[0].nonremovable = true,
 		setup_pin_mux(mmc0_mmi_pin_mux);
 		break;
 	}
@@ -1004,25 +963,78 @@ struct pia_gpios {
 };
 #define E2_GPIO_EXT_RESET	GPIO_TO_PIN(2, 1)
 #define E2_GPIO_USB_OC		GPIO_TO_PIN(2, 20)
+#define E2_GPIO_WD_SET1		GPIO_TO_PIN(2, 22)
+#define E2_GPIO_WD_SET2		GPIO_TO_PIN(2, 23)
 #define E2_GPIO_WDI		GPIO_TO_PIN(2, 24)
 #define E2_GPIO_24V_FAIL	GPIO_TO_PIN(2, 25)
 #define E2_GPIO_CLEAR_RESET	GPIO_TO_PIN(2, 9)
+#define E2_GPIO_FF_CLK		GPIO_TO_PIN(3, 10) /* flipflop reset */
 #define E2_GPIO_WD_RESET	GPIO_TO_PIN(1, 14)
 #define E2_GPIO_PB_RESET	GPIO_TO_PIN(3, 0)
 #define E2_GPIO_S_ASAUS		GPIO_TO_PIN(3, 1)
 #define E2_GPIO_230V_A		GPIO_TO_PIN(3, 2)
 #define E2_GPIO_230V_B		GPIO_TO_PIN(3, 4)
+#define E2_GPIO_FRAM_WP		GPIO_TO_PIN(3, 21)
 #define E2_GPIO_WARTUNG		GPIO_TO_PIN(0, 16)
 #define E2_GPIO_KSB_TERM1	GPIO_TO_PIN(2, 21)
 #define E2_GPIO_KSB_TERM2	GPIO_TO_PIN(1, 30)
+#define E2_GPIO_APS_TERM	GPIO_TO_PIN(1, 31)
+#define E2_GPIO_RESERVE1	GPIO_TO_PIN(0, 17)
+#define E2_GPIO_RESERVE2	GPIO_TO_PIN(3, 9)
+#define E2_GPIO_RESERVE3	GPIO_TO_PIN(0, 27)
+#define E2_GPIO_RESERVE4	GPIO_TO_PIN(3, 4)
+/* special GPIOs, handled elsewhere */
+#define E2_GPIO_PMIC_INT	GPIO_TO_PIN(0, 28)
+#define E2_GPIO_CAN2_INT	GPIO_TO_PIN(3, 20)
+#define E2_GPIO_RS485_DE	GPIO_TO_PIN(2, 17)
+/* pinmux for special gpios */
+static struct pinmux_config km_e2_gpios_pin_mux[] = {
+	/* Ext. RESET */
+	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
+	/* USB OC */
+	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET1 */
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET2 */
+	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* WDI */
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	/* 24V FAIL */
+	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* FRAM WP */
+	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
+	/* CLEAR_RESET */
+	{"lcd_data3.gpio2_9",      AM33XX_PIN_INPUT_PULLUP },
+	/* WD_RESET */
+	{"gpmc_ad14.gpio1_14",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* PB_RESET */
+	{"mii1_col.gpio3_0",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* *S_ASAUS */
+	{"mii1_crs.gpio3_1",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_A */
+	{"mii1_rxerr.gpio3_2",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_B */
+	{"mii1_rxdv.gpio3_4",      AM33XX_PIN_INPUT_PULLDOWN },
+	/* Wartung */
+	{"mii1_txd3.gpio0_16",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* KSB_TERM */
+	{"mii1_rxd0.gpio2_21",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* KSB_TERM2 */
+	{"gpmc_csn1.gpio1_30",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* CAN2 interrupt line MCP2515 */
+	{"mcasp0_axr1.gpio3_20",   AM33XX_PIN_INPUT_PULLUP },
+	/* RS485 DE */
+	{"lcd_data11.gpio2_17",    AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_EXT_RESET,	GPIOF_OUT_INIT_HIGH, "ext_reset" },
 	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
-	{ GPIO_TO_PIN(2, 22),	GPIOF_OUT_INIT_HIGH, "wd_set1" },
-	{ GPIO_TO_PIN(2, 23),	GPIOF_OUT_INIT_LOW,  "wd_set2" },
+	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
+	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
-	{ GPIO_TO_PIN(3, 21),	GPIOF_OUT_INIT_LOW,  "fram_wp" },
+	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
 	{ E2_GPIO_CLEAR_RESET,	GPIOF_OUT_INIT_HIGH, "clear_reset" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
 	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
@@ -1032,6 +1044,60 @@ static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
 	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term1" },
 	{ E2_GPIO_KSB_TERM2,	GPIOF_OUT_INIT_LOW, "ksb_term2" },
+};
+
+/* E2 rev0.02 */
+static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
+	/* Ext. RESET */
+	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
+	/* USB OC */
+	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET1 */
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET2 */
+	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* WDI */
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	/* 24V FAIL */
+	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* FRAM WP */
+	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
+	/* FF_CLK */
+	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLUP },
+	/* WD_RESET */
+	{"gpmc_ad14.gpio1_14",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* PB_RESET */
+	{"mii1_col.gpio3_0",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* *S_ASAUS */
+	{"mii1_crs.gpio3_1",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_A */
+	{"mii1_rxerr.gpio3_2",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* Wartung */
+	{"mii1_txd3.gpio0_16",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* KSB_TERM */
+	{"mii1_rxd0.gpio2_21",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* APS_TERM */
+	{"gpmc_csn2.gpio1_31",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* RS485 DE */
+	{"lcd_data11.gpio2_17",    AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+static struct gpio km_e2_rev2_gpios[] = {
+	{ E2_GPIO_EXT_RESET,	GPIOF_OUT_INIT_HIGH, "ext_reset" },
+	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
+	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
+	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
+	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
+	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
+	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
+	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
+	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
+	{ E2_GPIO_230V_A,	GPIOF_IN, "230v_test" },
+	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
+	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term" },
+	{ E2_GPIO_APS_TERM,	GPIOF_OUT_INIT_LOW, "aps_term" },
 };
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
@@ -1044,24 +1110,39 @@ static void pia_print_gpio_state(const char *msg, int gpio, int on)
 }
 static void km_e2_gpios_init(void)
 {
-	int i;
-	setup_pin_mux(km_e2_gpios_pin_mux);
-	for (i = 0; i < ARRAY_SIZE(km_e2_gpios); ++i) {
-		if (gpio_request_one(km_e2_gpios[i].gpio,
-				km_e2_gpios[i].flags,
-				km_e2_gpios[i].label) < 0) {
+	int i, sz;
+	struct pinmux_config *muxcfg;
+	struct gpio *gpiocfg;
+	if (am33xx_piarev == 1) {
+		muxcfg = km_e2_gpios_pin_mux;
+		gpiocfg = km_e2_gpios;
+		sz = ARRAY_SIZE(km_e2_gpios);
+	} else {
+		muxcfg = km_e2_rev2_gpios_pin_mux;
+		gpiocfg = km_e2_rev2_gpios;
+		sz = ARRAY_SIZE(km_e2_rev2_gpios);
+	}
+	setup_pin_mux(muxcfg);
+
+	for (i = 0; i < sz; ++i) {
+		if (gpio_request_one(gpiocfg[i].gpio,
+				gpiocfg[i].flags,
+				gpiocfg[i].label) < 0) {
 			pr_err("Failed to request gpio: %s\n",
-					km_e2_gpios[i].label);
+					gpiocfg[i].label);
 			return;
 		}
-		pr_info("piA335x: GPIO init %s\n", km_e2_gpios[i].label);
-		gpio_export(km_e2_gpios[i].gpio, 0);
+		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
+		gpio_export(gpiocfg[i].gpio, 0);
 	}
 	pr_info("E2 GPIO Status:\n");
 	pia_print_gpio_state("WD_RESET: ", E2_GPIO_WD_RESET, 0);
-	pia_print_gpio_state("WD_RESET: ", E2_GPIO_PB_RESET, 0);
+	pia_print_gpio_state("PB_RESET: ", E2_GPIO_PB_RESET, 0);
 	pr_info("  external Watchdog: OFF.\n");
-	gpio_set_value(E2_GPIO_CLEAR_RESET, 0); /* high to low */
+	if (am33xx_piarev == 1)
+		gpio_set_value(E2_GPIO_CLEAR_RESET, 0); /* high to low */
+	else
+		gpio_set_value(E2_GPIO_FF_CLK, 0); /* high to low */
 	pr_info("    RESET flags cleared.\n");
 
 	pia_print_gpio_state("USB_OC:   ", E2_GPIO_USB_OC, 0);
@@ -1140,7 +1221,6 @@ static void km_e2_spi1_init(void)
 			ARRAY_SIZE(km_e1_spi1_info));
 }
 
-#define KM_E2_RS485_DE_GPIO	GPIO_TO_PIN(2, 17)
 static void km_e2_rs485_init(void)
 {
 	setup_pin_mux(km_e2_rs485_pin_mux);
@@ -1157,15 +1237,15 @@ static void km_e2_rs485_init(void)
 	 * no transmission is active, as Tranceiver and Receiver must never be
 	 * active at the same time.
 	 */
-	if (gpio_request(KM_E2_RS485_DE_GPIO, "te_reg") < 0) {
+	if (gpio_request(E2_GPIO_RS485_DE, "te_reg") < 0) {
 		pr_err("Failed to request gpio for led_oe");
 		return;
 	}
 
 	pr_info("Configure RS485 TE GPIO\n");
 	/* enable receiver by default */
-	gpio_direction_output(KM_E2_RS485_DE_GPIO, 0);
-	gpio_export(KM_E2_RS485_DE_GPIO, 0);
+	gpio_direction_output(E2_GPIO_RS485_DE, 0);
+	gpio_export(E2_GPIO_RS485_DE, 0);
 }
 
 static void km_e2_ls7366_init(void)
