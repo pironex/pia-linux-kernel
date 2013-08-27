@@ -458,9 +458,6 @@ static struct pinmux_config mmc0_e2_pin_mux[] = {
 
 /* Module pin mux for mii2 */
 static struct pinmux_config mii2_pin_mux[] = {
-	/*
-	{"gpmc_wpn.mii2_rxerr", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
-	*/
 	{"gpmc_a0.mii2_txen", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
 	{"gpmc_a1.mii2_rxdv", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
 	{"gpmc_a2.mii2_txd3", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
@@ -551,9 +548,6 @@ static struct pinmux_config km_e2_spi_pin_mux[] = {
 };
 
 /** CLKOUT2 */
-/* divisor 8 not supported according to TI (error in TRM)
-#define SYS_CLKOUT2_PARENT	"per_192mhz_clk"
-*/
 #define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
 static void km_e2_clkout2_enable(void)
 {
@@ -1516,9 +1510,6 @@ static void setup_e2(void)
 	/* EVM - Starter Kit */
 /*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
-		{gpio_keys_init,  DEV_ON_BASEBOARD, PROFILE_ALL},
-		{lis331dlh_init, DEV_ON_BASEBOARD, PROFILE_ALL},
-		{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	};*/
 	setup_pin_mux(km_e2_board_pin_mux);
 	pia335x_rtc_init();
@@ -1776,7 +1767,6 @@ static void __init pia335x_init(void)
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
-	/* XXX what for? */
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
 }
