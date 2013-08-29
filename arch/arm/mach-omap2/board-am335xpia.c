@@ -1770,6 +1770,12 @@ static void __init pia335x_init(void)
 
 	omap_board_config = pia335x_config;
 	omap_board_config_size = ARRAY_SIZE(pia335x_config);
+	/* Create an alias for icss clock */
+	if (clk_add_alias("pruss", NULL, "pruss_uart_gclk", NULL))
+		pr_warn("failed to create an alias: icss_uart_gclk --> pruss\n");
+	/* Create an alias for gfx/sgx clock */
+	if (clk_add_alias("sgx_ck", NULL, "gfx_fclk", NULL))
+		pr_warn("failed to create an alias: gfx_fclk --> sgx_ck\n");
 }
 
 static void __init pia335x_map_io(void)
