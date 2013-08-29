@@ -72,6 +72,7 @@ struct pca9633_led {
 	struct work_struct work;
 	enum led_brightness brightness;
 	struct led_classdev led_cdev;
+	spinlock_t		lock;
 	int led_num; /* 0 .. 3 potentially */
 	char name[32];
 };
@@ -112,6 +113,7 @@ static void pca9633_led_set(struct led_classdev *led_cdev,
 
 	pca9633 = container_of(led_cdev, struct pca9633_led, led_cdev);
 
+	spin_lock(&pca9633->lock);
 	pca9633->brightness = value;
 
 	/*
@@ -119,6 +121,7 @@ static void pca9633_led_set(struct led_classdev *led_cdev,
 	 * can sleep.
 	 */
 	schedule_work(&pca9633->work);
+	spin_unlock(&pca9633->lock);
 }
 
 static int __devinit pca9633_probe(struct i2c_client *client,
@@ -167,6 +170,8 @@ static int __devinit pca9633_probe(struct i2c_client *client,
 			snprintf(pca9633[i].name, sizeof(pca9633[i].name),
 				 "pca9633:%d", i);
 		}
+
+		spin_lock_init(&pca9633[i].lock);
 
 		pca9633[i].led_cdev.name = pca9633[i].name;
 		pca9633[i].led_cdev.brightness_set = pca9633_led_set;
