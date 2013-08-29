@@ -1536,7 +1536,7 @@ static void setup_e2(void)
 
 	pr_info("piA335x: cpsw_init\n");
 	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
 static void setup_mmi(void)
