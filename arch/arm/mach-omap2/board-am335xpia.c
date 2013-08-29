@@ -1048,7 +1048,7 @@ static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
 	/* FRAM WP */
 	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
 	/* FF_CLK */
-	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLUP },
+	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLDOWN },
 	/* WD_RESET */
 	{"gpmc_ad14.gpio1_14",     AM33XX_PIN_INPUT_PULLDOWN },
 	/* PB_RESET */
@@ -1075,7 +1075,7 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
-	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
+	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_LOW, "ff_clk" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
 	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
 	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
@@ -1532,7 +1532,6 @@ static void setup_e2(void)
 	km_e2_rs485_init();
 	if (am33xx_piarev == 1)
 		km_e2_ls7366_init();
-
 
 	pr_info("piA335x: cpsw_init\n");
 	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
