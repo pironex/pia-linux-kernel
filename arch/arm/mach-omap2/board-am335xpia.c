@@ -1048,7 +1048,7 @@ static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
 	/* FRAM WP */
 	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
 	/* FF_CLK */
-	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLDOWN },
+	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLUP },
 	/* WD_RESET */
 	{"gpmc_ad14.gpio1_14",     AM33XX_PIN_INPUT_PULLDOWN },
 	/* PB_RESET */
@@ -1075,7 +1075,7 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
-	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_LOW, "ff_clk" },
+	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
 	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
 	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
@@ -1127,7 +1127,7 @@ static void km_e2_gpios_init(void)
 	if (am33xx_piarev == 1)
 		gpio_set_value(E2_GPIO_CLEAR_RESET, 0); /* high to low */
 	else
-		gpio_set_value(E2_GPIO_FF_CLK, 0); /* high to low */
+		gpio_set_value(E2_GPIO_FF_CLK, 1); /* high to low */
 	pr_info("    RESET flags cleared.\n");
 
 	pia_print_gpio_state("USB_OC:   ", E2_GPIO_USB_OC, 0);
