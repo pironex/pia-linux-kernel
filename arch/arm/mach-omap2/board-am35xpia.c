@@ -986,7 +986,7 @@ static inline void int __init pia35x_measurement_amplifier_init(void) { return; 
 {	.modalias      = "mcp2515", \
 	.bus_num       = bus, \
 	.chip_select   = cs, \
-	.max_speed_hz  = 4E6, \
+	.max_speed_hz  = 5E6, \
 	.mode          = SPI_MODE_0, \
 	.irq           = OMAP_GPIO_IRQ(irqgpio), \
 	.controller_data = &ems_io_mcp2515_cfg[id], \
@@ -1400,6 +1400,10 @@ static struct omap_board_mux board_mux[] __initdata = {
 	OMAP3_MUX(GPMC_A5, OMAP_MUX_MODE7),
 	OMAP3_MUX(GPMC_A6, OMAP_MUX_MODE7),
 
+	/* disable sys_clkout pins */
+	OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7),
+	OMAP3_MUX(SYS_CLKOUT2, OMAP_MUX_MODE7),
+
 	/* TERMINATOR */
 	{ .reg_offset = OMAP_MUX_TERMINATOR },
 };
@@ -1437,6 +1441,7 @@ static struct omap_board_mux board_mux_audio[] __initdata = {
 	/* I2S codec port pins for McBSP block */
 	/* SYS_CLKOUT1 connected to SYS_CLKOUT2 */
 	OMAP3_MUX(SYS_CLKOUT1, OMAP_MUX_MODE7 | OMAP_PIN_INPUT),
+	OMAP3_MUX(SYS_CLKOUT2, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP3_MUX(MCBSP2_FSX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP3_MUX(MCBSP2_CLKX, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP3_MUX(MCBSP2_DR, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
@@ -2349,10 +2354,14 @@ static void __init pia35x_init(void)
 	pia35x_flash_init();
 	pia35x_musb_init();
 	pia35x_ethernet_init(&pia35x_emac_pdata);
-	pia35x_can_init(&pia35x_hecc_pdata);
 	pia35x_mmc_init();
 
-	pia35x_audio_init();
+	if (0 != strncmp(expansionboard_name, "pia_ems_io", 10)) {
+		/* special baseboard when EMS-IO expansion used
+		 * no baseboard CAN, no audio */
+		pia35x_can_init(&pia35x_hecc_pdata);
+		pia35x_audio_init();
+	}
 
 	pia35x_expansion_init();
 }
