@@ -162,11 +162,13 @@ static inline int rts_on_send(struct uart_omap_port *up)
 static inline void serial_omap_update_rts(struct uart_omap_port *up)
 {
 	unsigned char mcr = up->mcr;
+	int rtstx = (up->rs485.flags & SER_RS485_RTS_ON_SEND);
 
-	if (up->tx_in_progress)
-		mcr &= ~UART_MCR_RTS;
+	if ((up->tx_in_progress && rtstx) ||
+			!(up->tx_in_progress || rtstx))
+		mcr &= ~UART_MCR_RTS; // logic HIGH
 	else
-		mcr |= UART_MCR_RTS;
+		mcr |= UART_MCR_RTS;  // logic LOW
 
 	serial_out(up, UART_MCR, mcr);
 }
@@ -326,8 +328,7 @@ static void serial_omap_start_tx(struct uart_port *port)
 	if (up->rs485.flags & SER_RS485_ENABLED) {
 		if (!up->tx_in_progress) {
 			up->tx_in_progress = 1;
-			if (rts_on_send(up))
-				serial_omap_update_rts(up);
+			serial_omap_update_rts(up);
 		}
 		if (up->tx_wait_end) {
 			up->tx_wait_end = 0;
@@ -455,8 +456,7 @@ static inline irqreturn_t serial_omap_irq(int irq, void *dev_id)
 		up->ier = UART_IER_RLSI | UART_IER_RDI;
 		serial_out(up, UART_IER, up->ier);
 		serial_out(up, UART_OMAP_SCR, 0);
-		if (rts_on_send(up))
-			serial_omap_update_rts(up);
+		serial_omap_update_rts(up);
 		spin_unlock_irqrestore(&up->port.lock, flags);
 		return IRQ_HANDLED;
 	}
@@ -544,7 +544,7 @@ static void serial_omap_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	pm_runtime_get_sync(&up->pdev->dev);
 	up->mcr = serial_in(up, UART_MCR);
 	up->mcr |= mcr;
-	if (up->rs485.flags & SER_RS485_ENABLED && rts_on_send(up))
+	if (up->rs485.flags & SER_RS485_ENABLED)
 		serial_omap_update_rts(up);
 	serial_out(up, UART_MCR, up->mcr);
 	pm_runtime_put(&up->pdev->dev);
@@ -1220,8 +1220,7 @@ serial_omap_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
 			up->tx_wait_end = 0;
 		}
 		up->rs485 = rs485conf;
-		if (rts_on_send(up))
-			serial_omap_update_rts(up);
+		serial_omap_update_rts(up);
 		serial_omap_thri_mode(up);
 		spin_unlock_irqrestore(&up->port.lock, flags);
 
