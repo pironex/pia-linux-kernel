@@ -216,7 +216,8 @@ struct serial_rs485 {
 #define SER_RS485_RX_DURING_TX		(1 << 4)
 	__u32	delay_rts_before_send;	/* Delay before send (milliseconds) */
 	__u32	delay_rts_after_send;	/* Delay after send (milliseconds) */
-	__u32	padding[5];		/* Memory is cheap, new structs
+	__u32	rts_gpio;		/* optional GPIO for RTS */
+	__u32	padding[4];		/* Memory is cheap, new structs
 					   are a royal PITA .. */
 };
 
