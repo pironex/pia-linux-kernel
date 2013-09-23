@@ -40,6 +40,7 @@
 #include <linux/uaccess.h>
 #include <linux/pm_runtime.h>
 #include <linux/of.h>
+#include <linux/gpio.h>
 
 #include <plat/dma.h>
 #include <plat/dmtimer.h>
@@ -159,6 +160,16 @@ static inline int rts_on_send(struct uart_omap_port *up)
 	return up->rs485.flags & SER_RS485_RTS_ON_SEND;
 }
 
+static inline void serial_omap_update_gpio_rts(struct uart_omap_port *up)
+{
+	if (up->mcr & UART_MCR_RTS) {
+		gpio_set_value(up->rs485.rts_gpio, 1);
+		mdelay(1);
+	} else {
+		gpio_set_value(up->rs485.rts_gpio, 0);
+	}
+}
+
 static inline void serial_omap_update_rts(struct uart_omap_port *up)
 {
 	unsigned char mcr = up->mcr;
@@ -171,6 +182,9 @@ static inline void serial_omap_update_rts(struct uart_omap_port *up)
 		mcr |= UART_MCR_RTS;  // logic LOW
 
 	serial_out(up, UART_MCR, mcr);
+	if (up->rs485.rts_gpio)
+		serial_omap_update_gpio_rts(up);
+
 }
 
 static void serial_omap_stop_tx(struct uart_port *port)
