@@ -206,14 +206,14 @@ static int xhci_setup_msi(struct xhci_hcd *xhci)
 
 	ret = pci_enable_msi(pdev);
 	if (ret) {
-		xhci_err(xhci, "failed to allocate MSI entry\n");
+		xhci_dbg(xhci, "failed to allocate MSI entry\n");
 		return ret;
 	}
 
 	ret = request_irq(pdev->irq, (irq_handler_t)xhci_msi_irq,
 				0, "xhci_hcd", xhci_to_hcd(xhci));
 	if (ret) {
-		xhci_err(xhci, "disable MSI interrupt\n");
+		xhci_dbg(xhci, "disable MSI interrupt\n");
 		pci_disable_msi(pdev);
 	}
 
@@ -276,7 +276,7 @@ static int xhci_setup_msix(struct xhci_hcd *xhci)
 
 	ret = pci_enable_msix(pdev, xhci->msix_entries, xhci->msix_count);
 	if (ret) {
-		xhci_err(xhci, "Failed to enable MSI-X\n");
+		xhci_dbg(xhci, "Failed to enable MSI-X\n");
 		goto free_entries;
 	}
 
@@ -292,7 +292,7 @@ static int xhci_setup_msix(struct xhci_hcd *xhci)
 	return ret;
 
 disable_msix:
-	xhci_err(xhci, "disable MSI-X interrupt\n");
+	xhci_dbg(xhci, "disable MSI-X interrupt\n");
 	xhci_free_irq(xhci);
 	pci_disable_msix(pdev);
 free_entries:
@@ -342,7 +342,7 @@ static int xhci_try_enable_msi(struct usb_hcd *hcd)
 	 * generate interrupts.  Don't even try to enable MSI.
 	 */
 	if (xhci->quirks & XHCI_BROKEN_MSI)
-		return 0;
+		goto legacy_irq;
 
 	/* unregister the legacy interrupt */
 	if (hcd->irq)
@@ -363,6 +363,7 @@ static int xhci_try_enable_msi(struct usb_hcd *hcd)
 		return -EINVAL;
 	}
 
+ legacy_irq:
 	/* fall back to legacy interrupt*/
 	ret = request_irq(pdev->irq, &usb_hcd_irq, IRQF_SHARED,
 			hcd->irq_descr, hcd);
@@ -472,7 +473,7 @@ static bool compliance_mode_recovery_timer_quirk_check(void)
 	if (strstr(dmi_product_name, "Z420") ||
 			strstr(dmi_product_name, "Z620") ||
 			strstr(dmi_product_name, "Z820") ||
-			strstr(dmi_product_name, "Z1"))
+			strstr(dmi_product_name, "Z1 Workstation"))
 		return true;
 
 	return false;
@@ -871,6 +872,11 @@ int xhci_suspend(struct xhci_hcd *xhci)
 	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
 	u32			command;
 
+	/* Don't poll the roothubs on bus suspend. */
+	xhci_dbg(xhci, "%s: stopping port polling.\n", __func__);
+	clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
+	del_timer_sync(&hcd->rh_timer);
+
 	spin_lock_irq(&xhci->lock);
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &xhci->shared_hcd->flags);
@@ -932,6 +938,7 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
 	struct usb_hcd		*secondary_hcd;
 	int			retval = 0;
+	bool			comp_timer_running = false;
 
 	/* Wait a bit if either of the roothubs need to settle from the
 	 * transition into bus suspend.
@@ -969,6 +976,13 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 
 	/* If restore operation fails, re-initialize the HC during resume */
 	if ((temp & STS_SRE) || hibernated) {
+
+		if ((xhci->quirks & XHCI_COMP_MODE_QUIRK) &&
+				!(xhci_all_ports_seen_u0(xhci))) {
+			del_timer_sync(&xhci->comp_mode_recovery_timer);
+			xhci_dbg(xhci, "Compliance Mode Recovery Timer deleted!\n");
+		}
+
 		/* Let the USB core know _both_ roothubs lost power. */
 		usb_root_hub_lost_power(xhci->main_hcd->self.root_hub);
 		usb_root_hub_lost_power(xhci->shared_hcd->self.root_hub);
@@ -1011,6 +1025,8 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 		retval = xhci_init(hcd->primary_hcd);
 		if (retval)
 			return retval;
+		comp_timer_running = true;
+
 		xhci_dbg(xhci, "Start the primary HCD\n");
 		retval = xhci_run(hcd->primary_hcd);
 		if (!retval) {
@@ -1052,8 +1068,13 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 	 * to suffer the Compliance Mode issue again. It doesn't matter if
 	 * ports have entered previously to U0 before system's suspension.
 	 */
-	if (xhci->quirks & XHCI_COMP_MODE_QUIRK)
+	if ((xhci->quirks & XHCI_COMP_MODE_QUIRK) && !comp_timer_running)
 		compliance_mode_recovery_timer_init(xhci);
+
+	/* Re-enable port polling. */
+	xhci_dbg(xhci, "%s: starting port polling.\n", __func__);
+	set_bit(HCD_FLAG_POLL_RH, &hcd->flags);
+	usb_hcd_poll_rh_status(hcd);
 
 	return retval;
 }
@@ -1132,9 +1153,6 @@ static int xhci_check_args(struct usb_hcd *hcd, struct usb_device *udev,
 	}
 
 	xhci = hcd_to_xhci(hcd);
-	if (xhci->xhc_state & XHCI_STATE_HALTED)
-		return -ENODEV;
-
 	if (check_virt_dev) {
 		if (!udev->slot_id || !xhci->devs[udev->slot_id]) {
 			printk(KERN_DEBUG "xHCI %s called with unaddressed "
@@ -1149,6 +1167,9 @@ static int xhci_check_args(struct usb_hcd *hcd, struct usb_device *udev,
 			return -EINVAL;
 		}
 	}
+
+	if (xhci->xhc_state & XHCI_STATE_HALTED)
+		return -ENODEV;
 
 	return 1;
 }
@@ -2241,7 +2262,7 @@ static bool xhci_is_async_ep(unsigned int ep_type)
 
 static bool xhci_is_sync_in_ep(unsigned int ep_type)
 {
-	return (ep_type == ISOC_IN_EP || ep_type != INT_IN_EP);
+	return (ep_type == ISOC_IN_EP || ep_type == INT_IN_EP);
 }
 
 static unsigned int xhci_get_ss_bw_consumed(struct xhci_bw_info *ep_bw)
@@ -4156,6 +4177,13 @@ int xhci_gen_setup(struct usb_hcd *hcd, xhci_get_quirks_t get_quirks)
 	xhci_print_registers(xhci);
 
 	get_quirks(dev, xhci);
+
+	/* In xhci controllers which follow xhci 1.0 spec gives a spurious
+	 * success event after a short transfer. This quirk will ignore such
+	 * spurious event.
+	 */
+	if (xhci->hci_version > 0x96)
+		xhci->quirks |= XHCI_SPURIOUS_SUCCESS;
 
 	/* Make sure the HC is halted. */
 	retval = xhci_halt(xhci);

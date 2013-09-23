@@ -1353,6 +1353,8 @@ static int cayman_startup(struct radeon_device *rdev)
 	/* enable pcie gen2 link */
 	evergreen_pcie_gen2_enable(rdev);
 
+	evergreen_mc_program(rdev);
+
 	if (!rdev->me_fw || !rdev->pfp_fw || !rdev->rlc_fw || !rdev->mc_fw) {
 		r = ni_init_microcode(rdev);
 		if (r) {
@@ -1370,7 +1372,6 @@ static int cayman_startup(struct radeon_device *rdev)
 	if (r)
 		return r;
 
-	evergreen_mc_program(rdev);
 	r = cayman_pcie_gart_enable(rdev);
 	if (r)
 		return r;
@@ -1389,6 +1390,12 @@ static int cayman_startup(struct radeon_device *rdev)
 		return r;
 
 	/* Enable IRQ */
+	if (!rdev->irq.installed) {
+		r = radeon_irq_kms_init(rdev);
+		if (r)
+			return r;
+	}
+
 	r = r600_irq_init(rdev);
 	if (r) {
 		DRM_ERROR("radeon: IH init failed (%d).\n", r);
@@ -1503,10 +1510,6 @@ int cayman_init(struct radeon_device *rdev)
 		return r;
 	/* Memory manager */
 	r = radeon_bo_init(rdev);
-	if (r)
-		return r;
-
-	r = radeon_irq_kms_init(rdev);
 	if (r)
 		return r;
 

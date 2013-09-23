@@ -1057,6 +1057,8 @@ static int rv770_startup(struct radeon_device *rdev)
 	/* enable pcie gen2 link */
 	rv770_pcie_gen2_enable(rdev);
 
+	rv770_mc_program(rdev);
+
 	if (!rdev->me_fw || !rdev->pfp_fw || !rdev->rlc_fw) {
 		r = r600_init_microcode(rdev);
 		if (r) {
@@ -1069,7 +1071,6 @@ static int rv770_startup(struct radeon_device *rdev)
 	if (r)
 		return r;
 
-	rv770_mc_program(rdev);
 	if (rdev->flags & RADEON_IS_AGP) {
 		rv770_agp_enable(rdev);
 	} else {
@@ -1092,6 +1093,12 @@ static int rv770_startup(struct radeon_device *rdev)
 		return r;
 
 	/* Enable IRQ */
+	if (!rdev->irq.installed) {
+		r = radeon_irq_kms_init(rdev);
+		if (r)
+			return r;
+	}
+
 	r = r600_irq_init(rdev);
 	if (r) {
 		DRM_ERROR("radeon: IH init failed (%d).\n", r);
@@ -1217,10 +1224,6 @@ int rv770_init(struct radeon_device *rdev)
 		return r;
 	/* Memory manager */
 	r = radeon_bo_init(rdev);
-	if (r)
-		return r;
-
-	r = radeon_irq_kms_init(rdev);
 	if (r)
 		return r;
 

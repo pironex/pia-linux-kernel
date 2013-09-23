@@ -148,10 +148,8 @@ void snd_usb_release_substream_urbs(struct snd_usb_substream *subs, int force)
 	int i;
 
 	/* stop urbs (to be sure) */
-	if (!subs->stream->chip->shutdown) {
-		deactivate_urbs(subs, force, 1);
-		wait_clear_urbs(subs);
-	}
+	deactivate_urbs(subs, force, 1);
+	wait_clear_urbs(subs);
 
 	for (i = 0; i < MAX_URBS; i++)
 		release_urb_ctx(&subs->dataurb[i]);
@@ -460,7 +458,7 @@ static int retire_capture_urb(struct snd_usb_substream *subs,
 	stride = runtime->frame_bits >> 3;
 
 	for (i = 0; i < urb->number_of_packets; i++) {
-		cp = (unsigned char *)urb->transfer_buffer + urb->iso_frame_desc[i].offset;
+		cp = (unsigned char *)urb->transfer_buffer + urb->iso_frame_desc[i].offset + subs->pkt_offset_adj;
 		if (urb->iso_frame_desc[i].status && printk_ratelimit()) {
 			snd_printdd("frame %d active: %d\n", i, urb->iso_frame_desc[i].status);
 			// continue;
@@ -900,6 +898,7 @@ void snd_usb_init_substream(struct snd_usb_stream *as,
 	subs->speed = snd_usb_get_speed(subs->dev);
 	if (subs->speed >= USB_SPEED_HIGH)
 		subs->ops.prepare_sync = prepare_capture_sync_urb_hs;
+	subs->pkt_offset_adj = 0;
 
 	snd_usb_set_pcm_ops(as->pcm, stream);
 

@@ -584,14 +584,24 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 		struct request sreq;
 
 		dev_info(disk_to_dev(lo->disk), "NBD_DISCONNECT\n");
+		if (!lo->sock)
+			return -EINVAL;
 
+		mutex_unlock(&lo->tx_lock);
+		fsync_bdev(bdev);
+		mutex_lock(&lo->tx_lock);
 		blk_rq_init(NULL, &sreq);
 		sreq.cmd_type = REQ_TYPE_SPECIAL;
 		nbd_cmd(&sreq) = NBD_CMD_DISC;
+
+		/* Check again after getting mutex back.  */
 		if (!lo->sock)
 			return -EINVAL;
+
+		lo->disconnect = 1;
+
 		nbd_send_req(lo, &sreq);
-                return 0;
+		return 0;
 	}
  
 	case NBD_CLEAR_SOCK: {
@@ -603,6 +613,7 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 		nbd_clear_que(lo);
 		BUG_ON(!list_empty(&lo->queue_head));
 		BUG_ON(!list_empty(&lo->waiting_queue));
+		kill_bdev(bdev);
 		if (file)
 			fput(file);
 		return 0;
@@ -620,6 +631,7 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 				lo->sock = SOCKET_I(inode);
 				if (max_part > 0)
 					bdev->bd_invalidated = 1;
+				lo->disconnect = 0; /* we're connected now */
 				return 0;
 			} else {
 				fput(file);
@@ -666,7 +678,8 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 
 		mutex_unlock(&lo->tx_lock);
 
-		thread = kthread_create(nbd_thread, lo, lo->disk->disk_name);
+		thread = kthread_create(nbd_thread, lo, "%s",
+					lo->disk->disk_name);
 		if (IS_ERR(thread)) {
 			mutex_lock(&lo->tx_lock);
 			return PTR_ERR(thread);
@@ -683,6 +696,7 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 		lo->file = NULL;
 		nbd_clear_que(lo);
 		dev_warn(disk_to_dev(lo->disk), "queue cleared\n");
+		kill_bdev(bdev);
 		if (file)
 			fput(file);
 		lo->bytesize = 0;
@@ -690,6 +704,8 @@ static int __nbd_ioctl(struct block_device *bdev, struct nbd_device *lo,
 		set_capacity(lo->disk, 0);
 		if (max_part > 0)
 			ioctl_by_bdev(bdev, BLKRRPART, 0);
+		if (lo->disconnect) /* user requested, ignore socket errors */
+			return 0;
 		return lo->harderror;
 	}
 

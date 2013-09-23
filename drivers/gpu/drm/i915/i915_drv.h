@@ -274,6 +274,8 @@ enum intel_pch {
 
 #define QUIRK_PIPEA_FORCE (1<<0)
 #define QUIRK_LVDS_SSC_DISABLE (1<<1)
+#define QUIRK_INVERT_BRIGHTNESS (1<<2)
+#define QUIRK_NO_PCH_PWM_ENABLE (1<<3)
 
 struct intel_fbdev;
 struct intel_fbc_work;
@@ -374,6 +376,8 @@ typedef struct drm_i915_private {
 	unsigned int lvds_use_ssc:1;
 	unsigned int display_clock_mode:1;
 	int lvds_ssc_freq;
+	unsigned int bios_lvds_val; /* initial [PCH_]LVDS reg val in VBIOS */
+	unsigned int lvds_val; /* used for checking LVDS channel mode */
 	struct {
 		int rate;
 		int lanes;
@@ -1303,6 +1307,7 @@ static inline void intel_unregister_dsm_handler(void) { return; }
 #endif /* CONFIG_ACPI */
 
 /* modesetting */
+extern void i915_redisable_vga(struct drm_device *dev);
 extern void intel_modeset_init(struct drm_device *dev);
 extern void intel_modeset_gem_init(struct drm_device *dev);
 extern void intel_modeset_cleanup(struct drm_device *dev);

@@ -761,6 +761,20 @@ void cred_to_ucred(struct pid *pid, const struct cred *cred,
 }
 EXPORT_SYMBOL_GPL(cred_to_ucred);
 
+void cred_real_to_ucred(struct pid *pid, const struct cred *cred,
+			struct ucred *ucred)
+{
+	ucred->pid = pid_vnr(pid);
+	ucred->uid = ucred->gid = -1;
+	if (cred) {
+		struct user_namespace *current_ns = current_user_ns();
+
+		ucred->uid = user_ns_map_uid(current_ns, cred, cred->uid);
+		ucred->gid = user_ns_map_gid(current_ns, cred, cred->gid);
+	}
+}
+EXPORT_SYMBOL_GPL(cred_real_to_ucred);
+
 int sock_getsockopt(struct socket *sock, int level, int optname,
 		    char __user *optval, int __user *optlen)
 {
@@ -1005,18 +1019,6 @@ static void sock_copy(struct sock *nsk, const struct sock *osk)
 	nsk->sk_security = sptr;
 	security_sk_clone(osk, nsk);
 #endif
-}
-
-/*
- * caches using SLAB_DESTROY_BY_RCU should let .next pointer from nulls nodes
- * un-modified. Special care is taken when initializing object to zero.
- */
-static inline void sk_prot_clear_nulls(struct sock *sk, int size)
-{
-	if (offsetof(struct sock, sk_node.next) != 0)
-		memset(sk, 0, offsetof(struct sock, sk_node.next));
-	memset(&sk->sk_node.pprev, 0,
-	       size - offsetof(struct sock, sk_node.pprev));
 }
 
 void sk_prot_clear_portaddr_nulls(struct sock *sk, int size)

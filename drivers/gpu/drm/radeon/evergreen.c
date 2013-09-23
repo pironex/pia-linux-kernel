@@ -412,6 +412,16 @@ void evergreen_hpd_init(struct radeon_device *rdev)
 
 	list_for_each_entry(connector, &dev->mode_config.connector_list, head) {
 		struct radeon_connector *radeon_connector = to_radeon_connector(connector);
+
+		if (connector->connector_type == DRM_MODE_CONNECTOR_eDP ||
+		    connector->connector_type == DRM_MODE_CONNECTOR_LVDS) {
+			/* don't try to enable hpd on eDP or LVDS avoid breaking the
+			 * aux dp channel on imac and help (but not completely fix)
+			 * https://bugzilla.redhat.com/show_bug.cgi?id=726143
+			 * also avoid interrupt storms during dpms.
+			 */
+			continue;
+		}
 		switch (radeon_connector->hpd.hpd) {
 		case RADEON_HPD_1:
 			WREG32(DC_HPD1_CONTROL, tmp);
@@ -1122,6 +1132,8 @@ void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *sav
 					break;
 				udelay(1);
 			}
+		} else {
+			save->crtc_enabled[i] = false;
 		}
 	}
 
@@ -1135,6 +1147,8 @@ void evergreen_mc_stop(struct radeon_device *rdev, struct evergreen_mc_save *sav
 		blackout &= ~BLACKOUT_MODE_MASK;
 		WREG32(MC_SHARED_BLACKOUT_CNTL, blackout | 1);
 	}
+	/* wait for the MC to settle */
+	udelay(100);
 }
 
 void evergreen_mc_resume(struct radeon_device *rdev, struct evergreen_mc_save *save)
@@ -1728,7 +1742,7 @@ static void evergreen_gpu_init(struct radeon_device *rdev)
 	case CHIP_SUMO:
 		rdev->config.evergreen.num_ses = 1;
 		rdev->config.evergreen.max_pipes = 4;
-		rdev->config.evergreen.max_tile_pipes = 2;
+		rdev->config.evergreen.max_tile_pipes = 4;
 		if (rdev->pdev->device == 0x9648)
 			rdev->config.evergreen.max_simds = 3;
 		else if ((rdev->pdev->device == 0x9647) ||
@@ -1817,7 +1831,7 @@ static void evergreen_gpu_init(struct radeon_device *rdev)
 		break;
 	case CHIP_CAICOS:
 		rdev->config.evergreen.num_ses = 1;
-		rdev->config.evergreen.max_pipes = 4;
+		rdev->config.evergreen.max_pipes = 2;
 		rdev->config.evergreen.max_tile_pipes = 2;
 		rdev->config.evergreen.max_simds = 2;
 		rdev->config.evergreen.max_backends = 1 * rdev->config.evergreen.num_ses;
@@ -3022,6 +3036,8 @@ static int evergreen_startup(struct radeon_device *rdev)
 	/* enable pcie gen2 link */
 	evergreen_pcie_gen2_enable(rdev);
 
+	evergreen_mc_program(rdev);
+
 	if (ASIC_IS_DCE5(rdev)) {
 		if (!rdev->me_fw || !rdev->pfp_fw || !rdev->rlc_fw || !rdev->mc_fw) {
 			r = ni_init_microcode(rdev);
@@ -3049,7 +3065,6 @@ static int evergreen_startup(struct radeon_device *rdev)
 	if (r)
 		return r;
 
-	evergreen_mc_program(rdev);
 	if (rdev->flags & RADEON_IS_AGP) {
 		evergreen_agp_enable(rdev);
 	} else {
@@ -3072,6 +3087,12 @@ static int evergreen_startup(struct radeon_device *rdev)
 		return r;
 
 	/* Enable IRQ */
+	if (!rdev->irq.installed) {
+		r = radeon_irq_kms_init(rdev);
+		if (r)
+			return r;
+	}
+
 	r = r600_irq_init(rdev);
 	if (r) {
 		DRM_ERROR("radeon: IH init failed (%d).\n", r);
@@ -3201,10 +3222,6 @@ int evergreen_init(struct radeon_device *rdev)
 		return r;
 	/* Memory manager */
 	r = radeon_bo_init(rdev);
-	if (r)
-		return r;
-
-	r = radeon_irq_kms_init(rdev);
 	if (r)
 		return r;
 

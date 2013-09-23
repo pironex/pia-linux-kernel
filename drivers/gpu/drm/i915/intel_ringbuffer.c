@@ -398,14 +398,20 @@ static int init_render_ring(struct intel_ring_buffer *ring)
 
 	if (INTEL_INFO(dev)->gen > 3) {
 		int mode = VS_TIMER_DISPATCH << 16 | VS_TIMER_DISPATCH;
-		if (IS_GEN6(dev) || IS_GEN7(dev))
-			mode |= MI_FLUSH_ENABLE << 16 | MI_FLUSH_ENABLE;
 		I915_WRITE(MI_MODE, mode);
-		if (IS_GEN7(dev))
-			I915_WRITE(GFX_MODE_GEN7,
-				   GFX_MODE_DISABLE(GFX_TLB_INVALIDATE_ALWAYS) |
-				   GFX_MODE_ENABLE(GFX_REPLAY_MODE));
 	}
+
+	/* We need to disable the AsyncFlip performance optimisations in order
+	 * to use MI_WAIT_FOR_EVENT within the CS. It should already be
+	 * programmed to '1' on all products.
+	 */
+	if (INTEL_INFO(dev)->gen >= 6)
+		I915_WRITE(MI_MODE, GFX_MODE_ENABLE(ASYNC_FLIP_PERF_DISABLE));
+
+	if (IS_GEN7(dev))
+		I915_WRITE(GFX_MODE_GEN7,
+			   GFX_MODE_DISABLE(GFX_TLB_INVALIDATE_ALWAYS) |
+			   GFX_MODE_ENABLE(GFX_REPLAY_MODE));
 
 	if (INTEL_INFO(dev)->gen >= 5) {
 		ret = init_pipe_control(ring);
@@ -770,6 +776,18 @@ void intel_ring_setup_status_page(struct intel_ring_buffer *ring)
 
 	I915_WRITE(mmio, (u32)ring->status_page.gfx_addr);
 	POSTING_READ(mmio);
+
+	/* Flush the TLB for this page */
+	if (INTEL_INFO(dev)->gen >= 6) {
+		u32 reg = RING_INSTPM(ring->mmio_base);
+		I915_WRITE(reg,
+			   _MASKED_BIT_ENABLE(INSTPM_TLB_INVALIDATE |
+					      INSTPM_SYNC_FLUSH));
+		if (wait_for((I915_READ(reg) & INSTPM_SYNC_FLUSH) == 0,
+			     1000))
+			DRM_ERROR("%s: wait for SyncFlush to complete for TLB invalidation timed out\n",
+				  ring->name);
+	}
 }
 
 static int

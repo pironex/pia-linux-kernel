@@ -27,6 +27,8 @@
 
 #define _PIPE(pipe, a, b) ((a) + (pipe)*((b)-(a)))
 
+#define _MASKED_BIT_ENABLE(a) (((a) << 16) | (a))
+
 /*
  * The Bridge device's PCI config space has information about the
  * fb aperture size and the amount of pre-reserved memory.
@@ -360,6 +362,7 @@
 #define IPEIR_I965	0x02064
 #define IPEHR_I965	0x02068
 #define INSTDONE_I965	0x0206c
+#define RING_INSTPM(base)      ((base)+0xc0)
 #define INSTPS		0x02070 /* 965+ only */
 #define INSTDONE1	0x0207c /* 965+ only */
 #define ACTHD_I965	0x02074
@@ -389,6 +392,7 @@
  * the enables for writing to the corresponding low bit.
  */
 #define _3D_CHICKEN	0x02084
+#define _3D_CHICKEN_HIZ_PLANE_DISABLE_MSAA_4X_SNB	(1 << 10)
 #define _3D_CHICKEN2	0x0208c
 /* Disables pipelining of read flushes past the SF-WIZ interface.
  * Required on all Ironlake steppings according to the B-Spec, but the
@@ -399,7 +403,8 @@
 
 #define MI_MODE		0x0209c
 # define VS_TIMER_DISPATCH				(1 << 6)
-# define MI_FLUSH_ENABLE				(1 << 11)
+# define MI_FLUSH_ENABLE				(1 << 12)
+# define ASYNC_FLIP_PERF_DISABLE			(1 << 14)
 
 #define GEN6_GT_MODE	0x20d0
 #define   GEN6_GT_MODE_HI	(1 << 9)
@@ -454,6 +459,8 @@
 					will not assert AGPBUSY# and will only
 					be delivered when out of C3. */
 #define   INSTPM_FORCE_ORDERING				(1<<7) /* GEN6+ */
+#define   INSTPM_TLB_INVALIDATE	(1<<9)
+#define   INSTPM_SYNC_FLUSH	(1<<5)
 #define ACTHD	        0x020c8
 #define FW_BLC		0x020d8
 #define FW_BLC2		0x020dc
@@ -2816,6 +2823,8 @@
 #define _PFA_CTL_1               0x68080
 #define _PFB_CTL_1               0x68880
 #define  PF_ENABLE              (1<<31)
+#define  PF_PIPE_SEL_MASK_IVB	(3<<29)
+#define  PF_PIPE_SEL_IVB(pipe)	((pipe)<<29)
 #define  PF_FILTER_MASK		(3<<23)
 #define  PF_FILTER_PROGRAMMED	(0<<23)
 #define  PF_FILTER_MED_3x3	(1<<23)
@@ -3507,7 +3516,7 @@
 #define EDP_LINK_TRAIN_600MV_0DB_IVB		(0x30 <<22)
 #define EDP_LINK_TRAIN_600MV_3_5DB_IVB		(0x36 <<22)
 #define EDP_LINK_TRAIN_800MV_0DB_IVB		(0x38 <<22)
-#define EDP_LINK_TRAIN_800MV_3_5DB_IVB		(0x33 <<22)
+#define EDP_LINK_TRAIN_800MV_3_5DB_IVB		(0x3e <<22)
 
 /* legacy values */
 #define EDP_LINK_TRAIN_500MV_0DB_IVB		(0x00 <<22)

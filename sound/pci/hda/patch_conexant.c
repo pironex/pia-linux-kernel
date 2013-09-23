@@ -592,24 +592,12 @@ static int conexant_build_controls(struct hda_codec *codec)
 	return 0;
 }
 
-#ifdef CONFIG_SND_HDA_POWER_SAVE
-static int conexant_suspend(struct hda_codec *codec, pm_message_t state)
-{
-	snd_hda_shutup_pins(codec);
-	return 0;
-}
-#endif
-
 static const struct hda_codec_ops conexant_patch_ops = {
 	.build_controls = conexant_build_controls,
 	.build_pcms = conexant_build_pcms,
 	.init = conexant_init,
 	.free = conexant_free,
 	.set_power_state = conexant_set_power,
-#ifdef CONFIG_SND_HDA_POWER_SAVE
-	.suspend = conexant_suspend,
-#endif
-	.reboot_notify = snd_hda_shutup_pins,
 };
 
 #ifdef CONFIG_SND_HDA_INPUT_BEEP
@@ -1248,7 +1236,7 @@ static int patch_cxt5045(struct hda_codec *codec)
 	}
 
 	if (spec->beep_amp)
-		snd_hda_attach_beep_device(codec, spec->beep_amp);
+		snd_hda_attach_beep_device(codec, get_amp_nid_(spec->beep_amp));
 
 	return 0;
 }
@@ -2039,7 +2027,7 @@ static int patch_cxt5051(struct hda_codec *codec)
 	}
 
 	if (spec->beep_amp)
-		snd_hda_attach_beep_device(codec, spec->beep_amp);
+		snd_hda_attach_beep_device(codec, get_amp_nid_(spec->beep_amp));
 
 	conexant_init_jacks(codec);
 	if (spec->auto_mic & AUTO_MIC_PORTB)
@@ -3237,7 +3225,7 @@ static int patch_cxt5066(struct hda_codec *codec)
 	}
 
 	if (spec->beep_amp)
-		snd_hda_attach_beep_device(codec, spec->beep_amp);
+		snd_hda_attach_beep_device(codec, get_amp_nid_(spec->beep_amp));
 
 	return 0;
 }
@@ -4429,10 +4417,6 @@ static const struct hda_codec_ops cx_auto_patch_ops = {
 	.init = cx_auto_init,
 	.free = conexant_free,
 	.unsol_event = cx_auto_unsol_event,
-#ifdef CONFIG_SND_HDA_POWER_SAVE
-	.suspend = conexant_suspend,
-#endif
-	.reboot_notify = snd_hda_shutup_pins,
 };
 
 /*
@@ -4505,6 +4489,7 @@ static const struct snd_pci_quirk cxt5051_fixups[] = {
 };
 
 static const struct snd_pci_quirk cxt5066_fixups[] = {
+	SND_PCI_QUIRK(0x1025, 0x0543, "Acer Aspire One 522", CXT_FIXUP_STEREO_DMIC),
 	SND_PCI_QUIRK(0x17aa, 0x20f2, "Lenovo T400", CXT_PINCFG_LENOVO_TP410),
 	SND_PCI_QUIRK(0x17aa, 0x215e, "Lenovo T410", CXT_PINCFG_LENOVO_TP410),
 	SND_PCI_QUIRK(0x17aa, 0x215f, "Lenovo T510", CXT_PINCFG_LENOVO_TP410),
@@ -4571,7 +4556,7 @@ static int patch_conexant_auto(struct hda_codec *codec)
 	spec->capture_stream = &cx_auto_pcm_analog_capture;
 	codec->patch_ops = cx_auto_patch_ops;
 	if (spec->beep_amp)
-		snd_hda_attach_beep_device(codec, spec->beep_amp);
+		snd_hda_attach_beep_device(codec, get_amp_nid_(spec->beep_amp));
 	return 0;
 }
 
@@ -4613,6 +4598,18 @@ static const struct hda_codec_preset snd_hda_preset_conexant[] = {
 	  .patch = patch_conexant_auto },
 	{ .id = 0x14f150b9, .name = "CX20665",
 	  .patch = patch_conexant_auto },
+	{ .id = 0x14f1510f, .name = "CX20751/2",
+	  .patch = patch_conexant_auto },
+	{ .id = 0x14f15110, .name = "CX20751/2",
+	  .patch = patch_conexant_auto },
+	{ .id = 0x14f15111, .name = "CX20753/4",
+	  .patch = patch_conexant_auto },
+	{ .id = 0x14f15113, .name = "CX20755",
+	  .patch = patch_conexant_auto },
+	{ .id = 0x14f15114, .name = "CX20756",
+	  .patch = patch_conexant_auto },
+	{ .id = 0x14f15115, .name = "CX20757",
+	  .patch = patch_conexant_auto },
 	{} /* terminator */
 };
 
@@ -4633,6 +4630,12 @@ MODULE_ALIAS("snd-hda-codec-id:14f150ab");
 MODULE_ALIAS("snd-hda-codec-id:14f150ac");
 MODULE_ALIAS("snd-hda-codec-id:14f150b8");
 MODULE_ALIAS("snd-hda-codec-id:14f150b9");
+MODULE_ALIAS("snd-hda-codec-id:14f1510f");
+MODULE_ALIAS("snd-hda-codec-id:14f15110");
+MODULE_ALIAS("snd-hda-codec-id:14f15111");
+MODULE_ALIAS("snd-hda-codec-id:14f15113");
+MODULE_ALIAS("snd-hda-codec-id:14f15114");
+MODULE_ALIAS("snd-hda-codec-id:14f15115");
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Conexant HD-audio codec");
