@@ -37,6 +37,7 @@
 #include <linux/mfd/tps65217.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input/ti_tsc.h>
+#include <linux/platform_data/ti_adc.h>
 #include <linux/mfd/ti_tscadc.h>
 #include <linux/reboot.h>
 #include <linux/pwm/pwm.h>
@@ -55,6 +56,7 @@
 #include <asm/hardware/asp.h>
 
 #include <plat/omap_device.h>
+#include <plat/omap-pm.h>
 #include <plat/irqs.h>
 #include <plat/board.h>
 #include <plat/common.h>
@@ -155,8 +157,13 @@ static struct tsc_data am335x_touchscreen_data  = {
 	.steps_to_configure = 5,
 };
 
+static struct adc_data am335x_adc_data = {
+	.adc_channels = 4,
+};
+
 static struct mfd_tscadc_board tscadc = {
 	.tsc_init = &am335x_touchscreen_data,
+	.adc_init = &am335x_adc_data,
 };
 
 static u8 am335x_iis_serializer_direction1[] = {
@@ -175,8 +182,10 @@ static struct snd_platform_data am335x_evm_snd_data1 = {
 	.serial_dir	= am335x_iis_serializer_direction1,
 	.asp_chan_q	= EVENTQ_2,
 	.version	= MCASP_VERSION_3,
-	.txnumevt	= 1,
-	.rxnumevt	= 1,
+	.txnumevt	= 32,
+	.rxnumevt	= 32,
+	.get_context_loss_count	=
+			omap_pm_get_dev_context_loss_count,
 };
 
 static u8 am335x_evm_sk_iis_serializer_direction1[] = {
@@ -195,7 +204,9 @@ static struct snd_platform_data am335x_evm_sk_snd_data1 = {
 	.serial_dir	= am335x_evm_sk_iis_serializer_direction1,
 	.asp_chan_q	= EVENTQ_2,
 	.version	= MCASP_VERSION_3,
-	.txnumevt	= 1,
+	.txnumevt	= 32,
+	.get_context_loss_count	=
+			omap_pm_get_dev_context_loss_count,
 };
 
 static struct omap2_hsmmc_info am335x_mmc[] __initdata = {
@@ -1058,6 +1069,8 @@ static void lcdc_init(int evm_id, int profile)
 		pr_err("LCDC not supported on this evm (%d)\n",evm_id);
 		return;
 	}
+
+	lcdc_pdata->get_context_loss_count = omap_pm_get_dev_context_loss_count;
 
 	if (am33xx_register_lcdc(lcdc_pdata))
 		pr_info("Failed to register LCDC device\n");
@@ -2015,7 +2028,7 @@ static void am335x_rtc_init(int evm_id, int profile)
 	clk_disable(clk);
 	clk_put(clk);
 
-	if (omap_rev() == AM335X_REV_ES2_0)
+	if (omap_rev() >= AM335X_REV_ES2_0)
 		am335x_rtc_info.wakeup_capable = 1;
 
 	oh = omap_hwmod_lookup("rtc");
@@ -2051,6 +2064,12 @@ static void clkout2_enable(int evm_id, int profile)
 	setup_pin_mux(clkout2_pin_mux);
 }
 
+static void sgx_init(int evm_id, int profile)
+{
+	if (omap3_has_sgx()) {
+		am33xx_gpu_init();
+	}
+}
 /* General Purpose EVM */
 static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{am335x_rtc_init, DEV_ON_BASEBOARD, PROFILE_ALL},
@@ -2085,6 +2104,7 @@ static struct evm_dev_cfg gen_purp_evm_dev_cfg[] = {
 	{volume_keys_init,  DEV_ON_DGHTR_BRD, PROFILE_0},
 	{uart2_init,	DEV_ON_DGHTR_BRD, PROFILE_3},
 	{haptics_init,	DEV_ON_DGHTR_BRD, (PROFILE_4)},
+	{sgx_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
 	{NULL, 0, 0},
 };
 
@@ -2113,6 +2133,7 @@ static struct evm_dev_cfg beaglebone_old_dev_cfg[] = {
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{i2c2_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
+	{sgx_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{NULL, 0, 0},
 };
 
@@ -2126,6 +2147,7 @@ static struct evm_dev_cfg beaglebone_dev_cfg[] = {
 	{usb1_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{mmc0_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{i2c2_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
+	{sgx_init,	DEV_ON_BASEBOARD, PROFILE_NONE},
 	{NULL, 0, 0},
 };
 
@@ -2146,6 +2168,7 @@ static struct evm_dev_cfg evm_sk_dev_cfg[] = {
 	{uart1_wl12xx_init, DEV_ON_BASEBOARD, PROFILE_ALL},
 	{wl12xx_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
 	{gpio_ddr_vtt_enb_init,	DEV_ON_BASEBOARD, PROFILE_ALL},
+	{sgx_init,       DEV_ON_BASEBOARD, PROFILE_ALL},
 	{NULL, 0, 0},
 };
 
@@ -2157,6 +2180,114 @@ static int am33xx_evm_tx_clk_dly_phy_fixup(struct phy_device *phydev)
 
 	return 0;
 }
+
+#define AM33XX_VDD_CORE_OPP50_UV		1100000
+#define AM33XX_OPP120_FREQ		600000000
+#define AM33XX_OPPTURBO_FREQ		720000000
+
+#define AM33XX_ES2_0_VDD_CORE_OPP50_UV	950000
+#define AM33XX_ES2_0_OPP120_FREQ	720000000
+#define AM33XX_ES2_0_OPPTURBO_FREQ	800000000
+#define AM33XX_ES2_0_OPPNITRO_FREQ	1000000000
+
+#define AM33XX_ES2_1_VDD_CORE_OPP50_UV	950000
+#define AM33XX_ES2_1_OPP120_FREQ	720000000
+#define AM33XX_ES2_1_OPPTURBO_FREQ	800000000
+#define AM33XX_ES2_1_OPPNITRO_FREQ	1000000000
+
+static void am335x_opp_update(void)
+{
+	u32 rev;
+	int voltage_uv = 0;
+	struct device *core_dev, *mpu_dev;
+	struct regulator *core_reg;
+
+	core_dev = omap_device_get_by_hwmod_name("l3_main");
+	mpu_dev = omap_device_get_by_hwmod_name("mpu");
+
+	if (!mpu_dev || !core_dev) {
+		pr_err("%s: Aiee.. no mpu/core devices? %p %p\n", __func__,
+		       mpu_dev, core_dev);
+		return;
+	}
+
+	core_reg = regulator_get(core_dev, "vdd_core");
+	if (IS_ERR(core_reg)) {
+		pr_err("%s: unable to get core regulator\n", __func__);
+		return;
+	}
+
+	/*
+	 * Ensure physical regulator is present.
+	 * (e.g. could be dummy regulator.)
+	 */
+	voltage_uv = regulator_get_voltage(core_reg);
+	if (voltage_uv < 0) {
+		pr_err("%s: physical regulator not present for core" \
+		       "(%d)\n", __func__, voltage_uv);
+		regulator_put(core_reg);
+		return;
+	}
+
+	pr_debug("%s: core regulator value %d\n", __func__, voltage_uv);
+	if (voltage_uv > 0) {
+		rev = omap_rev();
+		switch (rev) {
+		case AM335X_REV_ES1_0:
+			if (voltage_uv <= AM33XX_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev, AM33XX_OPP120_FREQ);
+				opp_disable(mpu_dev, AM33XX_OPPTURBO_FREQ);
+			}
+			break;
+		case AM335X_REV_ES2_0:
+			if (voltage_uv <= AM33XX_ES2_0_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPP120_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPPTURBO_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPPNITRO_FREQ);
+			}
+			break;
+		case AM335X_REV_ES2_1:
+		/* FALLTHROUGH */
+		default:
+			if (voltage_uv <= AM33XX_ES2_1_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPP120_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPPTURBO_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPPNITRO_FREQ);
+			}
+			break;
+		}
+	}
+}
+
+static char tps65910_core_vg_scale_sleep_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x1f, /* Set VDD2 to 0.95V */
+	0x0,
+};
+
+static char tps65910_core_vg_scale_wake_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x2b, /* Set VDD2 to 1.1V */
+	0x0,
+};
 
 static void setup_general_purpose_evm(void)
 {
@@ -2176,6 +2307,12 @@ static void setup_general_purpose_evm(void)
 	/* Atheros Tx Clk delay Phy fixup */
 	phy_register_fixup_for_uid(AM335X_EVM_PHY_ID, AM335X_EVM_PHY_MASK,
 				   am33xx_evm_tx_clk_dly_phy_fixup);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
 }
 
 static void setup_ind_auto_motor_ctrl_evm(void)
@@ -2215,6 +2352,32 @@ static void setup_beaglebone_old(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_RMII, NULL, NULL);
 }
 
+static char tps65217_core_vg_scale_sleep_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 1 */
+	0x02, 0x24, 0x10, 0x02, /* Set DCDC3 to 0.95V */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 2 */
+	0x02, 0x24, 0x10, 0x02, /* Set DCDC3 to 0.95V */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 1 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 2 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x0,
+};
+
+static char tps65217_core_vg_scale_wake_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 1 */
+	0x02, 0x24, 0x10, 0x08, /* Set DCDC3 to 1.1V */
+	0x02, 0x24, 0x0b, 0x6d, /* Password unlock 2 */
+	0x02, 0x24, 0x10, 0x08, /* Set DCDC3 to 1.1V */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 1 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x02, 0x24, 0x0b, 0x6c, /* Password unlock 2 */
+	0x02, 0x24, 0x11, 0x86, /* Apply DCDC changes */
+	0x0,
+};
+
 /* BeagleBone after Rev A3 */
 static void setup_beaglebone(void)
 {
@@ -2229,6 +2392,13 @@ static void setup_beaglebone(void)
 	regulator_has_full_constraints();
 
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65217_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65217_core_vg_scale_sleep_seq),
+				tps65217_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65217_core_vg_scale_wake_seq));
+
 }
 
 /* EVM - Starter Kit */
@@ -2245,6 +2415,13 @@ static void setup_starterkit(void)
 	/* Atheros Tx Clk delay Phy fixup */
 	phy_register_fixup_for_uid(AM335X_EVM_PHY_ID, AM335X_EVM_PHY_MASK,
 				   am33xx_evm_tx_clk_dly_phy_fixup);
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
+
 }
 
 static void am335x_setup_daughter_board(struct memory_accessor *m, void *c)
@@ -2338,6 +2515,8 @@ static void am335x_evm_setup(struct memory_accessor *mem_acc, void *context)
 		else
 			goto out;
 	}
+
+	am335x_opp_update();
 
 	return;
 
@@ -2503,6 +2682,23 @@ static void evm_init_cpld(void)
 	i2c_add_driver(&cpld_reg_driver);
 }
 
+static void __iomem *am33xx_i2c0_base;
+
+int am33xx_map_i2c0(void)
+{
+	am33xx_i2c0_base = ioremap(AM33XX_I2C0_BASE, SZ_4K);
+
+	if (!am33xx_i2c0_base)
+		return -ENOMEM;
+
+	return 0;
+}
+
+void __iomem *am33xx_get_i2c0_base(void)
+{
+	return am33xx_i2c0_base;
+}
+
 static void __init am335x_evm_i2c_init(void)
 {
 	/* Initially assume General Purpose EVM Config */
@@ -2549,9 +2745,7 @@ static struct resource am33xx_cpuidle_resources[] = {
 	},
 };
 
-/* AM33XX devices support DDR2 power down */
 static struct am33xx_cpuidle_config am33xx_cpuidle_pdata = {
-	.ddr2_pdown	= 1,
 };
 
 static struct platform_device am33xx_cpuidle_device = {

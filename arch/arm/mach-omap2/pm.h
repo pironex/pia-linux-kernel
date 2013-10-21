@@ -22,6 +22,8 @@ extern int omap3_can_sleep(void);
 extern int omap_set_pwrdm_state(struct powerdomain *pwrdm, u32 state);
 extern int omap3_idle_init(void);
 extern int omap4_idle_init(void);
+extern int am33xx_setup_cpuidle(void);
+extern void am33xx_enter_cpuidle(void);
 
 #if defined(CONFIG_PM_OPP)
 extern int omap3_opp_init(void);
@@ -103,8 +105,12 @@ extern unsigned int am33xx_do_wfi_sz;
 extern unsigned int am33xx_resume_offset;
 /* ... and its pointer from SRAM after copy */
 extern void (*am33xx_do_wfi_sram)(u32 *);
+extern void (*am33xx_do_wfi_cpuidle)(void);
+
 /* The resume location */
 extern void am33xx_resume_vector(void);
+extern void am33xx_sram_cpuidle(void);
+extern unsigned int am33xx_sram_cpuidle_sz;
 
 #define PM_RTA_ERRATUM_i608		(1 << 0)
 #define PM_SDRC_WAKEUP_ERRATUM_i583	(1 << 1)

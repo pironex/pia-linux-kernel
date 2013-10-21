@@ -38,6 +38,12 @@
 #define SELF_REFRESH_ENABLE(m)		(0x2 << 8 | (m << 4))
 #define SELF_REFRESH_DISABLE		(0x0 << 8)
 
+#define EMIF4_0_PWR_MGMT_MODE_MASK	(0x7 << 0x8)
+#define EMIF4_0_PWR_MGMT_MODE_SHIFT	(0x8)
+
+#define EMIF4_0_SLF_RFRSH_TMR_MASK	(0xf << 0x4)
+#define EMIF4_0_SLF_RFRSH_TMR_SHIFT	(0x4)
+
 #define SDRAM_TYPE_MASK			0xe0000000
 #define SDRAM_TYPE_SHIFT		29
 #endif /* __EMIF_H */

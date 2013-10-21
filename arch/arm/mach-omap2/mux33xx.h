@@ -161,8 +161,8 @@
 #define AM33XX_CONTROL_PADCONF_RTC_XTALIN_OFFSET		0x09EC
 #define AM33XX_CONTROL_PADCONF_RTC_XTALOUT_OFFSET		0x09F0
 #define AM33XX_CONTROL_PADCONF_RTC_PWRONRSTN_OFFSET		0x09F8
+#define AM33XX_CONTROL_PADCONF_PMIC_POWER_EN_OFFSET		0x09FC
 #define AM33XX_CONTROL_PADCONF_EXT_WAKEUP_OFFSET		0x0A00
-#define AM33XX_CONTROL_PADCONF_PMIC_POWER_EN_OFFSET		0x09F4
 #define AM33XX_CONTROL_PADCONF_RTC_KALDO_ENN_OFFSET		0x0A04
 #define AM33XX_CONTROL_PADCONF_USB0_DM_OFFSET			0x0A08
 #define AM33XX_CONTROL_PADCONF_USB0_DP_OFFSET		        0x0A0C
@@ -237,5 +237,21 @@
 
 #define AM33XX_CONTROL_PADCONF_MUX_SIZE				\
 		(AM33XX_CONTROL_PADCONF_VREFN_OFFSET + 0x4)
+
+#define MAX_IO_PADCONF	((AM33XX_CONTROL_PADCONF_MUX_SIZE -	\
+				AM33XX_CONTROL_PADCONF_GPMC_AD0_OFFSET) / 4)
+
+#ifndef __ASSEMBLER__
+void am335x_save_padconf(void);
+void am335x_restore_padconf(void);
+
+struct dentry;
+void am33xx_mux_dbg_create_entry(struct dentry *mux_dbg_dir);
+void am33xx_setup_pinmux_on_suspend(void);
+
+void am33xx_standby_setup(unsigned int state);
+void am33xx_standby_release(unsigned int state);
+
+#endif
 
 #endif

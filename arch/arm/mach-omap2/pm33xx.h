@@ -18,6 +18,13 @@
 #ifndef __ASSEMBLER__
 extern void __iomem *am33xx_get_ram_base(void);
 
+extern int am33xx_map_i2c0(void);
+extern void __iomem *am33xx_get_i2c0_base(void);
+extern void am33xx_fill_i2c_scl_sch(u32 *sleep_scll, u32 *sleep_sclh,
+			     u32 *wake_scll, u32 *wake_sclh);
+extern u32 sram_sleep_data_start, sram_sleep_data_sz;
+extern u32 sram_wake_data_start, sram_wake_data_sz;
+
 /*
  * This enum is used to index the array passed to suspend routine with
  * parameters that vary across DDR2 and DDR3 sleep sequence.
@@ -31,6 +38,8 @@ enum suspend_cfg_params {
 	SUSP_VTP_CTRL_VAL,
 	EVM_ID,
 	CPU_REV,
+	SUSPEND_STATE,
+	NEEDS_CORE_VOLTAGE_SCALING,
 	SUSPEND_CFG_PARAMS_END /* Must be the last entry */
 };
 
@@ -41,49 +50,6 @@ struct a8_wkup_m3_ipc_data {
 	int ipc_data2;
 } am33xx_lp_ipc;
 
-struct am33xx_padconf_regs {
-	u16 offset;
-	u32 val;
-};
-
-#ifdef CONFIG_SUSPEND
-static struct am33xx_padconf_regs am33xx_lp_padconf[] = {
-	{.offset = AM33XX_CONTROL_GMII_SEL_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A0_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A1_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A2_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A3_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A4_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A5_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A6_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A7_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A8_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A9_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A10_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_A11_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_WAIT0_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_WPN_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_GPMC_BEN1_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_COL_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_CRS_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXERR_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXEN_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXDV_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXD3_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXD2_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXD1_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXD0_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_TXCLK_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXCLK_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXD3_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXD2_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXD1_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_RXD0_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MII1_REFCLK_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MDIO_DATA_OFFSET},
-	{.offset = AM33XX_CONTROL_PADCONF_MDIO_CLK_OFFSET},
-};
-#endif /* CONFIG_SUSPEND */
 #endif /* ASSEMBLER */
 
 #define M3_TXEV_EOI			(AM33XX_CTRL_BASE + 0x1324)
@@ -94,12 +60,14 @@ static struct am33xx_padconf_regs am33xx_lp_padconf[] = {
 
 #define	DS0_ID				0x3
 #define DS1_ID				0x5
+#define CPUIDLE_ID			0x10
 
 #define M3_STATE_UNKNOWN		-1
 #define M3_STATE_RESET			0
 #define M3_STATE_INITED			1
 #define M3_STATE_MSG_FOR_LP		2
 #define M3_STATE_MSG_FOR_RESET		3
+#define M3_STATE_MSG_FOR_CPUIDLE	4
 
 #define VTP_CTRL_READY		(0x1 << 5)
 #define VTP_CTRL_ENABLE		(0x1 << 6)
@@ -121,5 +89,38 @@ static struct am33xx_padconf_regs am33xx_lp_padconf[] = {
 
 #define CPU_REV_1		1
 #define CPU_REV_2		2
+
+#define M3_VERSION_UNKNOWN		0x0000ffff
+
+#define PM_DS0			0
+#define PM_STANDBY		1
+
+
+/* For i2c handling in core voltage scaling */
+#define OMAP_I2C_SYSC_AUTOIDLE	(1 << 0)
+
+#define OMAP_I2C_STAT_BB		(1 << 12)
+#define OMAP_I2C_STAT_ARDY		(1 << 2)
+#define OMAP_I2C_STAT_NACK		(1 << 1)
+#define OMAP_I2C_STAT_AL		(1 << 0)
+
+#define OMAP_I2C_CON_EN			(1 << 15)
+#define OMAP_I2C_CON_MST		(1 << 10)
+#define OMAP_I2C_CON_TRX		(1 << 9)
+#define OMAP_I2C_CON_STP		(1 << 1)
+#define OMAP_I2C_CON_STT		(1 << 0)
+
+#define OMAP_I2C_SYSC_REG			0x10
+#define OMAP_I2C_STAT_RAW_REG		0x24
+#define OMAP_I2C_STAT_REG			0x28
+#define OMAP_I2C_IRQENABLE_SET		0x2c
+#define OMAP_I2C_IRQENABLE_CLR		0x30
+#define OMAP_I2C_CNT_REG			0x98
+#define OMAP_I2C_DATA_REG			0x9c
+#define OMAP_I2C_CON_REG			0xa4
+#define OMAP_I2C_SA_REG				0xac
+#define OMAP_I2C_PSC_REG			0xb0
+#define OMAP_I2C_SCLL_REG			0xb4
+#define OMAP_I2C_SCLH_REG			0xb8
 
 #endif

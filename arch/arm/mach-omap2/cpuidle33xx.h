@@ -17,7 +17,6 @@
 #define _AM33XX_CPUIDLE_H
 
 struct am33xx_cpuidle_config {
-	u32 ddr2_pdown;
 	void __iomem *emif_base;
 };
 

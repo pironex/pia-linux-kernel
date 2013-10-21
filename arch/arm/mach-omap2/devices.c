@@ -20,6 +20,7 @@
 #include <linux/of.h>
 #include <linux/davinci_emac.h>
 #include <linux/cpsw.h>
+#include <linux/phy.h>
 #include <linux/etherdevice.h>
 #include <linux/dma-mapping.h>
 #include <linux/can/platform/d_can.h>
@@ -1312,6 +1313,8 @@ int am33xx_cpsw_init(enum am33xx_cpsw_mac_mode mode, unsigned char *phy_id0,
 		break;
 	case AM33XX_CPSW_MODE_RGMII:
 		gmii_sel = AM33XX_RGMII_MODE_EN;
+		am33xx_cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RGMII;
+		am33xx_cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RGMII;
 		break;
 	default:
 		return -EINVAL;
@@ -1452,4 +1455,24 @@ int __init omap_init_gpmc(struct gpmc_devices_info *pdata, int pdata_len)
 	}
 
 	return 0;
+}
+
+void __init am33xx_gpu_init(void)
+{
+	int id = -1;
+	struct platform_device *pdev;
+	struct omap_hwmod *oh;
+	char *oh_name = "gfx";
+	char *dev_name = "pvrsrvkm";
+
+	oh = omap_hwmod_lookup(oh_name);
+	if (!oh) {
+		pr_err("Could not find %s hwmod data\n", oh_name);
+		return;
+	}
+
+	pdev = omap_device_build(dev_name, id, oh, NULL, 0, NULL, 0, 0);
+
+	WARN(IS_ERR(pdev), "could not build omap_device for %s\n", oh_name);
+
 }

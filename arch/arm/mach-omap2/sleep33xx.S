@@ -42,6 +42,8 @@
  * 2) susp_vtp_ctrl_val [r1]
  * 3) evm_id [r2]
  * 4) cpu_rev [r3]
+ * 5) suspend_state[r4]
+ * 6) needs_core_vg_scaling[r5]
  *
  * The code loads these values taking r0 value as reference to the array in
  * registers starting from r0, i,e memory_type goes to r0 and susp_vtp_ctrl_val
@@ -123,12 +125,10 @@ wait_sc_\num:
 	/* EMIF config for low power mode */
 	ldr	r0, emif_addr_func
 	blx	r0
-
 	str	r0, emif_addr_virt
 
 	ldr	r0, gpio0_addr_func
 	blx	r0
-
 	str	r0, gpio0_addr_virt
 
 	/* This ensures isb */
@@ -139,14 +139,34 @@ wait_sc_\num:
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c5, 0	@ I+BTB cache invalidate
 
-	ldm	r8, {r0-r3}		@ gather values passed
+	ldm	r8, {r0-r5}		@ gather values passed
 
 	/* Save the values passed */
 	str	r0, mem_type
 	str	r1, susp_vtp_ctrl_val
 	str	r2, evm_id
 	str	r3, cpu_rev
+	str	r4, suspend_state
+	str	r5, needs_core_vg_scaling
 
+	/* setup core voltage scaling only if required */
+	cmp	r5, #1
+	bne	no_core_vg_scale
+
+	/* Get/save the i2c1 base virtual address */
+	ldr	r0, i2c_addr_func
+	blx	r0
+	str	r0, i2c_addr_virt
+
+	/* Load the sleep/wake sequences */
+	ldr	r4, i2c_get_scll_sclh
+	adrl	r0, i2c_sleep_scll
+	adrl	r1, i2c_sleep_sclh
+	adrl	r2, i2c_wake_scll
+	adrl	r3, i2c_wake_sclh
+	blx	r4
+
+no_core_vg_scale:
 	ldr	r0, emif_addr_virt
 
 	/* Save EMIF configuration */
@@ -244,6 +264,16 @@ wait_sc_\num:
 	ldr	r1, [r0, #OMAP4_GPIO_CLEARDATAOUT]
 	mov	r2, #(1 << 7)
 	str	r2, [r0, #OMAP4_GPIO_CLEARDATAOUT]
+
+	/*
+	 * Keep GPIO0 enabled during standby to support
+	 * wakeup from Standby via GPIO0 keys.
+	 *
+	 * GPIO0 is disabled here for EVM_SK only in DS0.
+	 */
+	ldr 	r6, suspend_state
+	cmp	r6, #PM_STANDBY
+	beq	no_gpio_toggle
 
 	/* Disable GPIO0 for EVM_SK here */
 	ldr	r1, virt_gpio0_clkctrl
@@ -347,6 +377,27 @@ put_pll_bypass:
 	pll_bypass	per, virt_per_clk_mode, virt_per_idlest, per_val
 	pll_bypass	mpu, virt_mpu_clk_mode, virt_mpu_idlest, mpu_val
 
+	/* call core voltage scaling only if required */
+	ldr	r5, needs_core_vg_scaling
+	cmp	r5, #1
+	bne	no_core_vg_scale1
+
+	/* Write the sleep sequence, abort on suspend on error */
+
+	/* Enable i2c0 */
+	ldr	r1, virt_i2c0_clkctrl
+	mov	r2, #0x2
+	str	r2, [r1]
+wait_i2c0_enable1:
+	ldr	r3, [r1]
+	cmp	r2, r3
+	bne	wait_i2c0_enable1
+
+	bl	am33xx_i2c_write_sleep
+	cmp	r0, #1
+	beq	wfi_abort
+
+no_core_vg_scale1:
 	dsb
 	dmb
 	isb
@@ -367,7 +418,26 @@ put_pll_bypass:
 	nop
 
 	/* We come here in case of an abort */
+wfi_abort:
+	/* call core voltage scaling only if required */
+	ldr	r5, needs_core_vg_scaling
+	cmp	r5, #1
+	bne	no_core_vg_scale2
+	bl	am33xx_i2c_write_wakeup_abrt
 
+	/* Disable i2c0 clkctrl */
+	ldr	r1, virt_i2c0_clkctrl
+	ldr	r2, [r1]
+	bic	r2, r2, #(3 << 0)
+	str	r2, [r1]
+
+	ldr	r3, module_disabled_val
+wait_i2c0_disable1:
+	ldr	r2, [r1]
+	cmp	r2, r3
+	bne	wait_i2c0_disable1
+
+no_core_vg_scale2:
 	/* Relock the PLLs */
 	pll_lock	mpu_abt, virt_mpu_clk_mode, virt_mpu_idlest, mpu_val
 	pll_lock	per_abt, virt_per_clk_mode, virt_per_idlest, per_val
@@ -462,6 +532,14 @@ poll_vtp_ready_abt3:
 	cmp	r6, #EVM_SK
 	bne	no_gpio_toggle2
 
+	/*
+	 * GPIO0 was not disabled during standby for EVM_SK
+	 * Hence no need to enable it back here.
+	 */
+	ldr	r6, suspend_state
+	cmp	r6, #PM_STANDBY
+	beq	skip_gpio_enable1
+
 	/* Enable GPIO0 for EVM-SK here */
 	ldr	r1, virt_gpio0_clkctrl
 	mov	r2, #0x2
@@ -471,6 +549,7 @@ wait_gpio0_enable:
 	cmp	r2, r3
 	bne	wait_gpio0_enable
 
+skip_gpio_enable1:
 	/* Drive GPIO0_7 HIGH */
 	ldr	r0, gpio0_addr_virt
 	ldr	r1, [r0, #OMAP4_GPIO_SETDATAOUT]
@@ -584,6 +663,26 @@ ENTRY(am33xx_resume_offset)
 	.word . - am33xx_do_wfi
 
 ENTRY(am33xx_resume_from_deep_sleep)
+
+	/* call core voltage scaling only if required */
+	ldr	r5, needs_core_vg_scaling
+	cmp	r5, #1
+	bne	no_core_vg_scale3
+	bl	am33xx_i2c_write_wakeup_success
+
+	/* Disable i2c0 clkctrl */
+	ldr	r1, phys_i2c0_clkctrl
+	ldr	r2, [r1]
+	bic	r2, r2, #(3 << 0)
+	str	r2, [r1]
+
+	ldr	r3, module_disabled_val
+wait_i2c0_disable2:
+	ldr	r2, [r1]
+	cmp	r2, r3
+	bne	wait_i2c0_disable2
+
+no_core_vg_scale3:
 	/* Take the PLLs out of LP_BYPASS */
 	pll_lock	mpu, phys_mpu_clk_mode, phys_mpu_idlest, mpu_val
 	pll_lock	per, phys_per_clk_mode, phys_per_idlest, per_val
@@ -669,6 +768,14 @@ poll_vtp_ready3:
 	cmp	r6, #EVM_SK
 	bne	no_gpio_toggle3
 
+	/*
+	 * GPIO0 was not disabled during standby for EVM_SK
+	 * Hence no need to enable it back here.
+	 */
+	ldr 	r6, suspend_state
+	cmp	r6, #PM_STANDBY
+	beq	skip_gpio_enable2
+
 	/* Enable GPIO0 for EVM-SK here */
 	ldr	r1, phys_gpio0_clkctrl
 	mov	r2, #0x2
@@ -678,6 +785,7 @@ wait_gpio0_phys_enable:
 	cmp	r2, r3
 	bne	wait_gpio0_phys_enable
 
+skip_gpio_enable2:
 	/* Drive GPIO0_7 HIGH */
 	ldr	r0, gpio0_phys_addr
 	ldr	r1, [r0, #OMAP4_GPIO_SETDATAOUT]
@@ -807,6 +915,155 @@ wait_loop2:
 ENTRY(am33xx_resume_vector)
 	ldr	pc, resume_addr
 
+/* VDD Core Scaling through i2c handling */
+am33xx_i2c_write_wakeup_abrt:
+	ldr	r3, i2c_addr_virt
+	b	wake_up_path
+
+am33xx_i2c_write_wakeup_success:
+	ldr	r3, i2c_addr_phys
+wake_up_path:
+	adrl	r2, sram_wake_data
+	ldr	r4, i2c_wake_scll
+	ldr	r5, i2c_wake_sclh
+	b	am33xx_i2c_write
+
+am33xx_i2c_write_sleep:
+	adrl	r2, sram_sleep_data
+	ldr	r3, i2c_addr_virt
+	ldr	r4, i2c_sleep_scll
+	ldr	r5, i2c_sleep_sclh
+
+am33xx_i2c_write:
+	/* Early out check, don't touch the hardware */
+	ldrb	r6, [r2]
+	tst	r6, r6
+	moveq	pc, lr
+
+	/* Save modified registers */
+	ldr	r1, [r3, #OMAP_I2C_SYSC_REG]
+	str	r1, i2c_sysc_bkp
+	ldrh	r1, [r3, #OMAP_I2C_CON_REG]
+	str	r1, i2c_con_bkp
+	ldrh	r1, [r3, #OMAP_I2C_IRQENABLE_SET]
+	str	r1, i2c_irqen_bkp
+	ldrh	r1, [r3, #OMAP_I2C_PSC_REG]
+	str	r1, i2c_psc_bkp
+	ldrh	r1, [r3, #OMAP_I2C_SCLL_REG]
+	str	r1, i2c_scll_bkp
+	ldrh	r1, [r3, #OMAP_I2C_SCLH_REG]
+	str	r1, i2c_sclh_bkp
+
+	/* Disable auto-idle */
+	ldr     r1, [r3, #OMAP_I2C_SYSC_REG]
+	bic     r1, r1, #OMAP_I2C_SYSC_AUTOIDLE
+	str     r1, [r3, #OMAP_I2C_SYSC_REG]
+
+	/* Disable controller */
+	movw	r1, #0
+	strh	r1, [r3, #OMAP_I2C_CON_REG]
+
+	/* Configure psc, scll, sclh */
+
+	/* Frequency of XTAL will never be high enough to require PSC */
+	movw	r1, #0
+	strh	r1, [r3, #OMAP_I2C_PSC_REG]
+	strh	r4, [r3, #OMAP_I2C_SCLL_REG]
+	strh	r5, [r3, #OMAP_I2C_SCLH_REG]
+
+	/* Enable controller */
+	movw	r1, #OMAP_I2C_CON_EN
+	strh	r1, [r3, #OMAP_I2C_CON_REG]
+
+	/* Disable all event interrupts */
+	movw	r5, #0xffff
+	strh	r5, [r3, #OMAP_I2C_IRQENABLE_CLR]
+
+i2c_transfer:
+	/* Ack all events */
+	strh	r5, [r3, #OMAP_I2C_STAT_REG]
+
+	/*
+	 * Loop through the I2C transfer list, a zero byte transfer
+	 * terminates the list.
+	 */
+	ldrb	r4, [r2], #1
+	tst	r4, r4
+	beq	i2c_success
+
+	/* Wait for bus to be ready */
+	mov	r0, #1000
+1:	ldr	r1, [r3, #OMAP_I2C_STAT_RAW_REG]
+	tst	r1, #OMAP_I2C_STAT_BB
+	beq	bb_cleared
+	subs	r0, r0, #1
+	bne	1b
+	b	i2c_err
+
+bb_cleared:
+	/* Ack all events */
+	strh	r5, [r3, #OMAP_I2C_STAT_REG]
+
+	/* Program I2C target address */
+	ldrb	r1, [r2], #1
+	strh	r1, [r3, #OMAP_I2C_SA_REG]
+
+	/* Store the length of the transfer */
+	strh	r4, [r3, #OMAP_I2C_CNT_REG]
+
+	/* Configure I2C controller for transfer */
+	movw	r1, #(OMAP_I2C_CON_EN | OMAP_I2C_CON_MST | OMAP_I2C_CON_TRX | \
+					OMAP_I2C_CON_STP | OMAP_I2C_CON_STT)
+	strh	r1, [r3, #OMAP_I2C_CON_REG]
+
+	/* Ack all events */
+	strh	r5, [r3, #OMAP_I2C_STAT_REG]
+
+	/* Write out data */
+1:	ldrb	r1, [r2], #1
+	strh	r1, [r3, #OMAP_I2C_DATA_REG]
+	subs	r4, r4, #1
+	bne 	1b
+
+	/* Wait for transfer to complete */
+	mov	r0, #1000
+1:	ldr	r1, [r3, #OMAP_I2C_STAT_RAW_REG]
+	tst	r1, #(OMAP_I2C_STAT_NACK | OMAP_I2C_STAT_AL)
+	bne	i2c_err
+	tst	r1, #OMAP_I2C_STAT_ARDY
+	bne	i2c_transfer
+	subs	r0, r0, #1
+	bne	1b
+
+i2c_err:
+	/* ACK all events and return NE */
+	movs	r0, #1
+	strh	r5, [r3, #OMAP_I2C_STAT_REG]
+	mov	pc, lr
+
+i2c_success:
+
+	/* Disable controller */
+	movw	r1, #0
+	strh	r1, [r3, #OMAP_I2C_CON_REG]
+
+	/* Restore modified registers */
+	ldr	r4, i2c_sclh_bkp
+	strh	r4, [r3, #OMAP_I2C_SCLH_REG]
+	ldr	r4, i2c_scll_bkp
+	strh	r4, [r3, #OMAP_I2C_SCLL_REG]
+	ldr	r4, i2c_psc_bkp
+	str	r4, [r3, #OMAP_I2C_PSC_REG]
+	ldr	r4, i2c_con_bkp
+	strh	r4, [r3, #OMAP_I2C_CON_REG]
+	ldr	r4, i2c_irqen_bkp
+	strh	r4, [r3, #OMAP_I2C_IRQENABLE_SET]
+	ldr	r4, i2c_sysc_bkp
+	str	r4, [r3, #OMAP_I2C_SYSC_REG]
+
+	movs	r0, #0
+	mov	pc, lr
+
 /*
  * Local variables
  */
@@ -828,6 +1085,114 @@ gpio0_phys_addr:
 
 ddr_start:
 	.word	PAGE_OFFSET
+
+i2c_addr_func:
+	.word	am33xx_get_i2c0_base
+i2c_get_scll_sclh:
+	.word	am33xx_fill_i2c_scl_sch
+i2c_addr_virt:
+	.word	0xDEADBEEF
+i2c_addr_phys:
+	.word	AM33XX_I2C0_BASE
+i2c_sysc_bkp:
+	.word	0xDEADBEEF
+i2c_con_bkp:
+	.word	0xDEADBEEF
+i2c_irqen_bkp:
+	.word	0xDEADBEEF
+i2c_psc_bkp:
+	.word	0xDEADBEEF
+i2c_scll_bkp:
+	.word	0xDEADBEEF
+i2c_sclh_bkp:
+	.word	0xDEADBEEF
+i2c_sleep_scll:
+	.word	0xDEADBEEF
+i2c_sleep_sclh:
+	.word	0xDEADBEEF
+i2c_wake_scll:
+	.word	0xDEADBEEF
+i2c_wake_sclh:
+	.word	0xDEADBEEF
+
+/* I2C sleep/wake sequence data */
+ENTRY(sram_sleep_data_start)
+	.word . - am33xx_do_wfi
+
+ENTRY(sram_sleep_data)
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+	.word	0x55aa55aa
+ENTRY(sram_sleep_data_sz)
+	.word . - sram_sleep_data
+
+ENTRY(sram_wake_data_start)
+	.word	. - am33xx_do_wfi
+
+ENTRY(sram_wake_data)
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+	.word	0x33cc33cc
+ENTRY(sram_wake_data_sz)
+	.word . - sram_wake_data
 
 virt_mpu_idlest:
 	.word	AM33XX_CM_IDLEST_DPLL_MPU
@@ -881,6 +1246,11 @@ virt_sram_ldo_addr:
 	.word	AM33XX_PRM_LDO_SRAM_MPU_CTRL
 phys_sram_ldo_addr:
 	.word	AM33XX_PRM_BASE + AM33XX_PRM_DEVICE_MOD + AM33XX_PRM_LDO_SRAM_MPU_CTRL_OFFSET
+
+virt_i2c0_clkctrl:
+	.word	AM33XX_CM_WKUP_I2C0_CLKCTRL
+phys_i2c0_clkctrl:
+	.word	AM33XX_CM_BASE + AM33XX_CM_WKUP_MOD + AM33XX_CM_WKUP_I2C0_CLKCTRL_OFFSET
 
 virt_gpio0_clkctrl:
 	.word	AM33XX_CM_WKUP_GPIO0_CLKCTRL
@@ -959,6 +1329,10 @@ evm_id:
 	.word	0xDEADBEEF
 cpu_rev:
 	.word	0xDEADBEEF
+suspend_state:
+	.word	0xDEADBEEF
+needs_core_vg_scaling:
+	.word	0xDEADBEEF
 emif_addr_virt:
 	.word	0xDEADBEEF
 gpio0_addr_virt:
@@ -996,3 +1370,74 @@ clk_mode_core_val:
 
 ENTRY(am33xx_do_wfi_sz)
 	.word	. - am33xx_do_wfi
+
+
+	.align 3
+ENTRY(am33xx_sram_cpuidle)
+	stmfd   sp!, {r4 - r11, lr}     @ save registers on stack
+
+	/* This ensures isb */
+	ldr	r0, cpuidle_dcache_flush
+	blx	r0
+
+	/* Same as v7_flush_icache_all - saving a branch */
+	mov	r0, #0
+	mcr	p15, 0, r0, c7, c5, 0	@ I+BTB cache invalidate
+
+	/*
+	 * For the MPU WFI to be registered as an interrupt
+	 * to WKUP_M3, MPU_CLKCTRL.MODULEMODE needs to be set
+	 * to DISABLED
+	 */
+	ldr	r1, virt_mpu_clkctrl
+	ldr	r2, [r1]
+	bic	r2, r2, #0x03
+	str	r2, [r1]
+
+	/*
+	 * Execute an ISB instruction to ensure that all of the
+	 * CP15 register changes have been committed.
+	 */
+	isb
+
+	/*
+	 * Execute a barrier instruction to ensure that all cache,
+	 * TLB and branch predictor maintenance operations issued
+	 * have completed.
+	 */
+	dsb
+	dmb
+
+	/*
+	 * Execute a WFI instruction and wait until the
+	 * STANDBYWFI output is asserted to indicate that the
+	 * CPU is in idle and low power state. CPU can specualatively
+	 * prefetch the instructions so add NOPs after WFI. Thirteen
+	 * NOPs as per Cortex-A8 pipeline.
+	 */
+	wfi
+
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+	ldmfd   sp!, {r4 - r11, pc}     @ restore regs and return
+
+cpuidle_dcache_flush:
+	.word   v7_flush_dcache_all
+
+virt_mpu_clkctrl:
+	.word	AM33XX_CM_MPU_MPU_CLKCTRL
+
+ENTRY(am33xx_sram_cpuidle_sz)
+	.word   . - am33xx_sram_cpuidle
