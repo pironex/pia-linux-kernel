@@ -30,6 +30,7 @@
 #include "prm33xx.h"
 #include "control.h"
 
+	.arm			@ force arm mode to allow ADRL
 /*
  * We should probably pass in the virtual address of PRCM, Control and EMIF
  * along with the physical addresses, load it into the registers
