@@ -80,6 +80,8 @@
 #define AM35X_TX_INTR_MASK	(AM35X_TX_EP_MASK << AM35X_INTR_TX_SHIFT)
 #define AM35X_RX_INTR_MASK	(AM35X_RX_EP_MASK << AM35X_INTR_RX_SHIFT)
 
+#define A_WAIT_BCON_TIMEOUT     1100            /* in ms */
+
 #define USB_MENTOR_CORE_OFFSET	0x400
 
 struct am35x_glue {
@@ -178,6 +180,13 @@ static void otg_timer(unsigned long _musb)
 		devctl = musb_readb(mregs, MUSB_DEVCTL);
 		if (devctl & MUSB_DEVCTL_BDEVICE)
 			mod_timer(&otg_workaround, jiffies + POLL_SECONDS * HZ);
+		else if ((devctl & MUSB_DEVCTL_SESSION) &&
+				!(devctl & MUSB_DEVCTL_BDEVICE)) {
+			mod_timer(&otg_workaround,
+					jiffies + POLL_SECONDS * HZ);
+			musb_writeb(musb->mregs, MUSB_DEVCTL, devctl &
+					~MUSB_DEVCTL_SESSION);
+		}
 		else
 			musb->xceiv->state = OTG_STATE_A_IDLE;
 		break;
@@ -288,11 +297,19 @@ static irqreturn_t am35x_musb_interrupt(int irq, void *hci)
 			mod_timer(&otg_workaround, jiffies + POLL_SECONDS * HZ);
 			WARNING("VBUS error workaround (delay coming)\n");
 		} else if (is_host_enabled(musb) && drvvbus) {
-			MUSB_HST_MODE(musb);
-			musb->xceiv->default_a = 1;
-			musb->xceiv->state = OTG_STATE_A_WAIT_VRISE;
-			portstate(musb->port1_status |= USB_PORT_STAT_POWER);
-			del_timer(&otg_workaround);
+			if (!(devctl & MUSB_DEVCTL_SESSION) ||
+					(devctl & MUSB_DEVCTL_BDEVICE) ||
+					(devctl & MUSB_DEVCTL_HM)) {
+				if (musb->is_active)
+					del_timer(&otg_workaround);
+				else
+					musb->is_active = 1;
+
+				MUSB_HST_MODE(musb);
+				musb->xceiv->default_a = 1;
+				musb->xceiv->state = OTG_STATE_A_WAIT_VRISE;
+				portstate(musb->port1_status |= USB_PORT_STAT_POWER);
+			}
 		} else {
 			musb->is_active = 0;
 			MUSB_DEV_MODE(musb);
@@ -389,6 +406,7 @@ static int am35x_musb_init(struct musb *musb)
 
 	msleep(5);
 
+	musb->a_wait_bcon = A_WAIT_BCON_TIMEOUT;
 	musb->isr = am35x_musb_interrupt;
 
 	/* clear level interrupt */
