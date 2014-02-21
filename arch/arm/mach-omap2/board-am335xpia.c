@@ -1528,11 +1528,13 @@ static void setup_e2(void)
 		am33xx_piarev = 1;
 	} else if (0 == strncmp("0.02", config.version, 4)) {
 		am33xx_piarev = 2;
+	} else if (0 == strncmp("0.03", config.version, 4)) {
+		am33xx_piarev = 3;
 	} else {
 		pr_warn("PIA335E2: Unknown board revision %.4s, using "
 				"rev 2 configuration\n",
 				config.version);
-		am33xx_piarev = 2;
+		am33xx_piarev = 3;
 	}
 	pr_info("piA335x: Setup KM E2 rev %d\n", am33xx_piarev);
 	/* EVM - Starter Kit */
