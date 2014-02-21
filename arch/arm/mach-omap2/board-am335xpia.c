@@ -1682,8 +1682,9 @@ static struct tps65910_board pia335x_tps65910_info = {
 
 static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 	{
-		/* Daughter Board EEPROM */
-		I2C_BOARD_INFO("24c00", PIA335X_EEPROM_I2C_ADDR),
+		/* Board ID EEPROM, KM E2 Rev 0.01 & 0.02 use 24c00,
+		 * 0.03 uses 24cs01 (taking only 1 address 0x50) */
+		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR),
 		.platform_data  = &pia335x_eeprom_info,
 	},
 	{
