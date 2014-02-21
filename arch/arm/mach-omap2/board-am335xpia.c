@@ -62,6 +62,8 @@
 #include "mux.h"
 #include "hsmmc.h"
 
+// #define CONFIG_PIAAM335X_PROTOTYPE
+
 /** BOARD CONFIG storage */
 static struct omap_board_config_kernel pia335x_config[] __initdata = {
 };
@@ -985,6 +987,8 @@ struct pia_gpios {
 #define E2_GPIO_PMIC_INT	GPIO_TO_PIN(0, 28)
 #define E2_GPIO_CAN2_INT	GPIO_TO_PIN(3, 20)
 #define E2_GPIO_RS485_DE	GPIO_TO_PIN(2, 17)
+
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 /* pinmux for special gpios */
 static struct pinmux_config km_e2_gpios_pin_mux[] = {
 	/* Ext. RESET */
@@ -1097,6 +1101,7 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term" },
 	{ E2_GPIO_APS_TERM,	GPIOF_OUT_INIT_LOW, "aps_term" },
 };
+#endif /* CONFIG_PIAAM335X_PROTOTYPE
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -1111,6 +1116,7 @@ static void km_e2_gpios_init(void)
 	int i, sz;
 	struct pinmux_config *muxcfg;
 	struct gpio *gpiocfg;
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		muxcfg = km_e2_gpios_pin_mux;
 		gpiocfg = km_e2_gpios;
@@ -1120,6 +1126,7 @@ static void km_e2_gpios_init(void)
 		gpiocfg = km_e2_rev2_gpios;
 		sz = ARRAY_SIZE(km_e2_rev2_gpios);
 	}
+#endif
 	setup_pin_mux(muxcfg);
 
 	for (i = 0; i < sz; ++i) {
