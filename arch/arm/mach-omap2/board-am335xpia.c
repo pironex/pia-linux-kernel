@@ -1741,7 +1741,6 @@ static struct resource am33xx_cpuidle_resources[] = {
 
 /* AM33XX devices support DDR2 power down */
 static struct am33xx_cpuidle_config pia335x_cpuidle_pdata = {
-	.ddr2_pdown	= 1,
 };
 
 static struct platform_device pia335x_cpuidle_device = {
