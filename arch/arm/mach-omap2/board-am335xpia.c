@@ -174,6 +174,9 @@ static struct pinmux_config km_e2_board_pin_mux[] = {
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
 	{ "uart0_rtsn.i2c1_scl",
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	/* disable JTAG EMU 2+3 */
+	{"xdma_event_intr0.gpio0_19", AM33XX_PIN_INPUT_PULLUP},
+	{"xdma_event_intr1.gpio0_20", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -517,7 +520,6 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 	{"uart1_txd.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
-
 
 /* pinmux for led drivers */
 static struct pinmux_config km_e2_leds_pin_mux[] = {
@@ -979,12 +981,16 @@ struct pia_gpios {
 #define E2_GPIO_230V_A		GPIO_TO_PIN(3, 2)
 #define E2_GPIO_230V_B		GPIO_TO_PIN(3, 4)
 #define E2_GPIO_FRAM_WP		GPIO_TO_PIN(3, 21)
+#define E2_GPIO_WARTUNG		GPIO_TO_PIN(3, 3)
 #define E2_GPIO_KSB_TERM1	GPIO_TO_PIN(2, 21)
 #define E2_GPIO_APS_TERM	GPIO_TO_PIN(1, 31)
 #define E2_GPIO_RESERVE2	GPIO_TO_PIN(3, 9)
 #define E2_GPIO_RESERVE3	GPIO_TO_PIN(0, 27)
 #define E2_GPIO_RESERVE4	GPIO_TO_PIN(3, 4)
+#define E2_GPIO_POE_PS_SHUTDOWN GPIO_TO_PIN(3, 9)
+#define E2_GPIO_PSE_SHUTDOWN	GPIO_TO_PIN(3, 20)
 /* special GPIOs, handled elsewhere */
+#define E2_GPIO_BOOT0_E1	GPIO_TO_PIN(3, 4)
 #define E2_GPIO_PMIC_INT	GPIO_TO_PIN(0, 28)
 #define E2_GPIO_RS485_DE	GPIO_TO_PIN(2, 17)
 
@@ -1101,11 +1107,71 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
 	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
 	{ E2_GPIO_230V_A,	GPIOF_IN, "230v_test" },
-	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
+	{ E2_GPIO_WARTUNG_R1,	GPIOF_IN, "wartung" },
 	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term" },
 	{ E2_GPIO_APS_TERM,	GPIOF_OUT_INIT_LOW, "aps_term" },
 };
-#endif /* CONFIG_PIAAM335X_PROTOTYPE
+#endif /* CONFIG_PIAAM335X_PROTOTYPE */
+
+/* E2 rev0.03 */
+static struct pinmux_config km_e2_gpios_pin_mux[] = {
+	/* Ext. RESET */
+	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
+	/* USB OC */
+	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET1 */
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	/* WD_SET2 */
+	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* WDI */
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	/* 24V FAIL */
+	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* FRAM WP */
+	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
+	/* FF_CLK */
+	{"mii1_rxclk.gpio3_10",    AM33XX_PIN_INPUT_PULLUP },
+	/* WD_RESET */
+	{"gpmc_ad14.gpio1_14",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* PB_RESET */
+	{"mii1_col.gpio3_0",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* *S_ASAUS */
+	{"mii1_crs.gpio3_1",       AM33XX_PIN_INPUT_PULLDOWN },
+	/* 230V_A */
+	{"mii1_rxerr.gpio3_2",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* Wartung */
+	{"mii1_txen.gpio3_3",      AM33XX_PIN_INPUT_PULLDOWN },
+	/* KSB_TERM */
+	{"mii1_rxd0.gpio2_21",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* APS_TERM */
+	{"gpmc_csn2.gpio1_31",     AM33XX_PIN_INPUT_PULLDOWN },
+	/* RS485 DE */
+	{"lcd_data11.gpio2_17",    AM33XX_PIN_INPUT_PULLUP},
+	/* PoE_PS_Shutdown */
+	{"mii1_txclk.gpio3_9",     AM33XX_PIN_INPUT_PULLUP},
+	/* PSE_Shutdown */
+	{"mcasp0_axr.gpio3_20",    AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+static struct gpio km_e2_gpios[] = {
+	{ E2_GPIO_EXT_RESET,	GPIOF_OUT_INIT_HIGH, "ext_reset" },
+	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
+	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
+	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
+	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
+	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
+	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
+	{ E2_GPIO_PB_RESET,	GPIOF_IN, "pb_reset" },
+	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
+	{ E2_GPIO_230V_A,	GPIOF_IN, "230v_test" },
+	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
+	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term" },
+	{ E2_GPIO_APS_TERM,	GPIOF_OUT_INIT_LOW, "aps_term" },
+	{ E2_GPIO_POE_PS_SHUTDOWN, GPIOF_OUT_INIT_HIGH, "poe_ps_shutdown" },
+	{ E2_GPIO_PSE_SHUTDOWN,	GPIOF_OUT_INIT_LOW, "pse_shutdown" },
+};
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -1122,14 +1188,18 @@ static void km_e2_gpios_init(void)
 	struct gpio *gpiocfg;
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
-		muxcfg = km_e2_gpios_pin_mux;
-		gpiocfg = km_e2_gpios;
-		sz = ARRAY_SIZE(km_e2_gpios);
-	} else {
+		muxcfg = km_e2_rev1_gpios_pin_mux;
+		gpiocfg = km_e2_rev1_gpios;
+		sz = ARRAY_SIZE(km_e2_rev1_gpios);
+	} else if (am33xx_piarev == 2) {
 		muxcfg = km_e2_rev2_gpios_pin_mux;
 		gpiocfg = km_e2_rev2_gpios;
 		sz = ARRAY_SIZE(km_e2_rev2_gpios);
+	} else {
 #endif
+		muxcfg = km_e2_gpios_pin_mux;
+		gpiocfg = km_e2_gpios;
+		sz = ARRAY_SIZE(km_e2_gpios);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
 #endif
@@ -1564,6 +1634,9 @@ static void setup_e2(void)
 	km_e2_can_init();
 	km_e2_spi_init();
 	km_e2_rs485_init();
+	if (am33xx_piarev >= 3) {
+		km_e2_uart4_init();
+	}
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1)
