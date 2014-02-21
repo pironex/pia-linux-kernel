@@ -750,10 +750,23 @@ static struct led_info km_e2_leds1_config[] = {
 		.name = "pbled2",
 		.default_trigger = "default-on",
 	},
+	/* 10 and 11 only used in Rev 0.3 */
+	{
+		.name = "null",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led10",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led11",
+		.default_trigger = "none",
+	},
 };
 static struct pca9633_platform_data km_e2_leds1_data = {
 	.leds = {
-		.num_leds = 5,
+		.num_leds = 8,
 		.leds = km_e2_leds1_config,
 	},
 	.outdrv = PCA9633_OPEN_DRAIN,
