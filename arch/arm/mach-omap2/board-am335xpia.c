@@ -549,6 +549,7 @@ static struct pinmux_config km_e2_spi_pin_mux[] = {
 	{NULL, 0},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 /** CLKOUT2 */
 #define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
 static void km_e2_clkout2_enable(void)
@@ -604,6 +605,7 @@ static void km_e2_clkout2_enable(void)
 
 	setup_pin_mux(clkout2_pin_mux);
 }
+#endif
 
 static void km_mmi_clkout2_enable(void)
 {
@@ -717,11 +719,13 @@ static void usb0_init(void)
 	setup_pin_mux(usb0_pin_mux);
 }
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 /* USB1 host */
 static void usb1_init(void)
 {
 	setup_pin_mux(usb1_pin_mux);
 }
+#endif
 
 /* MII2 */
 static void mii2_init(void)
@@ -975,22 +979,22 @@ struct pia_gpios {
 #define E2_GPIO_230V_A		GPIO_TO_PIN(3, 2)
 #define E2_GPIO_230V_B		GPIO_TO_PIN(3, 4)
 #define E2_GPIO_FRAM_WP		GPIO_TO_PIN(3, 21)
-#define E2_GPIO_WARTUNG		GPIO_TO_PIN(0, 16)
 #define E2_GPIO_KSB_TERM1	GPIO_TO_PIN(2, 21)
-#define E2_GPIO_KSB_TERM2	GPIO_TO_PIN(1, 30)
 #define E2_GPIO_APS_TERM	GPIO_TO_PIN(1, 31)
-#define E2_GPIO_RESERVE1	GPIO_TO_PIN(0, 17)
 #define E2_GPIO_RESERVE2	GPIO_TO_PIN(3, 9)
 #define E2_GPIO_RESERVE3	GPIO_TO_PIN(0, 27)
 #define E2_GPIO_RESERVE4	GPIO_TO_PIN(3, 4)
 /* special GPIOs, handled elsewhere */
 #define E2_GPIO_PMIC_INT	GPIO_TO_PIN(0, 28)
-#define E2_GPIO_CAN2_INT	GPIO_TO_PIN(3, 20)
 #define E2_GPIO_RS485_DE	GPIO_TO_PIN(2, 17)
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
+#define E2_GPIO_WARTUNG_R1	GPIO_TO_PIN(0, 16)
+#define E2_GPIO_KSB_TERM2	GPIO_TO_PIN(1, 30)
+#define E2_GPIO_RESERVE1	GPIO_TO_PIN(0, 17)
+#define E2_GPIO_CAN2_INT	GPIO_TO_PIN(3, 20)
 /* pinmux for special gpios */
-static struct pinmux_config km_e2_gpios_pin_mux[] = {
+static struct pinmux_config km_e2_rev1_gpios_pin_mux[] = {
 	/* Ext. RESET */
 	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
 	/* USB OC */
@@ -1029,7 +1033,7 @@ static struct pinmux_config km_e2_gpios_pin_mux[] = {
 	{"lcd_data11.gpio2_17",    AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
-static struct gpio km_e2_gpios[] = {
+static struct gpio km_e2_rev1_gpios[] = {
 	{ E2_GPIO_EXT_RESET,	GPIOF_OUT_INIT_HIGH, "ext_reset" },
 	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
@@ -1043,7 +1047,7 @@ static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_S_ASAUS,	GPIOF_IN, "s_asaus" },
 	{ E2_GPIO_230V_A,	GPIOF_IN, "230v_a" },
 	{ E2_GPIO_230V_B,	GPIOF_IN, "230v_b" },
-	{ E2_GPIO_WARTUNG,	GPIOF_IN, "wartung" },
+	{ E2_GPIO_WARTUNG_R1,	GPIOF_IN, "wartung" },
 	{ E2_GPIO_KSB_TERM1,	GPIOF_OUT_INIT_LOW, "ksb_term1" },
 	{ E2_GPIO_KSB_TERM2,	GPIOF_OUT_INIT_LOW, "ksb_term2" },
 };
@@ -1125,6 +1129,8 @@ static void km_e2_gpios_init(void)
 		muxcfg = km_e2_rev2_gpios_pin_mux;
 		gpiocfg = km_e2_rev2_gpios;
 		sz = ARRAY_SIZE(km_e2_rev2_gpios);
+#endif
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
 #endif
 	setup_pin_mux(muxcfg);
@@ -1283,10 +1289,12 @@ static void km_e2_rs485_init(void)
 	gpio_export(E2_GPIO_RS485_DE, 0);
 }
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void km_e2_ls7366_init(void)
 {
-	//pia335x_clkout2_enable();
+	pia335x_clkout2_enable();
 }
+#endif
 
 /**
  * AM33xx internal RTC
@@ -1536,22 +1544,29 @@ static void setup_e2(void)
 	km_e2_i2c1_init(); /* second i2c bus */
 	mmc0_init();
 	mii2_init();
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		usb1_init();
 		km_e2_clkout2_enable();
 	} else {
+#endif
 		/* since 0.02 only USB0, we have to init musb_board_data
 		 * before usb core driver is initialized */
 		usb0_init();
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
+#endif
 	nand_init();
 
 	km_e2_gpios_init();
 	km_e2_can_init();
 	km_e2_spi_init();
 	km_e2_rs485_init();
+
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1)
 		km_e2_ls7366_init();
+#endif
 
 	pr_info("piA335x: cpsw_init\n");
 	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
