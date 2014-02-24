@@ -505,12 +505,14 @@ static struct pinmux_config usb0_pin_mux[] = {
 	{NULL, 0},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 /* pinmux for usb1 */
 static struct pinmux_config usb1_pin_mux[] = {
 	/* other usb pins are not muxable */
 	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
+#endif
 
 /* E2 CAN 0+1 */
 static struct pinmux_config km_e2_can_pin_mux[] = {
@@ -1256,11 +1258,6 @@ static void km_e2_can_init(void)
 }
 
 /* SPI1 -> CAN2 */
-#define KM_E2_CAN2_INT_GPIO GPIO_TO_PIN(3, 20)
-#include <linux/can/platform/mcp251x.h>
-static struct mcp251x_platform_data km_e2_mcp2515_data = {
-	.oscillator_frequency = 25E6 ,
-};
 static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
 	.turbo_mode	= 0,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
@@ -1277,6 +1274,7 @@ static struct spi_board_info km_e2_spi_aps_info[] = {
 	},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 static struct spi_board_info km_e2_spi_qenc_info[] = {
 	{	/* LS7366, max 8 MHz */
 		.modalias      = "spidev",
@@ -1287,6 +1285,11 @@ static struct spi_board_info km_e2_spi_qenc_info[] = {
 	},
 };
 
+#define KM_E2_CAN2_INT_GPIO GPIO_TO_PIN(3, 20)
+#include <linux/can/platform/mcp251x.h>
+static struct mcp251x_platform_data km_e2_mcp2515_data = {
+	.oscillator_frequency = 25E6 ,
+};
 static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 	{
 		/* 3rd CAN device */
@@ -1300,6 +1303,7 @@ static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 		.platform_data = &km_e2_mcp2515_data,
 	},
 };
+#endif /* CONFIG_PIAAM335X_PROTOTYPE */
 
 static struct spi_board_info km_e2_spi1_0_info[] = {
 	{
@@ -1325,6 +1329,7 @@ static void km_e2_spi_init(void)
 	spi_register_board_info(km_e2_spi_aps_info,
 			ARRAY_SIZE(km_e2_spi_aps_info));
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		/* CAN device only on rev 0.01 */
 		spi_register_board_info(km_e2_spi_mcp2515_info,
@@ -1333,10 +1338,13 @@ static void km_e2_spi_init(void)
 		spi_register_board_info(km_e2_spi_qenc_info,
 				ARRAY_SIZE(km_e2_spi_qenc_info));
 	} else {
+#endif
 		/* expansion header */
 		spi_register_board_info(km_e2_spi1_0_info,
 				ARRAY_SIZE(km_e2_spi1_0_info));
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
+#endif
 	/* expansion header - all revisions */
 	spi_register_board_info(km_e2_spi1_1_info,
 			ARRAY_SIZE(km_e2_spi1_1_info));
