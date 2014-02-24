@@ -526,7 +526,7 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 /* pinmux for led drivers */
 static struct pinmux_config km_e2_leds_pin_mux[] = {
 	/* enable input to allow readback of status */
-	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1314,6 +1314,7 @@ static struct spi_board_info km_e2_spi1_0_info[] = {
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
+
 static struct spi_board_info km_e2_spi1_1_info[] = {
 	{
 		/* external Header */
