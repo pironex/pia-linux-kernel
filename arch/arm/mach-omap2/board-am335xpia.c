@@ -1463,6 +1463,17 @@ static struct omap_musb_board_data musb_board_data = {
 
 /* Accelerometer LIS331DLH */
 #include <linux/lis3lv02d.h>
+#define GPIO_LIS_IRQ1	GPIO_TO_PIN(3, 19)
+#define GPIO_LIS_IRQ2	GPIO_TO_PIN(0, 7)
+
+/* LIS3 IRQ GPIOs */
+static struct pinmux_config km_mmi_lis3_pin_mux[] = {
+	/* INT1 */
+	{"mcasp0_fsr.gpio3_19",		AM33XX_PIN_INPUT_PULLUP},
+	/* INT2 */
+	{"ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 
 static struct lis3lv02d_platform_data lis331dlh_pdata = {
 	.click_flags = LIS3_CLICK_SINGLE_X |
@@ -1483,12 +1494,14 @@ static struct lis3lv02d_platform_data lis331dlh_pdata = {
 	.st_max_limits[0] = 550,
 	.st_max_limits[1] = 550,
 	.st_max_limits[2] = 750,
+	.irq2 = OMAP_GPIO_IRQ(GPIO_LIS_IRQ2)
 };
 
 static struct i2c_board_info lis331dlh_i2c_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("lis331dlh", 0x18),
 		.platform_data = &lis331dlh_pdata,
+		.irq = OMAP_GPIO_IRQ(GPIO_LIS_IRQ1),
 	},
 };
 
@@ -1498,6 +1511,7 @@ static void lis331dlh_init(void)
 	struct i2c_client *client;
 	unsigned int i2c_instance;
 
+	setup_pin_mux(km_mmi_lis3_pin_mux);
 	i2c_instance = 1;
 
 	/* I2C adapter request */
