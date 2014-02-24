@@ -564,20 +564,8 @@ static struct pinmux_config km_e2_spi_pin_mux[] = {
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 /** CLKOUT2 */
 #define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
-static void km_e2_clkout2_enable(void)
+static void clkout2_12m_enable(void)
 {
-#if 0
-	/* code to enable default 32k clock output*/
-	struct clk *ck_32;
-
-	ck_32 = clk_get(NULL, "clkout2_ck");
-	if (IS_ERR(ck_32)) {
-		pr_err("Cannot clk_get ck_32\n");
-		return;
-	}
-
-	clk_enable(ck_32);
-#endif
 	/* change clkout2 to a 12 MHz clock */
 	struct clk *sys_clkout2;
 	struct clk *parent_clk;
@@ -619,7 +607,7 @@ static void km_e2_clkout2_enable(void)
 }
 #endif
 
-static void km_mmi_clkout2_enable(void)
+static void clkout2_32k_enable(void)
 {
 	/* code to enable default 32k clock output*/
 	struct clk *ck_32;
@@ -1532,10 +1520,6 @@ static void lis331dlh_init(void)
 
 /* Enable clkout1 */
 static struct pinmux_config clkout1_pin_mux[] = {
-	/*
-	 * Setting clkout1 pin-mux manually will allow user
-	 * to extract raw oscillator clock (Master_OSC)
-	 */
 	{"xdma_event_intr0.clkout1", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
@@ -1595,11 +1579,15 @@ static struct i2c_board_info tlv320aic3x_i2c_boardinfo[] = {
 	},
 };
 
-static void tlv320aic3x_i2c_init(void)
+static void km_mmi_tlv320aic3x_init(void)
 {
 	struct i2c_adapter *adapter;
 	struct i2c_client *client;
 	unsigned int i2c_instance = 1;
+
+	/* Enable clkout1 */
+	setup_pin_mux(clkout1_pin_mux);
+
 
 	/* I2C adapter request */
 	adapter = i2c_get_adapter(i2c_instance);
@@ -1613,6 +1601,8 @@ static void tlv320aic3x_i2c_init(void)
 		pr_err("failed to register tlv320aic3x to i2c%u\n", i2c_instance);
 
 	i2c_put_adapter(adapter);
+
+	mcasp0_init(PIA335_KM_MMI);
 }
 
 static void setup_e2(void)
@@ -1627,7 +1617,7 @@ static void setup_e2(void)
 		am33xx_piarev = 3;
 	} else {
 		pr_warn("PIA335E2: Unknown board revision %.4s, using "
-				"rev 2 configuration\n",
+				"rev 3 configuration\n",
 				config.version);
 		am33xx_piarev = 3;
 	}
@@ -1644,7 +1634,7 @@ static void setup_e2(void)
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		usb1_init();
-		km_e2_clkout2_enable();
+		clkout2_12m_enable();
 	} else {
 #endif
 		/* since 0.02 only USB0, we have to init musb_board_data
@@ -1684,13 +1674,10 @@ static void setup_mmi(void)
 
 	mmc0_init();
 
-	km_mmi_clkout2_enable();
+	clkout2_32k_enable();
 	lis331dlh_init();
-	/* Enable clkout1 */
-	setup_pin_mux(clkout1_pin_mux);
-	/* Register TLV320AIC3106 on I2C-1 */
-	tlv320aic3x_i2c_init();
-	mcasp0_init(PIA335_KM_MMI);
+
+	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
