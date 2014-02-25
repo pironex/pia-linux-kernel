@@ -183,36 +183,6 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* GPIO pin mux for KM MMI */
-/* MMI: Watchdog */
-#define GPIO_MMI_WDI		GPIO_TO_PIN(1, 0)
-#define GPIO_MMI_WD_SET1	GPIO_TO_PIN(1, 1)
-#define GPIO_MMI_WD_SET2	GPIO_TO_PIN(1, 2)
-/* MMI: LCD GPIOs */
-#define GPIO_LCD_DISP		GPIO_TO_PIN(1,28)
-#define GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
-#define GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
-/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
-/* MMI: TPS */
-#define GPIO_MMI_PMIC_INT	GPIO_TO_PIN(2, 1)
-#define GPIO_MMI_PMIC_WAKE	GPIO_TO_PIN(3,16)
-
-
-static struct pinmux_config km_mmi_gpio_pin_mux[] = {
-	/* PMIC INT   2_1 */
-	/* PMIC SLEEP 3_16 */
-	/* WDI        1_0 */
-	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
-	/* WD_SET1  1_1 */
-	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
-	/* WD_SET2	1_2 */
-	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
-	/* 3.3V_Fail 3_20 */
-	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
-	/* XDMA_EVENT_INTR0 CLKOUT2 not used */
-	{NULL, 0},
-};
-
 static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
 {
 	struct i2c_adapter *adapter;
@@ -969,6 +939,37 @@ static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_PSE_SHUTDOWN,	GPIOF_OUT_INIT_LOW, "pse_shutdown" },
 };
 
+/* MMI rev 0.x */
+#define MMI_GPIO_PMIC_INT	GPIO_TO_PIN(2, 1)
+#define MMI_GPIO_PMIC_WAKE	GPIO_TO_PIN(3,16)
+/* MMI: Watchdog */
+#define MMI_GPIO_WDI		GPIO_TO_PIN(1, 0)
+#define MMI_GPIO_WD_SET1	GPIO_TO_PIN(1, 1)
+#define MMI_GPIO_WD_SET2	GPIO_TO_PIN(1, 2)
+/* MMI: LCD GPIOs */
+#define MMI_GPIO_LCD_DISP	GPIO_TO_PIN(1,28)
+#define MMI_GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
+#define MMI_GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
+/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
+
+static struct pinmux_config km_mmi_gpios_pin_mux[] = {
+	/* PMIC INT */
+	{ "gpmc_clk.gpio2_1", AM33XX_PIN_INPUT_PULLUP },
+	/* PMIC SLEEP 3_16 */
+	/* WDI        1_0 */
+	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
+	/* WD_SET1  1_1 */
+	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
+	/* WD_SET2	1_2 */
+	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
+	/* 3.3V_Fail 3_20 */
+	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
+static struct gpio km_mmi_gpios[] = {
+};
+
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
 	int val = gpio_get_value(gpio);
@@ -977,28 +978,40 @@ static void pia_print_gpio_state(const char *msg, int gpio, int on)
 	else
 		pr_warn("  %s: Unable to read GPIO!\n", msg);
 }
-static void km_e2_gpios_init(void)
+static void pia335x_gpios_init(void)
 {
 	int i, sz;
 	struct pinmux_config *muxcfg;
 	struct gpio *gpiocfg;
+
+	switch(am33xx_piaid) {
+	case PIA335_KM_E2:
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
-	if (am33xx_piarev == 1) {
-		muxcfg = km_e2_rev1_gpios_pin_mux;
-		gpiocfg = km_e2_rev1_gpios;
-		sz = ARRAY_SIZE(km_e2_rev1_gpios);
-	} else if (am33xx_piarev == 2) {
-		muxcfg = km_e2_rev2_gpios_pin_mux;
-		gpiocfg = km_e2_rev2_gpios;
-		sz = ARRAY_SIZE(km_e2_rev2_gpios);
-	} else {
+		if (am33xx_piarev == 1) {
+			muxcfg = km_e2_rev1_gpios_pin_mux;
+			gpiocfg = km_e2_rev1_gpios;
+			sz = ARRAY_SIZE(km_e2_rev1_gpios);
+		} else if (am33xx_piarev == 2) {
+			muxcfg = km_e2_rev2_gpios_pin_mux;
+			gpiocfg = km_e2_rev2_gpios;
+			sz = ARRAY_SIZE(km_e2_rev2_gpios);
+		} else {
 #endif
-		muxcfg = km_e2_gpios_pin_mux;
-		gpiocfg = km_e2_gpios;
-		sz = ARRAY_SIZE(km_e2_gpios);
+			muxcfg = km_e2_gpios_pin_mux;
+			gpiocfg = km_e2_gpios;
+			sz = ARRAY_SIZE(km_e2_gpios);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
+		}
+#endif
+		break;
+	case PIA335_KM_MMI:
+		muxcfg = km_mmi_gpios_pin_mux;
+		gpiocfg = km_mmi_gpios;
+		sz = ARRAY_SIZE(km_mmi_gpios);
+		break;
+	default:
+		return;
 	}
-#endif
 	setup_pin_mux(muxcfg);
 
 	for (i = 0; i < sz; ++i) {
@@ -1012,24 +1025,19 @@ static void km_e2_gpios_init(void)
 		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
 		gpio_export(gpiocfg[i].gpio, 0);
 	}
-	pr_info("E2 GPIO Status:\n");
-	pia_print_gpio_state("WD_RESET: ", E2_GPIO_WD_RESET, 0);
-	pia_print_gpio_state("PB_RESET: ", E2_GPIO_PB_RESET, 0);
-	pr_info("  external Watchdog: OFF.\n");
-	if (am33xx_piarev == 1)
-		gpio_set_value(E2_GPIO_CLEAR_RESET, 0); /* high to low */
-	else
-		gpio_set_value(E2_GPIO_FF_CLK, 1); /* high to low */
-	pr_info("    RESET flags cleared.\n");
 
-	pia_print_gpio_state("USB_OC:   ", E2_GPIO_USB_OC, 0);
-	/* TODO check active low/high */
-	pia_print_gpio_state("24V Fail: ", E2_GPIO_24V_FAIL, 1);
-	pia_print_gpio_state("*S_ASAUS: ", E2_GPIO_S_ASAUS, 1);
-	pia_print_gpio_state("230V_Test:   ", E2_GPIO_230V_A, 1);
-	if (am33xx_piarev == 1)
-		pia_print_gpio_state("230V_B:   ", E2_GPIO_230V_B, 1);
-	pia_print_gpio_state("WARTUNG:  ", E2_GPIO_WARTUNG, 1);
+	/* board specific initializations */
+	if (am33xx_piaid == PIA335_KM_E2) {
+		/* clear reset status */
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+		if (am33xx_piarev == 1)
+			gpio_set_value(E2_GPIO_CLEAR_RESET, 0);
+		else
+#endif
+			gpio_set_value(E2_GPIO_FF_CLK, 1);
+	}
+}
+
 /* LCD Display */
 static struct pinmux_config lcdc_pin_mux[] = {
 	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
@@ -1736,7 +1744,6 @@ static void setup_mmi(void)
 	pr_info("piA335x MMI: Setup KM MMI.\n");
 	am33xx_piaid = PIA335_KM_MMI;
 
-	setup_pin_mux(km_mmi_gpio_pin_mux);
 	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
 	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 
