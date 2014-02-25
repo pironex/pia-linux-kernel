@@ -281,7 +281,7 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 /* E2 LED drivers */
 static struct pinmux_config km_e2_leds_pin_mux[] = {
 	/* enable input to allow readback of status */
-	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1275,11 +1275,6 @@ static void km_e2_can_init(void)
 }
 
 /* SPI1 -> CAN2 */
-#define KM_E2_CAN2_INT_GPIO GPIO_TO_PIN(3, 20)
-#include <linux/can/platform/mcp251x.h>
-static struct mcp251x_platform_data km_e2_mcp2515_data = {
-	.oscillator_frequency = 25E6 ,
-};
 static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
 	.turbo_mode	= 0,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
@@ -1296,6 +1291,7 @@ static struct spi_board_info km_e2_spi_aps_info[] = {
 	},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 static struct spi_board_info km_e2_spi_qenc_info[] = {
 	{	/* LS7366, max 8 MHz */
 		.modalias      = "spidev",
@@ -1306,6 +1302,11 @@ static struct spi_board_info km_e2_spi_qenc_info[] = {
 	},
 };
 
+#define KM_E2_CAN2_INT_GPIO GPIO_TO_PIN(3, 20)
+#include <linux/can/platform/mcp251x.h>
+static struct mcp251x_platform_data km_e2_mcp2515_data = {
+	.oscillator_frequency = 25E6 ,
+};
 static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 	{
 		/* 3rd CAN device */
@@ -1319,6 +1320,7 @@ static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 		.platform_data = &km_e2_mcp2515_data,
 	},
 };
+#endif /* CONFIG_PIAAM335X_PROTOTYPE */
 
 static struct spi_board_info km_e2_spi1_0_info[] = {
 	{
@@ -1329,6 +1331,7 @@ static struct spi_board_info km_e2_spi1_0_info[] = {
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
+
 static struct spi_board_info km_e2_spi1_1_info[] = {
 	{
 		/* external Header */
@@ -1344,6 +1347,7 @@ static void km_e2_spi_init(void)
 	spi_register_board_info(km_e2_spi_aps_info,
 			ARRAY_SIZE(km_e2_spi_aps_info));
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		/* CAN device only on rev 0.01 */
 		spi_register_board_info(km_e2_spi_mcp2515_info,
@@ -1352,10 +1356,13 @@ static void km_e2_spi_init(void)
 		spi_register_board_info(km_e2_spi_qenc_info,
 				ARRAY_SIZE(km_e2_spi_qenc_info));
 	} else {
+#endif
 		/* expansion header */
 		spi_register_board_info(km_e2_spi1_0_info,
 				ARRAY_SIZE(km_e2_spi1_0_info));
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
+#endif
 	/* expansion header - all revisions */
 	spi_register_board_info(km_e2_spi1_1_info,
 			ARRAY_SIZE(km_e2_spi1_1_info));
