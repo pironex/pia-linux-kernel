@@ -1560,35 +1560,16 @@ static struct lis3lv02d_platform_data lis331dlh_pdata = {
 	.irq2 = OMAP_GPIO_IRQ(GPIO_LIS_IRQ2)
 };
 
-static struct i2c_board_info lis331dlh_i2c_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("lis331dlh", 0x18),
-		.platform_data = &lis331dlh_pdata,
-		.irq = OMAP_GPIO_IRQ(GPIO_LIS_IRQ1),
-	},
+static struct i2c_board_info lis331dlh_i2c_boardinfo = {
+	I2C_BOARD_INFO("lis331dlh", 0x18),
+	.platform_data = &lis331dlh_pdata,
+	.irq = OMAP_GPIO_IRQ(GPIO_LIS_IRQ1),
 };
 
 static void lis331dlh_init(void)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-	unsigned int i2c_instance;
-
 	setup_pin_mux(km_mmi_lis3_pin_mux);
-	i2c_instance = 1;
-
-	/* I2C adapter request */
-	adapter = i2c_get_adapter(i2c_instance);
-	if (!adapter) {
-		pr_err("failed to get adapter i2c%u\n", i2c_instance);
-		return;
-	}
-
-	client = i2c_new_device(adapter, lis331dlh_i2c_boardinfo);
-	if (!client)
-		pr_err("failed to register lis331dlh to i2c%u\n", i2c_instance);
-
-	i2c_put_adapter(adapter);
+	pia335x_add_i2c_device(1, &lis331dlh_i2c_boardinfo);
 }
 
 /*
