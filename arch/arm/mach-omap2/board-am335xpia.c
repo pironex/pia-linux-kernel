@@ -583,25 +583,26 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_LCD_DISP	GPIO_TO_PIN(1,28)
 #define MMI_GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
 #define MMI_GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
-/*#define GPIO_LCD_TOUCH_WAKE	GPIO_TO_PIN(2, 1)*/
 
 static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* PMIC INT */
-	{ "gpmc_clk.gpio2_1",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP },
 	/* PMIC SLEEP 3_16 - not currently used */
-	{ "mcasp0_acr0.gpio3_16", AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_acr0.gpio3_16",	AM33XX_PIN_INPUT_PULLUP },
 	/* WDI        1_0 */
-	{"gpmc_ad0.gpio1_0",	AM33XX_PIN_OUTPUT},
+	{ "gpmc_ad0.gpio1_0",		AM33XX_PIN_OUTPUT},
 	/* WD_SET1  1_1 */
-	{"gpmc_ad1.gpio1_1",	AM33XX_PIN_OUTPUT},
+	{ "gpmc_ad1.gpio1_1",		AM33XX_PIN_OUTPUT},
 	/* WD_SET2	1_2 */
-	{"gpmc_ad2.gpio1_2",	AM33XX_PIN_OUTPUT},
+	{ "gpmc_ad2.gpio1_2",		AM33XX_PIN_OUTPUT},
 	/* 3.3V_Fail 3_20 */
-	{"mcasp0_axr1.gpio3_20",AM33XX_PIN_INPUT_PULLUP},
+	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLUP},
 	/* LED1 */
-	{"gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
+	{ "gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
 	/* LED2 */
-	{"gpmc_wpn.gpio0_31",	AM33XX_PIN_INPUT},
+	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT},
+	/* touch INT */
+	{ "gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1096,9 +1097,9 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{ "lcd_pclk.lcd_pclk", AM33XX_PIN_OUTPUT },
 	{ "lcd_ac_bias_en.lcd_ac_bias_en", AM33XX_PIN_OUTPUT },
 	/* display enable GPIO */
-	{ "gpmc_ben1.gpio1_28", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ben1.gpio1_28",		AM33XX_PIN_OUTPUT },
 	/* backlight GPIO */
-	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_OUTPUT},
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
@@ -1106,14 +1107,6 @@ static struct pinmux_config lcdc_pin_mux[] = {
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
 	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 #include <linux/input/ft5x06_ts.h>
-/* Touch GPIOs */
-static struct pinmux_config km_mmi_touch_pin_mux[] = {
-	/* touch INT */
-	{"gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
-	/* touch wake */
-	{"gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
 
 static struct ft5x06_ts_platform_data km_mmi_touch_data = {
 	.x_max    = 480,
@@ -1131,8 +1124,6 @@ static struct i2c_board_info km_mmi_i2c1_touch = {
 static void pia335x_touch_init(void)
 {
 	pr_info("pia335x_init: init touch controller FT5x06\n");
-
-	setup_pin_mux(km_mmi_touch_pin_mux);
 
 	/* I2C adapter request */
 	pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
@@ -1240,7 +1231,7 @@ static void pia335x_lcd_init(int id)
 		gpio_free(MMI_GPIO_LCD_BACKLIGHT);
 			return;
 		} else {
-			//gpio_direction_output(GPIO_LCD_DISP, 1);
+			//TODO gpio_direction_output(GPIO_LCD_DISP, 1);
 			omap_mux_init_gpio(MMI_GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
 			gpio_export(MMI_GPIO_LCD_DISP, true);
 		}
