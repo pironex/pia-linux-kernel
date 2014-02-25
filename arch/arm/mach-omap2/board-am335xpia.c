@@ -260,12 +260,14 @@ static struct pinmux_config usb0_pin_mux[] = {
 	{NULL, 0},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 /* pinmux for usb1 */
 static struct pinmux_config usb1_pin_mux[] = {
 	/* other usb pins are not muxable */
 	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
+#endif
 
 /* E2 CAN 0+1 */
 static struct pinmux_config km_e2_can_pin_mux[] = {
@@ -1692,11 +1694,9 @@ static void km_e2_setup(void)
 		am33xx_piarev = 3;
 	}
 	pr_info("piA335x: Setup KM E2 rev %d\n", am33xx_piarev);
-	/* EVM - Starter Kit */
-/*	static struct evm_dev_cfg evm_sk_dev_cfg[] = {
-		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
-	};*/
+
 	setup_pin_mux(km_e2_board_pin_mux);
+
 	pia335x_tps65910_info.irq = E2_GPIO_PMIC_INT;
 	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 
@@ -1731,7 +1731,6 @@ static void km_e2_setup(void)
 #endif
 
 	pr_info("piA335x: cpsw_init\n");
-	//am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
@@ -1739,6 +1738,16 @@ static void km_mmi_setup(void)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
 	am33xx_piaid = PIA335_KM_MMI;
+
+	if (0 == strncmp("0.01", config.version, 4)) {
+		am33xx_piarev = 1;
+	} else if (0 == strncmp("0.02", config.version, 4)) {
+		am33xx_piarev = 2;
+	} else {
+		pr_info("PIA335MI: Unknown board revision %.4s\n",
+				config.version);
+		am33xx_piarev = 2;
+	}
 
 	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
 	pia335x_add_i2c_device(1, &tps65910_boardinfo);
@@ -1767,6 +1776,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	char tmp[10];
 
 	pr_info("piA335x: setup\n");
+
 	/* from evm code
 	 * 1st get the MAC address from EEPROM */
 	ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
