@@ -167,8 +167,6 @@ static struct omap_board_mux board_mux[] __initdata = {
 #endif
 
 static struct pinmux_config km_e2_board_pin_mux[] = {
-	/* PMIC INT */
-	{ "mii1_txd0.gpio0_28", AM33XX_PIN_INPUT_PULLUP },
 	/* I2C1*/
 	{ "uart0_ctsn.i2c1_sda",
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
@@ -793,6 +791,8 @@ struct pia_gpios {
 #define E2_GPIO_CAN2_INT	GPIO_TO_PIN(3, 20)
 /* pinmux for special gpios */
 static struct pinmux_config km_e2_rev1_gpios_pin_mux[] = {
+	/* PMIC INT */
+	{ "mii1_txd0.gpio0_28",    AM33XX_PIN_INPUT_PULLUP },
 	/* Ext. RESET */
 	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
 	/* USB OC */
@@ -852,6 +852,8 @@ static struct gpio km_e2_rev1_gpios[] = {
 
 /* E2 rev0.02 */
 static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
+	/* PMIC INT */
+	{ "mii1_txd0.gpio0_28",    AM33XX_PIN_INPUT_PULLUP },
 	/* Ext. RESET */
 	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
 	/* USB OC */
@@ -907,6 +909,8 @@ static struct gpio km_e2_rev2_gpios[] = {
 
 /* E2 rev0.03 */
 static struct pinmux_config km_e2_gpios_pin_mux[] = {
+	/* PMIC INT */
+	{ "mii1_txd0.gpio0_28",    AM33XX_PIN_INPUT_PULLUP },
 	/* Ext. RESET */
 	{"gpmc_clk.gpio2_1",       AM33XX_PIN_INPUT_PULLUP },
 	/* USB OC */
@@ -1639,7 +1643,34 @@ static void km_mmi_tlv320aic3x_init(void)
 	mcasp0_init(PIA335_KM_MMI);
 }
 
-static void setup_e2(void)
+static struct regulator_init_data pia335x_tps_dummy = {
+	.constraints.always_on	= true,
+};
+
+static struct tps65910_board pia335x_tps65910_info = {
+	.tps65910_pmic_init_data[TPS65910_REG_VRTC]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VPLL]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDAC]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX1]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
+	.gpio_base = (4 * 32),
+	.irq = -1, // set this in board specific setup
+};
+
+static struct i2c_board_info tps65910_boardinfo = {
+	I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
+	.platform_data  = &pia335x_tps65910_info,
+};
+
+static void km_e2_setup(void)
 {
 	//daughter_brd_detected = false;
 	am33xx_piaid = PIA335_KM_E2;
@@ -1661,6 +1692,9 @@ static void setup_e2(void)
 		{enable_ecap2,     DEV_ON_BASEBOARD, PROFILE_ALL},
 	};*/
 	setup_pin_mux(km_e2_board_pin_mux);
+	pia335x_tps65910_info.irq = E2_GPIO_PMIC_INT;
+	pia335x_add_i2c_device(1, &tps65910_boardinfo);
+
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
 	mmc0_init();
@@ -1703,6 +1737,8 @@ static void setup_mmi(void)
 	am33xx_piaid = PIA335_KM_MMI;
 
 	setup_pin_mux(km_mmi_gpio_pin_mux);
+	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
+	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 
 	pia335x_rtc_init();
 
@@ -1801,38 +1837,12 @@ static struct at24_platform_data pia335x_eeprom_info = {
 	.context        = (void *)NULL,
 };
 
-static struct regulator_init_data pia335x_tps_dummy = {
-	.constraints.always_on	= true,
-};
-
-static struct tps65910_board pia335x_tps65910_info = {
-	.tps65910_pmic_init_data[TPS65910_REG_VRTC]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VPLL]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDAC]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX1]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
-	.gpio_base = (4 * 32),
-	.irq = GPIO_TO_PIN(0, 28),
-};
-
 static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 	{
 		/* Board ID EEPROM, KM E2 Rev 0.01 & 0.02 use 24c00,
 		 * 0.03 uses 24cs01 (taking only 1 address 0x50) */
 		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR),
 		.platform_data  = &pia335x_eeprom_info,
-	},
-	{
-		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
-		.platform_data  = &pia335x_tps65910_info,
 	},
 };
 
