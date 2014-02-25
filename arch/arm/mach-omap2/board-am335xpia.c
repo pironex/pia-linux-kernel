@@ -1121,36 +1121,21 @@ static struct ft5x06_ts_platform_data km_mmi_touch_data = {
 	.irq_gpio = MMI_GPIO_LCD_PENDOWN,
 	.irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 };
-static struct i2c_board_info km_mmi_i2c1_touch[] = {
-	{
-		/* j043wqcn */
-		I2C_BOARD_INFO("ft5x06_ts", 0x38),
-		.irq = OMAP_GPIO_IRQ(MMI_GPIO_LCD_PENDOWN),
-		.platform_data = &km_mmi_touch_data,
-	}
+static struct i2c_board_info km_mmi_i2c1_touch = {
+	/* j043wqcn */
+	I2C_BOARD_INFO("ft5x06_ts", 0x38),
+	.irq = OMAP_GPIO_IRQ(MMI_GPIO_LCD_PENDOWN),
+	.platform_data = &km_mmi_touch_data,
 };
 
 static void pia335x_touch_init(void)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-
 	pr_info("pia335x_init: init touch controller FT5x06\n");
 
 	setup_pin_mux(km_mmi_touch_pin_mux);
 
 	/* I2C adapter request */
-	adapter = i2c_get_adapter(1);
-	if (!adapter) {
-		pr_err("failed to get adapter i2c%u\n", 1);
-		return;
-	}
-	client = i2c_new_device(adapter, km_mmi_i2c1_touch);
-
-	if (!client)
-		pr_err("failed to register ft5x06 to i2c%u\n", 1);
-
-	i2c_put_adapter(adapter);
+	pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
 }
 #else
 static void __init pia335x_touch_init(void)
