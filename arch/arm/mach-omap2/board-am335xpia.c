@@ -207,6 +207,11 @@ static struct pinmux_config km_mmi_board_pin_mux[] = {
 	{NULL, 0},
 };
 
+static struct pinmux_config clkout1_pin_mux[] = {
+	{"xdma_event_intr0.clkout1", AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+
 static struct pinmux_config clkout2_pin_mux[] = {
 	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
@@ -1590,12 +1595,6 @@ static void lis331dlh_init(void)
  * Audio
  */
 
-/* Enable clkout1 */
-static struct pinmux_config clkout1_pin_mux[] = {
-	{"xdma_event_intr0.clkout1", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
-	{NULL, 0},
-};
-
 /* Module pin mux for mcasp0 */
 static struct pinmux_config mcasp0_pin_mux[] = {
 	/* Audio.BCLK */
@@ -1645,34 +1644,16 @@ static void mcasp0_init(int pia_id)
 	return;
 }
 
-static struct i2c_board_info tlv320aic3x_i2c_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("tlv320aic3x", 0x1b),
-	},
+static struct i2c_board_info tlv320aic3x_i2c_boardinfo = {
+	I2C_BOARD_INFO("tlv320aic3x", 0x1b),
 };
 
 static void km_mmi_tlv320aic3x_init(void)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-	unsigned int i2c_instance = 1;
-
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);
 
-
-	/* I2C adapter request */
-	adapter = i2c_get_adapter(i2c_instance);
-	if (!adapter) {
-		pr_err("failed to get adapter i2c%u\n", i2c_instance);
-		return;
-	}
-
-	client = i2c_new_device(adapter, tlv320aic3x_i2c_boardinfo);
-	if (!client)
-		pr_err("failed to register tlv320aic3x to i2c%u\n", i2c_instance);
-
-	i2c_put_adapter(adapter);
+	pia335x_add_i2c_device(1, &tlv320aic3x_i2c_boardinfo);
 
 	mcasp0_init(PIA335_KM_MMI);
 }
