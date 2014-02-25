@@ -1721,7 +1721,6 @@ static void km_e2_setup(void)
 #endif
 	nand_init();
 
-	km_e2_gpios_init();
 	km_e2_can_init();
 	km_e2_spi_init();
 	km_e2_rs485_init();
@@ -1819,6 +1818,8 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 					config.version);
 		}
 	}
+
+	pia335x_gpios_init();
 
 	return;
 
