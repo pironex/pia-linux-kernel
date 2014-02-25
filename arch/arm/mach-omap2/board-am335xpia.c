@@ -216,6 +216,17 @@ static struct pinmux_config mmc0_e2_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* Module pin mux for mmc0 on board am335x_MMI*/
+static struct pinmux_config km_mmi_mmc0_pin_mux[] = {
+	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 /* Module pin mux for mii2 */
 static struct pinmux_config km_e2_mii2_pin_mux[] = {
 	{"gpmc_a0.mii2_txen", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
@@ -317,403 +328,6 @@ static struct pinmux_config km_e2_spi_pin_mux[] = {
 	{"ecap0_in_pwm0_out.spi1_cs1",	AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
-
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-/** CLKOUT2 */
-#define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
-static void clkout2_12m_enable(void)
-{
-	/* change clkout2 to a 12 MHz clock */
-	struct clk *sys_clkout2;
-	struct clk *parent_clk;
-	struct clk *sys_clkout2_src;
-
-	pr_info("piA335x: Initializing SYS_CLKOUT2");
-	sys_clkout2_src = clk_get(NULL, "sysclkout_pre_ck");
-
-	if (IS_ERR(sys_clkout2_src)) {
-		pr_err("pia35x: Could not get clkout2_src_ck");
-		return;
-	}
-
-	sys_clkout2 = clk_get(NULL, "clkout2_ck");
-	if (IS_ERR(sys_clkout2)) {
-		pr_err("pia35x: Could not get sys_clkout2");
-		clk_put(sys_clkout2_src);
-		return;
-	}
-
-	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
-	if (IS_ERR(parent_clk)) {
-		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
-		clk_put(sys_clkout2);
-		clk_put(sys_clkout2_src);
-		return;
-	}
-
-	clk_set_parent(sys_clkout2_src, parent_clk);
-	//clk_set_rate(sys_clkout2, 13500000);
-	clk_set_rate(sys_clkout2, 12000000);
-
-	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
-	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
-			clk_get_rate(sys_clkout2));
-	clk_enable(sys_clkout2);
-
-	setup_pin_mux(clkout2_pin_mux);
-}
-#endif
-
-static void clkout2_32k_enable(void)
-{
-	/* code to enable default 32k clock output*/
-	struct clk *ck_32;
-
-	ck_32 = clk_get(NULL, "clkout2_ck");
-	if (IS_ERR(ck_32)) {
-		pr_err("Cannot clk_get ck_32\n");
-		return;
-	}
-
-	clk_enable(ck_32);
-
-	setup_pin_mux(clkout2_pin_mux);
-}
-
-/* NAND partition information */
-static struct mtd_partition pia335x_nand_partitions[] = {
-/* All the partition sizes are listed in terms of NAND block size */
-	{
-		.name           = "SPL",
-		.offset         = 0,			/* Offset = 0x0 */
-		.size           = SZ_128K,
-	},
-	{
-		.name           = "SPL.backup1",
-		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x20000 */
-		.size           = SZ_128K,
-	},
-	{
-		.name           = "SPL.backup2",
-		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x40000 */
-		.size           = SZ_128K,
-	},
-	{
-		.name           = "SPL.backup3",
-		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
-		.size           = SZ_128K,
-	},
-	{
-		.name           = "U-Boot",
-		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x80000 */
-		.size           = 15 * SZ_128K,
-	},
-	{
-		.name           = "U-Boot Env",
-		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x260000 */
-		.size           = 1 * SZ_128K,
-	},
-	{
-		.name           = "Kernel",
-		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x280000 */
-		.size           = 40 * SZ_128K,
-	},
-	{
-		.name           = "File System",
-		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x780000 */
-		.size           = MTDPART_SIZ_FULL,
-	},
-};
-
-/* taken from ti evm */
-static struct gpmc_timings pia335x_nand_timings = {
-	.sync_clk = 0,
-
-	.cs_on = 0,
-	.cs_rd_off = 44,
-	.cs_wr_off = 44,
-
-	.adv_on = 6,
-	.adv_rd_off = 34,
-	.adv_wr_off = 44,
-	.we_off = 40,
-	.oe_off = 54,
-
-	.access = 64,
-	.rd_cycle = 82,
-	.wr_cycle = 82,
-
-	.wr_access = 40,
-	.wr_data_mux_bus = 0,
-};
-
-static void nand_init(void)
-{
-	struct omap_nand_platform_data *pdata;
-	struct gpmc_devices_info gpmc_device[2] = {
-		{ NULL, 0 },
-		/*{ NULL, 0 },*/
-	};
-
-	setup_pin_mux(nand_pin_mux);
-	pdata = omap_nand_init(pia335x_nand_partitions,
-		ARRAY_SIZE(pia335x_nand_partitions), 0, 0,
-		&pia335x_nand_timings);
-	if (!pdata)
-		return;
-	pdata->ecc_opt =OMAP_ECC_BCH8_CODE_HW;
-	pdata->elm_used = true; /* Error Locator Module */
-	gpmc_device[0].pdata = pdata;
-	gpmc_device[0].flag = GPMC_DEVICE_NAND;
-
-	omap_init_gpmc(gpmc_device, sizeof(gpmc_device));
-	omap_init_elm();
-}
-
-/* USB0 device */
-static void usb0_init(void)
-{
-	setup_pin_mux(usb0_pin_mux);
-}
-
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-/* USB1 host */
-static void usb1_init(void)
-{
-	setup_pin_mux(usb1_pin_mux);
-}
-#endif
-
-/* MII2 */
-static void km_e2_mii2_init(void)
-{
-	pr_info("piA335x: %s\n", __func__);
-	setup_pin_mux(km_e2_mii2_pin_mux);
-}
-
-/** I2C1 */
-static struct led_info km_e2_leds1_config[] = {
-	{
-		.name = "led9",
-		.default_trigger = "none",
-	},
-	{
-		.name = "pbled1",
-		.default_trigger = "none",
-	},
-	{
-		.name = "pbled3",
-		.default_trigger = "none",
-	},
-	{
-		.name = "null",
-		.default_trigger = "none",
-	},
-	{
-		.name = "pbled2",
-		.default_trigger = "default-on",
-	},
-	/* 10 and 11 only used in Rev 0.3 */
-	{
-		.name = "null",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led10",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led11",
-		.default_trigger = "none",
-	},
-};
-static struct pca9633_platform_data km_e2_leds1_data = {
-	.leds = {
-		.num_leds = 8,
-		.leds = km_e2_leds1_config,
-	},
-	.outdrv = PCA9633_OPEN_DRAIN,
-};
-
-static struct led_info km_e2_leds2_config[] = {
-	{
-		.name = "led1",
-		.default_trigger = "heartbeat",
-	},
-	{
-		.name = "led2",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led3",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led4",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led5",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led6",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led7",
-		.default_trigger = "none",
-	},
-	{
-		.name = "led8",
-		.default_trigger = "none",
-	},
-};
-static struct pca9633_platform_data km_e2_leds2_data = {
-	.leds = {
-		.num_leds = 8,
-		.leds = km_e2_leds2_config,
-	},
-	.outdrv = PCA9633_OPEN_DRAIN,
-};
-
-/* Module pin mux for mmc0 on board am335x_MMI*/
-static struct pinmux_config mmc0_mmi_pin_mux[] = {
-	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
-static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
-	{
-		.mmc            = 1,
-		.caps           = MMC_CAP_4_BIT_DATA,
-		.gpio_cd        = -1,
-		.gpio_wp        = -1,
-		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
-		.nonremovable = true,
-	},
-	{
-		.mmc            = 0,	/* will be set at runtime */
-	},
-	{
-		.mmc            = 0,	/* will be set at runtime */
-	},
-	{}      /* Terminator */
-};
-
-static void mmc0_init(void)
-{
-	switch(am33xx_piaid) {
-	case PIA335_KM_E2:
-		if (am33xx_piarev == 1) {
-			pia335x_mmc[0].gpio_cd = GPIO_TO_PIN(0, 17);
-			 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
-			pia335x_mmc[0].nonremovable = false;
-		}
-		setup_pin_mux(mmc0_e2_pin_mux);
-		break;
-	case PIA335_KM_MMI:
-		/* not used on KM MMI */
-		setup_pin_mux(mmc0_mmi_pin_mux);
-		break;
-	}
-
-	omap2_hsmmc_init(pia335x_mmc);
-	return;
-}
-
-/**
- * AM33xx LEDs
- */
-static struct gpio_led km_mmi_gpio_leds[] = {
-	{
-		.name			= "am335x:KM_MMI:usr1",
-		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
-		.default_trigger	= "heartbeat",
-	},
-	{
-		.name			= "am335x:KM_MMI:usr2",
-		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
-		.default_trigger	= "mmc0",
-	},
-};
-
-static struct gpio_led_platform_data km_mmi_led_info = {
-	.leds		= km_mmi_gpio_leds,
-	.num_leds	= ARRAY_SIZE(km_mmi_gpio_leds),
-};
-
-static struct platform_device km_mmi_leds = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &km_mmi_led_info,
-	},
-};
-
-static void km_mmi_leds_init(void)
-{
-	int err;
-
-	setup_pin_mux(km_mmi_gpio_led_mux);
-	err = platform_device_register(&km_mmi_leds);
-	if (err)
-		pr_err("failed to register gpio led device\n");
-}
-
-static void km_e2_leds_init(void)
-{
-	int gpio = GPIO_TO_PIN(3, 17);
-	setup_pin_mux(nand_pin_mux);
-	if (gpio_request(gpio, "led_oe") < 0) {
-		pr_err("Failed to request gpio for led_oe");
-		return;
-	}
-
-	pr_info("Configure LEDs...\n");
-	gpio_direction_output(gpio, 0);
-	gpio_export(gpio, 0);
-}
-
-/* FRAM is similar to at24 eeproms without write delay and page limits */
-static struct at24_platform_data km_e2_fram_info = {
-	.byte_len       = (256*1024) / 8,
-	.page_size      = (256*1024) / 8, /* no sequencial rw limit */
-	.flags          = AT24_FLAG_ADDR16,
-	.context        = (void *)NULL,
-};
-
-static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("pca9634", 0x22),
-		.platform_data = &km_e2_leds1_data,
-	},
-	{
-		I2C_BOARD_INFO("pca9634", 0x23),
-		.platform_data = &km_e2_leds2_data,
-	},
-	{
-		/* rev 0.01 is using tmp422 */
-		I2C_BOARD_INFO("tmp421", 0x4C),
-	},
-	{	I2C_BOARD_INFO("24c256", 0x52),
-		.platform_data = &km_e2_fram_info,
-	}
-};
-
-static void km_e2_i2c1_init(void)
-{
-	/* I2C1 is the second bus */
-	setup_pin_mux(km_e2_leds_pin_mux);
-	km_e2_leds_init();
-	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
-			ARRAY_SIZE(km_e2_i2c1_boardinfo));
-}
 
 struct pia_gpios {
 	int gpio; /* gpio number from GPIO_TO_PIN() */
@@ -1035,6 +649,400 @@ static void pia335x_gpios_init(void)
 #endif
 			gpio_set_value(E2_GPIO_FF_CLK, 1);
 	}
+}
+
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+/** CLKOUT2 */
+#define SYS_CLKOUT2_PARENT	"lcd_gclk" /* 24MHz */
+static void clkout2_12m_enable(void)
+{
+	/* change clkout2 to a 12 MHz clock */
+	struct clk *sys_clkout2;
+	struct clk *parent_clk;
+	struct clk *sys_clkout2_src;
+
+	pr_info("piA335x: Initializing SYS_CLKOUT2");
+	sys_clkout2_src = clk_get(NULL, "sysclkout_pre_ck");
+
+	if (IS_ERR(sys_clkout2_src)) {
+		pr_err("pia35x: Could not get clkout2_src_ck");
+		return;
+	}
+
+	sys_clkout2 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(sys_clkout2)) {
+		pr_err("pia35x: Could not get sys_clkout2");
+		clk_put(sys_clkout2_src);
+		return;
+	}
+
+	parent_clk = clk_get(NULL, SYS_CLKOUT2_PARENT);
+	if (IS_ERR(parent_clk)) {
+		pr_err("pia35x: Could not get " SYS_CLKOUT2_PARENT);
+		clk_put(sys_clkout2);
+		clk_put(sys_clkout2_src);
+		return;
+	}
+
+	clk_set_parent(sys_clkout2_src, parent_clk);
+	//clk_set_rate(sys_clkout2, 13500000);
+	clk_set_rate(sys_clkout2, 12000000);
+
+	pr_info("pia35x: parent of SYS_CLKOUT2 %s ", parent_clk->name);
+	pr_info("pia35x: CLK - enabling SYS_CLKOUT2 with %lu MHz",
+			clk_get_rate(sys_clkout2));
+	clk_enable(sys_clkout2);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
+#endif
+
+static void clkout2_32k_enable(void)
+{
+	/* code to enable default 32k clock output*/
+	struct clk *ck_32;
+
+	ck_32 = clk_get(NULL, "clkout2_ck");
+	if (IS_ERR(ck_32)) {
+		pr_err("Cannot clk_get ck_32\n");
+		return;
+	}
+
+	clk_enable(ck_32);
+
+	setup_pin_mux(clkout2_pin_mux);
+}
+
+/* NAND partition information */
+static struct mtd_partition pia335x_nand_partitions[] = {
+/* All the partition sizes are listed in terms of NAND block size */
+	{
+		.name           = "SPL",
+		.offset         = 0,			/* Offset = 0x0 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup1",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x20000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup2",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x40000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "SPL.backup3",
+		.offset         = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
+		.size           = SZ_128K,
+	},
+	{
+		.name           = "U-Boot",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x80000 */
+		.size           = 15 * SZ_128K,
+	},
+	{
+		.name           = "U-Boot Env",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x260000 */
+		.size           = 1 * SZ_128K,
+	},
+	{
+		.name           = "Kernel",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x280000 */
+		.size           = 40 * SZ_128K,
+	},
+	{
+		.name           = "File System",
+		.offset         = MTDPART_OFS_APPEND,   /* Offset = 0x780000 */
+		.size           = MTDPART_SIZ_FULL,
+	},
+};
+
+/* taken from ti evm */
+static struct gpmc_timings pia335x_nand_timings = {
+	.sync_clk = 0,
+
+	.cs_on = 0,
+	.cs_rd_off = 44,
+	.cs_wr_off = 44,
+
+	.adv_on = 6,
+	.adv_rd_off = 34,
+	.adv_wr_off = 44,
+	.we_off = 40,
+	.oe_off = 54,
+
+	.access = 64,
+	.rd_cycle = 82,
+	.wr_cycle = 82,
+
+	.wr_access = 40,
+	.wr_data_mux_bus = 0,
+};
+
+static void nand_init(void)
+{
+	struct omap_nand_platform_data *pdata;
+	struct gpmc_devices_info gpmc_device[2] = {
+		{ NULL, 0 },
+		/*{ NULL, 0 },*/
+	};
+
+	setup_pin_mux(nand_pin_mux);
+	pdata = omap_nand_init(pia335x_nand_partitions,
+		ARRAY_SIZE(pia335x_nand_partitions), 0, 0,
+		&pia335x_nand_timings);
+	if (!pdata)
+		return;
+	pdata->ecc_opt =OMAP_ECC_BCH8_CODE_HW;
+	pdata->elm_used = true; /* Error Locator Module */
+	gpmc_device[0].pdata = pdata;
+	gpmc_device[0].flag = GPMC_DEVICE_NAND;
+
+	omap_init_gpmc(gpmc_device, sizeof(gpmc_device));
+	omap_init_elm();
+}
+
+/* USB0 device */
+static void usb0_init(void)
+{
+	setup_pin_mux(usb0_pin_mux);
+}
+
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+/* USB1 host */
+static void usb1_init(void)
+{
+	setup_pin_mux(usb1_pin_mux);
+}
+#endif
+
+/* MII2 */
+static void km_e2_mii2_init(void)
+{
+	pr_info("piA335x: %s\n", __func__);
+	setup_pin_mux(km_e2_mii2_pin_mux);
+}
+
+static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
+	{
+		.mmc            = 1,
+		.caps           = MMC_CAP_4_BIT_DATA,
+		.gpio_cd        = -1,
+		.gpio_wp        = -1,
+		.ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34, /* 3V3 */
+		.nonremovable = true,
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{
+		.mmc            = 0,	/* will be set at runtime */
+	},
+	{}      /* Terminator */
+};
+
+static void mmc0_init(void)
+{
+	switch(am33xx_piaid) {
+	case PIA335_KM_E2:
+		if (am33xx_piarev == 1) {
+			pia335x_mmc[0].gpio_cd = GPIO_TO_PIN(0, 17);
+			 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
+			pia335x_mmc[0].nonremovable = false;
+		}
+		setup_pin_mux(mmc0_e2_pin_mux);
+		break;
+	case PIA335_KM_MMI:
+		/* not used on KM MMI */
+		setup_pin_mux(km_mmi_mmc0_pin_mux);
+		break;
+	}
+
+	omap2_hsmmc_init(pia335x_mmc);
+	return;
+}
+
+/** LEDs */
+/* E2 LEDs */
+static struct led_info km_e2_leds1_config[] = {
+	{
+		.name = "led9",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled1",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled3",
+		.default_trigger = "none",
+	},
+	{
+		.name = "null",
+		.default_trigger = "none",
+	},
+	{
+		.name = "pbled2",
+		.default_trigger = "default-on",
+	},
+	/* 10 and 11 only used in Rev 0.3 */
+	{
+		.name = "null",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led10",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led11",
+		.default_trigger = "none",
+	},
+};
+static struct pca9633_platform_data km_e2_leds1_data = {
+	.leds = {
+		.num_leds = 8,
+		.leds = km_e2_leds1_config,
+	},
+	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
+static struct led_info km_e2_leds2_config[] = {
+	{
+		.name = "led1",
+		.default_trigger = "heartbeat",
+	},
+	{
+		.name = "led2",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led3",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led4",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led5",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led6",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led7",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led8",
+		.default_trigger = "none",
+	},
+};
+static struct pca9633_platform_data km_e2_leds2_data = {
+	.leds = {
+		.num_leds = 8,
+		.leds = km_e2_leds2_config,
+	},
+	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
+static void km_e2_leds_init(void)
+{
+	int gpio = GPIO_TO_PIN(3, 17);
+	setup_pin_mux(nand_pin_mux);
+	if (gpio_request(gpio, "led_oe") < 0) {
+		pr_err("Failed to request gpio for led_oe");
+		return;
+	}
+
+	pr_info("Configure LEDs...\n");
+	gpio_direction_output(gpio, 0);
+	gpio_export(gpio, 0);
+}
+
+/* MMI LEDs */
+static struct gpio_led km_mmi_gpio_leds[] = {
+	{
+		.name			= "am335x:KM_MMI:usr1",
+		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "am335x:KM_MMI:usr2",
+		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
+		.default_trigger	= "mmc0",
+	},
+};
+
+static struct gpio_led_platform_data km_mmi_led_info = {
+	.leds		= km_mmi_gpio_leds,
+	.num_leds	= ARRAY_SIZE(km_mmi_gpio_leds),
+};
+
+static struct platform_device km_mmi_leds = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &km_mmi_led_info,
+	},
+};
+
+static void km_mmi_leds_init(void)
+{
+	int err;
+
+	setup_pin_mux(km_mmi_gpio_led_mux);
+	err = platform_device_register(&km_mmi_leds);
+	if (err)
+		pr_err("failed to register gpio led device\n");
+}
+
+
+/* FRAM is similar to at24 eeproms without write delay and page limits */
+static struct at24_platform_data km_e2_fram_info = {
+	.byte_len       = (256*1024) / 8,
+	.page_size      = (256*1024) / 8, /* no sequencial rw limit */
+	.flags          = AT24_FLAG_ADDR16,
+	.context        = (void *)NULL,
+};
+
+static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("pca9634", 0x22),
+		.platform_data = &km_e2_leds1_data,
+	},
+	{
+		I2C_BOARD_INFO("pca9634", 0x23),
+		.platform_data = &km_e2_leds2_data,
+	},
+	{
+		/* rev 0.01 is using tmp422 */
+		I2C_BOARD_INFO("tmp421", 0x4C),
+	},
+	{	I2C_BOARD_INFO("24c256", 0x52),
+		.platform_data = &km_e2_fram_info,
+	}
+};
+
+static void km_e2_i2c1_init(void)
+{
+	/* I2C1 is the second bus */
+	setup_pin_mux(km_e2_leds_pin_mux);
+	km_e2_leds_init();
+	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
+			ARRAY_SIZE(km_e2_i2c1_boardinfo));
+}
+
+static void km_mmi_i2c1_init(void)
+{
+	setup_pin_mux(km_e2_leds_pin_mux);
+	km_e2_leds_init();
+	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
+			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
 
 /* LCD Display */
