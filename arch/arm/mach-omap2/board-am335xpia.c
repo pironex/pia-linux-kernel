@@ -1037,10 +1037,14 @@ static void km_e2_i2c1_init(void)
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
 
+static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
+	// TODO
+};
+
 static void km_mmi_i2c1_init(void)
 {
-	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
-			ARRAY_SIZE(km_e2_i2c1_boardinfo));
+	omap_register_i2c_bus(2, 400, km_mmi_i2c1_boardinfo,
+			ARRAY_SIZE(km_mmi_i2c1_boardinfo));
 }
 
 /* LCD Display */
@@ -1763,10 +1767,12 @@ static void km_mmi_setup(void)
 	}
 
 	setup_pin_mux(km_mmi_board_pin_mux);
+
 	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
 	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 
 	pia335x_rtc_init();
+	km_mmi_i2c1_init(); /* second i2c bus */
 
 	mmc0_init();
 
