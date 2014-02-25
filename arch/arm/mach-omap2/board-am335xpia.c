@@ -302,13 +302,6 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* E2 LED drivers */
-static struct pinmux_config km_e2_leds_pin_mux[] = {
-	/* enable input to allow readback of status */
-	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
 /* E2 RS485 */
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
 	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
@@ -433,6 +426,7 @@ static struct gpio km_e2_rev1_gpios[] = {
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ E2_GPIO_LED_OE,	GPIO_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
 	{ E2_GPIO_CLEAR_RESET,	GPIOF_OUT_INIT_HIGH, "clear_reset" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
@@ -461,6 +455,8 @@ static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
 	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* LED OE */
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLDOWN},
 	/* FRAM WP */
 	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
 	/* FF_CLK */
@@ -490,6 +486,7 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ E2_GPIO_LED_OE,	GPIO_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
 	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
@@ -518,6 +515,8 @@ static struct pinmux_config km_e2_gpios_pin_mux[] = {
 	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* LED OE */
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLDOWN},
 	/* FRAM WP */
 	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
 	/* FF_CLK */
@@ -551,6 +550,7 @@ static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
 	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
+	{ E2_GPIO_LED_OE,	GPIOF_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
 	{ E2_GPIO_FF_CLK,	GPIOF_OUT_INIT_HIGH, "ff_clk" },
 	{ E2_GPIO_WD_RESET,	GPIOF_IN, "wd_reset" },
@@ -967,20 +967,6 @@ static struct pca9633_platform_data km_e2_leds2_data = {
 	},
 	.outdrv = PCA9633_OPEN_DRAIN,
 };
-
-static void km_e2_leds_init(void)
-{
-	int gpio = GPIO_TO_PIN(3, 17);
-	setup_pin_mux(nand_pin_mux);
-	if (gpio_request(gpio, "led_oe") < 0) {
-		pr_err("Failed to request gpio for led_oe");
-		return;
-	}
-
-	pr_info("Configure LEDs...\n");
-	gpio_direction_output(gpio, 0);
-	gpio_export(gpio, 0);
-}
 
 /* MMI LEDs */
 static struct gpio_led km_mmi_gpio_leds[] = {
