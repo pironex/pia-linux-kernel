@@ -213,7 +213,7 @@ static struct pinmux_config clkout1_pin_mux[] = {
 };
 
 static struct pinmux_config clkout2_pin_mux[] = {
-	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
+	{"xdma_event_intr1.clkout2", AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
@@ -1067,54 +1067,38 @@ static void km_mmi_i2c1_init(void)
 
 /* LCD Display */
 static struct pinmux_config lcdc_pin_mux[] = {
-	{"lcd_data0.lcd_data0",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data1.lcd_data1",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data2.lcd_data2",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data3.lcd_data3",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data4.lcd_data4",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data5.lcd_data5",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data6.lcd_data6",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data7.lcd_data7",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data8.lcd_data8",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data9.lcd_data9",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data10.lcd_data10",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data11.lcd_data11",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data12.lcd_data12",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data13.lcd_data13",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data14.lcd_data14",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"lcd_data15.lcd_data15",	OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT
-							   | AM33XX_PULL_DISA},
-	{"gpmc_ad8.lcd_data16",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad9.lcd_data17",		OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad10.lcd_data18",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad11.lcd_data19",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad12.lcd_data20",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad13.lcd_data21",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad14.lcd_data22",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"gpmc_ad15.lcd_data23",	OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
-	{"lcd_vsync.lcd_vsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"lcd_hsync.lcd_hsync",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"lcd_pclk.lcd_pclk",		OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{"lcd_ac_bias_en.lcd_ac_bias_en", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
+	{ "lcd_data0.lcd_data0", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data1.lcd_data1", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data2.lcd_data2", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data3.lcd_data3", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data4.lcd_data4", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data5.lcd_data5", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data6.lcd_data6", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data7.lcd_data7", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data8.lcd_data8", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data9.lcd_data9", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data10.lcd_data10", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data11.lcd_data11", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data12.lcd_data12", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data13.lcd_data13", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data14.lcd_data14", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "lcd_data15.lcd_data15", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
+	{ "gpmc_ad8.lcd_data16", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad9.lcd_data17", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad10.lcd_data18", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad11.lcd_data19", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad12.lcd_data20", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad13.lcd_data21", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad14.lcd_data22", AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad15.lcd_data23", AM33XX_PIN_OUTPUT },
+	{ "lcd_vsync.lcd_vsync", AM33XX_PIN_OUTPUT },
+	{ "lcd_hsync.lcd_hsync", AM33XX_PIN_OUTPUT },
+	{ "lcd_pclk.lcd_pclk", AM33XX_PIN_OUTPUT },
+	{ "lcd_ac_bias_en.lcd_ac_bias_en", AM33XX_PIN_OUTPUT },
 	/* display enable GPIO */
-	{"gpmc_ben1.gpio1_28", 		OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{ "gpmc_ben1.gpio1_28", AM33XX_PIN_OUTPUT },
 	/* backlight GPIO */
-	{"mcasp0_ahclkr.gpio3_17", 	OMAP_MUX_MODE7 | AM33XX_PIN_OUTPUT},
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
