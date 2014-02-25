@@ -1037,8 +1037,18 @@ static void km_e2_i2c1_init(void)
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
 
+static struct at24_platform_data km_mmi_lcd_eeprom_info = {
+	.byte_len       = 128,
+	.page_size      = 8,
+	.flags          = 0,
+	.context        = (void *)NULL,
+};
+
 static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
-	// TODO
+	{
+		I2C_BOARD_INFO("24c01", 0x51),
+		.platform_data = &km_mmi_lcd_eeprom_info,
+	}
 };
 
 static void km_mmi_i2c1_init(void)
