@@ -194,6 +194,19 @@ static struct pinmux_config km_e2_board_pin_mux[] = {
 	{NULL, 0},
 };
 
+static struct pinmux_config km_mmi_board_pin_mux[] = {
+	/* I2C1*/
+	{ "uart1_rxd.i2c1_sda",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart1_txd.i2c1_scl",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	/* CLKOUT1 */
+	{"xdma_event_intr0.clkout1", AM33XX_PIN_INPUT_PULLUP},
+	/* disable EMU3 by default */
+	{"xdma_event_intr1.gpio0_20", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 static struct pinmux_config clkout2_pin_mux[] = {
 	{"xdma_event_intr1.clkout2", OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT},
 	{NULL, 0},
@@ -357,6 +370,7 @@ struct pia_gpios {
 #define E2_GPIO_RESERVE3	GPIO_TO_PIN(0, 27)
 #define E2_GPIO_RESERVE4	GPIO_TO_PIN(3, 4)
 #define E2_GPIO_POE_PS_SHUTDOWN GPIO_TO_PIN(3, 9)
+#define E2_GPIO_LED_OE		GPIO_TO_PIN(3,17)
 #define E2_GPIO_PSE_SHUTDOWN	GPIO_TO_PIN(3, 20)
 /* special GPIOs, handled elsewhere */
 #define E2_GPIO_BOOT0_E1	GPIO_TO_PIN(3, 4)
@@ -384,6 +398,8 @@ static struct pinmux_config km_e2_rev1_gpios_pin_mux[] = {
 	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
+	/* LED OE */
+	{"mcasp0_ahclkr.gpio3_17", AM33XX_PIN_INPUT_PULLDOWN},
 	/* FRAM WP */
 	{"mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLDOWN },
 	/* CLEAR_RESET */
@@ -1764,6 +1780,7 @@ static void km_mmi_setup(void)
 		am33xx_piarev = 2;
 	}
 
+	setup_pin_mux(km_mmi_board_pin_mux);
 	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
 	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 
