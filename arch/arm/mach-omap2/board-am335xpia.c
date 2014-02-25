@@ -571,6 +571,8 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_WDI		GPIO_TO_PIN(1, 0)
 #define MMI_GPIO_WD_SET1	GPIO_TO_PIN(1, 1)
 #define MMI_GPIO_WD_SET2	GPIO_TO_PIN(1, 2)
+#define MMI_GPIO_LED1		GPIO_TO_PIN(0, 30)
+#define MMI_GPIO_LED2		GPIO_TO_PIN(0, 31)
 /* MMI: LCD GPIOs */
 #define MMI_GPIO_LCD_DISP	GPIO_TO_PIN(1,28)
 #define MMI_GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
@@ -984,12 +986,12 @@ static void km_e2_leds_init(void)
 static struct gpio_led km_mmi_gpio_leds[] = {
 	{
 		.name			= "am335x:KM_MMI:usr1",
-		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
+		.gpio			= MMI_GPIO_LED1,	/* LED1 */
 		.default_trigger	= "heartbeat",
 	},
 	{
 		.name			= "am335x:KM_MMI:usr2",
-		.gpio			= GPIO_TO_PIN(0, 31),	/* LED2 */
+		.gpio			= MMI_GPIO_LED2,	/* LED2 */
 		.default_trigger	= "mmc0",
 	},
 };
@@ -1011,7 +1013,6 @@ static void km_mmi_leds_init(void)
 {
 	int err;
 
-	setup_pin_mux(km_mmi_gpio_led_mux);
 	err = platform_device_register(&km_mmi_leds);
 	if (err)
 		pr_err("failed to register gpio led device\n");
@@ -1046,17 +1047,12 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 
 static void km_e2_i2c1_init(void)
 {
-	/* I2C1 is the second bus */
-	setup_pin_mux(km_e2_leds_pin_mux);
-	km_e2_leds_init();
 	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
 
 static void km_mmi_i2c1_init(void)
 {
-	setup_pin_mux(km_e2_leds_pin_mux);
-	km_e2_leds_init();
 	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
