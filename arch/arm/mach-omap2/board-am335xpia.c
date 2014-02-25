@@ -490,7 +490,7 @@ static void usb1_init(void)
 #endif
 
 /* MII2 */
-static void mii2_init(void)
+static void km_e2_mii2_init(void)
 {
 	pr_info("piA335x: %s\n", __func__);
 	setup_pin_mux(km_e2_mii2_pin_mux);
@@ -635,7 +635,7 @@ static void mmc0_init(void)
 /**
  * AM33xx LEDs
  */
-static struct gpio_led gpio_leds[] = {
+static struct gpio_led km_mmi_gpio_leds[] = {
 	{
 		.name			= "am335x:KM_MMI:usr1",
 		.gpio			= GPIO_TO_PIN(0, 30),	/* LED1 */
@@ -648,25 +648,25 @@ static struct gpio_led gpio_leds[] = {
 	},
 };
 
-static struct gpio_led_platform_data gpio_led_info = {
-	.leds		= gpio_leds,
-	.num_leds	= ARRAY_SIZE(gpio_leds),
+static struct gpio_led_platform_data km_mmi_led_info = {
+	.leds		= km_mmi_gpio_leds,
+	.num_leds	= ARRAY_SIZE(km_mmi_gpio_leds),
 };
 
-static struct platform_device leds_gpio = {
+static struct platform_device km_mmi_leds = {
 	.name	= "leds-gpio",
 	.id	= -1,
 	.dev	= {
-		.platform_data	= &gpio_led_info,
+		.platform_data	= &km_mmi_led_info,
 	},
 };
 
-static void gpio_led_init(void)
+static void km_mmi_leds_init(void)
 {
 	int err;
 
-	setup_pin_mux(gpio_led_mux);
-	err = platform_device_register(&leds_gpio);
+	setup_pin_mux(km_mmi_gpio_led_mux);
+	err = platform_device_register(&km_mmi_leds);
 	if (err)
 		pr_err("failed to register gpio led device\n");
 }
@@ -686,7 +686,7 @@ static void km_e2_leds_init(void)
 }
 
 /* FRAM is similar to at24 eeproms without write delay and page limits */
-static struct at24_platform_data e2_km_fram_info = {
+static struct at24_platform_data km_e2_fram_info = {
 	.byte_len       = (256*1024) / 8,
 	.page_size      = (256*1024) / 8, /* no sequencial rw limit */
 	.flags          = AT24_FLAG_ADDR16,
@@ -707,7 +707,7 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("tmp421", 0x4C),
 	},
 	{	I2C_BOARD_INFO("24c256", 0x52),
-		.platform_data = &e2_km_fram_info,
+		.platform_data = &km_e2_fram_info,
 	}
 };
 
@@ -1706,7 +1706,7 @@ static void km_e2_setup(void)
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
 	mmc0_init();
-	mii2_init();
+	km_e2_mii2_init();
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		usb1_init();
@@ -1738,7 +1738,7 @@ static void km_e2_setup(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
-static void setup_mmi(void)
+static void km_mmi_setup(void)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
 	am33xx_piaid = PIA335_KM_MMI;
@@ -1758,7 +1758,7 @@ static void setup_mmi(void)
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
-	gpio_led_init();
+	km_mmi_leds_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
 }
 
@@ -1809,14 +1809,9 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	pr_info("Board version: %s\n", tmp);
 
 	if (!strncmp("PIA335E2", config.name, 8)) {
-		setup_e2();
+		km_e2_setup();
 	} else if(!strncmp("PIA335MI", config.name, 8)) {
-		if(!strncmp("0.01", config.version, 4)) {
-			setup_mmi();
-		} else {
-			pr_info("PIA335MI: Unknown board revision %.4s\n",
-					config.version);
-		}
+		km_mmi_setup();
 	}
 
 	pia335x_gpios_init();
