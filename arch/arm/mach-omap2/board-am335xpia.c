@@ -199,13 +199,6 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* pinmux for led device */
-static struct pinmux_config km_mmi_gpio_led_mux[] = {
-	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-	{NULL, 0},
-};
-
 /* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config mmc0_e2_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -964,6 +957,10 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
 	/* 3.3V_Fail 3_20 */
 	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	/* LED1 */
+	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	/* LED2 */
+	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
 	{NULL, 0},
 };
 
