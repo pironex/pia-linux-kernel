@@ -571,11 +571,12 @@ static struct gpio km_e2_gpios[] = {
 
 /* MMI rev 0.x */
 #define MMI_GPIO_PMIC_INT	GPIO_TO_PIN(2, 1)
-#define MMI_GPIO_PMIC_WAKE	GPIO_TO_PIN(3,16)
+#define MMI_GPIO_PMIC_SLEEP	GPIO_TO_PIN(3,16)
 /* MMI: Watchdog */
 #define MMI_GPIO_WDI		GPIO_TO_PIN(1, 0)
 #define MMI_GPIO_WD_SET1	GPIO_TO_PIN(1, 1)
 #define MMI_GPIO_WD_SET2	GPIO_TO_PIN(1, 2)
+#define MMI_GPIO_3V3_FAIL	GPIO_TO_PIN(3,20)
 #define MMI_GPIO_LED1		GPIO_TO_PIN(0, 30)
 #define MMI_GPIO_LED2		GPIO_TO_PIN(0, 31)
 /* MMI: LCD GPIOs */
@@ -586,24 +587,26 @@ static struct gpio km_e2_gpios[] = {
 
 static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* PMIC INT */
-	{ "gpmc_clk.gpio2_1", AM33XX_PIN_INPUT_PULLUP },
-	/* PMIC SLEEP 3_16 */
+	{ "gpmc_clk.gpio2_1",	AM33XX_PIN_INPUT_PULLUP },
+	/* PMIC SLEEP 3_16 - not currently used */
+	{ "mcasp0_acr0.gpio3_16", AM33XX_PIN_INPUT_PULLUP },
 	/* WDI        1_0 */
-	{"gpmc_ad0.gpio1_0", AM33XX_PIN_OUTPUT},
+	{"gpmc_ad0.gpio1_0",	AM33XX_PIN_OUTPUT},
 	/* WD_SET1  1_1 */
-	{"gpmc_ad1.gpio1_1", AM33XX_PIN_OUTPUT},
+	{"gpmc_ad1.gpio1_1",	AM33XX_PIN_OUTPUT},
 	/* WD_SET2	1_2 */
-	{"gpmc_ad2.gpio1_2", AM33XX_PIN_OUTPUT},
+	{"gpmc_ad2.gpio1_2",	AM33XX_PIN_OUTPUT},
 	/* 3.3V_Fail 3_20 */
-	{"mcasp0_axr1.gpio3_20", AM33XX_PIN_INPUT_PULLUP},
+	{"mcasp0_axr1.gpio3_20",AM33XX_PIN_INPUT_PULLUP},
 	/* LED1 */
-	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
 	/* LED2 */
-	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_wpn.gpio0_31",	AM33XX_PIN_INPUT},
 	{NULL, 0},
 };
 
 static struct gpio km_mmi_gpios[] = {
+	{ MMI_GPIO_3V3_FAIL,	GPIOF_IN, "3v3_fail" },
 };
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
