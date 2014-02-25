@@ -127,17 +127,9 @@ int am335x_pia_get_id(void)
 }
 EXPORT_SYMBOL(am335x_pia_get_id);
 
-/** PINMUX **/
 struct pinmux_config {
 	const char *string_name; /* signal name format */
 	int val; /* Options for the mux register value */
-};
-
-/* pinmux for led device */
-static struct pinmux_config gpio_led_mux[] = {
-	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
-	{NULL, 0},
 };
 
 /*
@@ -153,6 +145,30 @@ static void setup_pin_mux(struct pinmux_config *pin_mux)
 
 }
 
+static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
+{
+	struct i2c_adapter *adapter;
+	struct i2c_client *client;
+
+	/* I2C adapter request */
+	adapter = i2c_get_adapter(busnum);
+	if (!adapter) {
+		pr_err("failed to get adapter i2c%u\n", busnum);
+		return -1;
+	}
+
+	client = i2c_new_device(adapter, info);
+	if (!client) {
+		pr_err("failed to register 0x%x to i2c%u\n",
+				info->addr, busnum);
+		return -1;
+	}
+	i2c_put_adapter(adapter);
+
+	return 0;
+}
+
+/** PINMUX tables */
 #ifdef CONFIG_OMAP_MUX
 static struct omap_board_mux board_mux[] __initdata = {
 	/* I2C0 */
@@ -183,28 +199,12 @@ static struct pinmux_config clkout2_pin_mux[] = {
 	{NULL, 0},
 };
 
-static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
-{
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-
-	/* I2C adapter request */
-	adapter = i2c_get_adapter(busnum);
-	if (!adapter) {
-		pr_err("failed to get adapter i2c%u\n", busnum);
-		return -1;
-	}
-
-	client = i2c_new_device(adapter, info);
-	if (!client) {
-		pr_err("failed to register 0x%x to i2c%u\n",
-				info->addr, busnum);
-		return -1;
-	}
-	i2c_put_adapter(adapter);
-
-	return 0;
-}
+/* pinmux for led device */
+static struct pinmux_config km_mmi_gpio_led_mux[] = {
+	{"gpmc_wait0.gpio0_30", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{"gpmc_wpn.gpio0_31", OMAP_MUX_MODE7 | AM33XX_PIN_INPUT},
+	{NULL, 0},
+};
 
 /* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config mmc0_e2_pin_mux[] = {
@@ -224,7 +224,7 @@ static struct pinmux_config mmc0_e2_pin_mux[] = {
 };
 
 /* Module pin mux for mii2 */
-static struct pinmux_config mii2_pin_mux[] = {
+static struct pinmux_config km_e2_mii2_pin_mux[] = {
 	{"gpmc_a0.mii2_txen", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
 	{"gpmc_a1.mii2_rxdv", OMAP_MUX_MODE1 | AM33XX_PIN_INPUT_PULLDOWN},
 	{"gpmc_a2.mii2_txd3", OMAP_MUX_MODE1 | AM33XX_PIN_OUTPUT},
@@ -283,7 +283,7 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* pinmux for led drivers */
+/* E2 LED drivers */
 static struct pinmux_config km_e2_leds_pin_mux[] = {
 	/* enable input to allow readback of status */
 	{"mcasp0_ahclkr.gpio3_17", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -306,7 +306,7 @@ static struct pinmux_config km_e2_uart4_pin_mux[] = {
 	{NULL, 0},
 };
 
-/* SPI1 */
+/* E2 SPI1 */
 static struct pinmux_config km_e2_spi_pin_mux[] = {
 	/* SPI0 */
 	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
@@ -493,7 +493,7 @@ static void usb1_init(void)
 static void mii2_init(void)
 {
 	pr_info("piA335x: %s\n", __func__);
-	setup_pin_mux(mii2_pin_mux);
+	setup_pin_mux(km_e2_mii2_pin_mux);
 }
 
 /** I2C1 */
