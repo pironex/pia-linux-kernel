@@ -389,11 +389,11 @@ static struct pinmux_config km_e2_rev1_gpios_pin_mux[] = {
 	/* USB OC */
 	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
 	/* WD_SET1 */
-	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT },
 	/* WD_SET2 */
 	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
 	/* WDI */
-	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
 	/* LED OE */
@@ -429,7 +429,7 @@ static struct gpio km_e2_rev1_gpios[] = {
 	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
-	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_WDI, 		GPIOF_OUT_INIT_LOW, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
 	{ E2_GPIO_LED_OE,	GPIO_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
@@ -453,11 +453,11 @@ static struct pinmux_config km_e2_rev2_gpios_pin_mux[] = {
 	/* USB OC */
 	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
 	/* WD_SET1 */
-	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT },
 	/* WD_SET2 */
 	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
 	/* WDI */
-	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
 	/* LED OE */
@@ -489,7 +489,7 @@ static struct gpio km_e2_rev2_gpios[] = {
 	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
-	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_WDI, 		GPIOF_OUT_INIT_LOW, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
 	{ E2_GPIO_LED_OE,	GPIO_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
@@ -513,11 +513,11 @@ static struct pinmux_config km_e2_gpios_pin_mux[] = {
 	/* USB OC */
 	{"mii1_rxd1.gpio2_20",     AM33XX_PIN_INPUT_PULLUP },
 	/* WD_SET1 */
-	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_vsync.gpio2_22",     AM33XX_PIN_INPUT },
 	/* WD_SET2 */
 	{"lcd_hsync.gpio2_23",     AM33XX_PIN_INPUT_PULLDOWN },
 	/* WDI */
-	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT_PULLUP },
+	{"lcd_pclk.gpio2_24",      AM33XX_PIN_INPUT },
 	/* 24V FAIL */
 	{"lcd_ac_bias_en.gpio2_25",AM33XX_PIN_INPUT_PULLUP },
 	/* LED OE */
@@ -553,7 +553,7 @@ static struct gpio km_e2_gpios[] = {
 	{ E2_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ E2_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
 	{ E2_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW,  "wd_set2" },
-	{ E2_GPIO_WDI, 		GPIOF_IN, "wdi" },
+	{ E2_GPIO_WDI, 		GPIOF_OUT_INIT_LOW, "wdi" },
 	{ E2_GPIO_24V_FAIL,	GPIOF_IN, "24v_fail" },
 	{ E2_GPIO_LED_OE,	GPIOF_OUT_INIT_LOW, "led_oe" },
 	{ E2_GPIO_FRAM_WP,	GPIOF_OUT_INIT_LOW,  "fram_wp" },
@@ -590,11 +590,11 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* PMIC SLEEP 3_16 - not currently used */
 	{ "mcasp0_acr0.gpio3_16",	AM33XX_PIN_INPUT_PULLUP },
 	/* WDI        1_0 */
-	{ "gpmc_ad0.gpio1_0",		AM33XX_PIN_OUTPUT},
-	/* WD_SET1  1_1 */
-	{ "gpmc_ad1.gpio1_1",		AM33XX_PIN_OUTPUT},
+	{ "gpmc_ad0.gpio1_0",		AM33XX_PIN_INPUT},
+	/* WD_SET1  1_1 - external pullup */
+	{ "gpmc_ad1.gpio1_1",		AM33XX_PIN_INPUT},
 	/* WD_SET2	1_2 */
-	{ "gpmc_ad2.gpio1_2",		AM33XX_PIN_OUTPUT},
+	{ "gpmc_ad2.gpio1_2",		AM33XX_PIN_INPUT_PULLDOWN},
 	/* 3.3V_Fail 3_20 */
 	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLUP},
 	/* LED1 */
@@ -608,6 +608,10 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 
 static struct gpio km_mmi_gpios[] = {
 	{ MMI_GPIO_3V3_FAIL,	GPIOF_IN, "3v3_fail" },
+	{ MMI_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
+	/* TODO keeps the watchdog disabled, change when implemented */
+	{ MMI_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW, "wd_set2" },
+	{ MMI_GPIO_WDI,		GPIOF_OUT_INIT_LOW, "wdi" },
 };
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
