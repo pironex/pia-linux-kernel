@@ -570,6 +570,7 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_ACC_INT2	GPIO_TO_PIN(0, 7)
 /* Monitoring */
 #define MMI_GPIO_3V3_FAIL	GPIO_TO_PIN(3,20)
+#define MMI_GPIO_USB_OC		GPIO_TO_PIN(0, 5)
 #define MMI_GPIO_LED1		GPIO_TO_PIN(0, 30)
 #define MMI_GPIO_LED2		GPIO_TO_PIN(0, 31)
 /* MMI: LCD GPIOs */
@@ -590,6 +591,8 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "gpmc_ad2.gpio1_2",		AM33XX_PIN_INPUT_PULLDOWN},
 	/* 3.3V_Fail 3_20 */
 	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLUP},
+	/* USB OC */
+	{ "spi0_cs0.gpio0_5",		AM33XX_PIN_INPUT_PULLUP },
 	/* LED1 */
 	{ "gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
 	/* LED2 */
@@ -607,6 +610,7 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 
 static struct gpio km_mmi_gpios[] = {
 	{ MMI_GPIO_3V3_FAIL,	GPIOF_IN, "3v3_fail" },
+	{ MMI_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ MMI_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
 	/* TODO keeps the watchdog disabled, change when implemented */
 	{ MMI_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW, "wd_set2" },
@@ -1705,6 +1709,7 @@ static void km_mmi_setup(void)
 	clkout2_32k_enable();
 	lis331dlh_init();
 
+	usb0_init(); /* since 0.02 */
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
