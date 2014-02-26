@@ -565,6 +565,9 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_WD_SET2	GPIO_TO_PIN(1, 2)
 /* MMC */
 #define MMI_GPIO_MMC_CD		GPIO_TO_PIN(0, 3)
+/* 3G ACC */
+#define MMI_GPIO_ACC_INT1	GPIO_TO_PIN(3,19)
+#define MMI_GPIO_ACC_INT2	GPIO_TO_PIN(0, 7)
 /* Monitoring */
 #define MMI_GPIO_3V3_FAIL	GPIO_TO_PIN(3,20)
 #define MMI_GPIO_LED1		GPIO_TO_PIN(0, 30)
@@ -591,6 +594,10 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
 	/* LED2 */
 	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT},
+	/* ACC INT1 */
+	{"mcasp0_fsr.gpio3_19",		AM33XX_PIN_INPUT_PULLUP},
+	/* ACC INT2 */
+	{"ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLUP},
 	/* touch INT */
 	{ "gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
 	/* MMC CD */
@@ -1486,18 +1493,6 @@ static struct omap_musb_board_data musb_board_data = {
 
 /* Accelerometer LIS331DLH */
 #include <linux/lis3lv02d.h>
-#define GPIO_LIS_IRQ1	GPIO_TO_PIN(3, 19)
-#define GPIO_LIS_IRQ2	GPIO_TO_PIN(0, 7)
-
-/* LIS3 IRQ GPIOs */
-static struct pinmux_config km_mmi_lis3_pin_mux[] = {
-	/* INT1 */
-	{"mcasp0_fsr.gpio3_19",		AM33XX_PIN_INPUT_PULLUP},
-	/* INT2 */
-	{"ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
 static struct lis3lv02d_platform_data lis331dlh_pdata = {
 	.click_flags = LIS3_CLICK_SINGLE_X |
 			LIS3_CLICK_SINGLE_Y |
@@ -1517,18 +1512,17 @@ static struct lis3lv02d_platform_data lis331dlh_pdata = {
 	.st_max_limits[0] = 550,
 	.st_max_limits[1] = 550,
 	.st_max_limits[2] = 750,
-	.irq2 = OMAP_GPIO_IRQ(GPIO_LIS_IRQ2)
+	.irq2 = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT2)
 };
 
 static struct i2c_board_info lis331dlh_i2c_boardinfo = {
 	I2C_BOARD_INFO("lis331dlh", 0x18),
 	.platform_data = &lis331dlh_pdata,
-	.irq = OMAP_GPIO_IRQ(GPIO_LIS_IRQ1),
+	.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
 };
 
 static void lis331dlh_init(void)
 {
-	setup_pin_mux(km_mmi_lis3_pin_mux);
 	pia335x_add_i2c_device(1, &lis331dlh_i2c_boardinfo);
 }
 
