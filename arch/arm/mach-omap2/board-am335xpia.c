@@ -1118,6 +1118,19 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* Touch resitive integrated */
+#include <linux/input/ti_tsc.h>
+static struct tsc_data km_mmi_touch_res_data  = {
+	.wires  = 4,
+	.x_plate_resistance = 200,
+	.steps_to_configure = 5,
+};
+
+static struct mfd_tscadc_board km_mmi_tscadc = {
+	.tsc_init = &km_mmi_touch_res_data,
+	.adc_init = 0,
+};
+
 /* Touch interface FT5406 */
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
 	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
@@ -1135,18 +1148,24 @@ static struct i2c_board_info km_mmi_i2c1_touch = {
 	.irq = OMAP_GPIO_IRQ(MMI_GPIO_LCD_PENDOWN),
 	.platform_data = &km_mmi_touch_data,
 };
+#endif
 
 static void pia335x_touch_init(void)
 {
+	int err;
+
 	pr_info("pia335x_init: init touch controller FT5x06\n");
 
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
+	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 	/* I2C adapter request */
 	pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
-}
-#else
-static void __init pia335x_touch_init(void)
-{}
 #endif
+
+	err = am33xx_register_mfd_tscadc(&km_mmi_tscadc);
+	if (err)
+		pr_err("failed to register TSADC device\n");
+}
 
 static const struct display_panel disp_panel = {
 	WVGA,
