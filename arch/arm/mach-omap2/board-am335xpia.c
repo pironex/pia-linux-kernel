@@ -736,7 +736,6 @@ static void clkout2_12m_enable(void)
 
 	setup_pin_mux(clkout2_pin_mux);
 }
-#endif
 
 static void clkout2_32k_enable(void)
 {
@@ -753,6 +752,7 @@ static void clkout2_32k_enable(void)
 
 	setup_pin_mux(clkout2_pin_mux);
 }
+#endif
 
 /* NAND partition information */
 static struct mtd_partition pia335x_nand_partitions[] = {
@@ -1280,6 +1280,7 @@ static void km_e2_can_init(void)
 
 static void km_mmi_can_init(void)
 {
+	// TODO only enable for extended
 	setup_pin_mux(km_mmi_can_pin_mux);
 	am33xx_d_can_init(0);
 }
@@ -1720,7 +1721,7 @@ static void km_mmi_setup(void)
 
 	mmc0_init();
 
-	clkout2_32k_enable();
+	//clkout2_32k_enable();
 	lis331dlh_init();
 
 	usb0_init(); /* since 0.02 */
