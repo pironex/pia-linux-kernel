@@ -218,24 +218,7 @@ static struct pinmux_config clkout2_pin_mux[] = {
 };
 
 /* Module pin mux for mmc0 on board am335x_E2 */
-static struct pinmux_config mmc0_e2_pin_mux[] = {
-	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-#if 0 /* only used on REV 0.01 boards, kept for reference */
-	/* write protect */
-	{"mii1_txclk.gpio3_9", AM33XX_PIN_INPUT_PULLUP},
-	/* card detect */
-	{"mii1_txd2.gpio0_17",  OMAP_MUX_MODE7 | AM33XX_PIN_INPUT_PULLUP},
-#endif
-	{NULL, 0},
-};
-
-/* Module pin mux for mmc0 on board am335x_MMI*/
-static struct pinmux_config km_mmi_mmc0_pin_mux[] = {
+static struct pinmux_config pia335x_mmc0_pin_mux[] = {
 	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
 	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -422,6 +405,10 @@ static struct pinmux_config km_e2_rev1_gpios_pin_mux[] = {
 	{"mcasp0_axr1.gpio3_20",   AM33XX_PIN_INPUT_PULLUP },
 	/* RS485 DE */
 	{"lcd_data11.gpio2_17",    AM33XX_PIN_INPUT_PULLUP},
+	/* MMC0 write protect */
+	{"mii1_txclk.gpio3_9",     AM33XX_PIN_INPUT_PULLUP},
+	/* MMC0 card detect */
+	{"mii1_txd2.gpio0_17",     AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 static struct gpio km_e2_rev1_gpios[] = {
@@ -576,6 +563,9 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_WDI		GPIO_TO_PIN(1, 0)
 #define MMI_GPIO_WD_SET1	GPIO_TO_PIN(1, 1)
 #define MMI_GPIO_WD_SET2	GPIO_TO_PIN(1, 2)
+/* MMC */
+#define MMI_GPIO_MMC_CD		GPIO_TO_PIN(0, 3)
+/* Monitoring */
 #define MMI_GPIO_3V3_FAIL	GPIO_TO_PIN(3,20)
 #define MMI_GPIO_LED1		GPIO_TO_PIN(0, 30)
 #define MMI_GPIO_LED2		GPIO_TO_PIN(0, 31)
@@ -603,6 +593,8 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT},
 	/* touch INT */
 	{ "gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
+	/* MMC CD */
+	{ "spi0_d0.gpio0_3",		AM33XX_PIN_INPUT_PULLUP },
 	{NULL, 0},
 };
 
@@ -875,18 +867,19 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 
 static void mmc0_init(void)
 {
+	setup_pin_mux(pia335x_mmc0_pin_mux);
 	switch(am33xx_piaid) {
 	case PIA335_KM_E2:
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 		if (am33xx_piarev == 1) {
 			pia335x_mmc[0].gpio_cd = GPIO_TO_PIN(0, 17);
 			 /* WP is GPIO_TO_PIN(3, 9) but we don't need it */
 			pia335x_mmc[0].nonremovable = false;
 		}
-		setup_pin_mux(mmc0_e2_pin_mux);
+#endif
 		break;
 	case PIA335_KM_MMI:
-		/* not used on KM MMI */
-		setup_pin_mux(km_mmi_mmc0_pin_mux);
+		pia335x_mmc[0].gpio_cd = MMI_GPIO_MMC_CD;
 		break;
 	}
 
