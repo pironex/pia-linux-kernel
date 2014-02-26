@@ -290,6 +290,13 @@ static struct pinmux_config km_e2_can_pin_mux[] = {
 	{NULL, 0},
 };
 
+/* MMI CAN 0 */
+static struct pinmux_config km_mmi_can_pin_mux[] = {
+	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
+	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 /* E2 RS485 */
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
 	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
@@ -1261,6 +1268,7 @@ static void pia335x_lcd_init(int id)
 	return;
 }
 
+/* CAN */
 extern void am33xx_d_can_init(unsigned int instance);
 static void km_e2_can_init(void)
 {
@@ -1270,7 +1278,13 @@ static void km_e2_can_init(void)
 
 }
 
-/* SPI1 -> CAN2 */
+static void km_mmi_can_init(void)
+{
+	setup_pin_mux(km_mmi_can_pin_mux);
+	am33xx_d_can_init(0);
+}
+
+/* SPI */
 static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
 	.turbo_mode	= 0,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
@@ -1710,6 +1724,8 @@ static void km_mmi_setup(void)
 	lis331dlh_init();
 
 	usb0_init(); /* since 0.02 */
+	km_mmi_can_init(); /* since 0.02, only extended */
+
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
