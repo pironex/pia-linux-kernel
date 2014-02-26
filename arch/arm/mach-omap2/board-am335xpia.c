@@ -212,10 +212,12 @@ static struct pinmux_config clkout1_pin_mux[] = {
 	{NULL, 0},
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 static struct pinmux_config clkout2_pin_mux[] = {
 	{"xdma_event_intr1.clkout2", AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
+#endif
 
 /* Module pin mux for mmc0 on board am335x_E2 */
 static struct pinmux_config pia335x_mmc0_pin_mux[] = {
