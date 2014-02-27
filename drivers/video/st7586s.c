@@ -5,8 +5,12 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef DEBUG
 #define TRACE() \
   printk(KERN_INFO DRVNAME "->%s (%s:%i)\n", __FUNCTION__, __FILE__, __LINE__)
+#else
+#define TRACE()
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -71,16 +75,41 @@ static int st7586s_configure(struct spi_device* spi)
   return SPI_FLUSH(spi, buf);
 }
 
+static int st7586s_violates_boundaries(int x, int y, int w, int h)
+{
+  return x > WIDTH || x + w < 0 || y > HEIGHT || y + h < 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void st7586s_fillrect(struct fb_info* info, const struct fb_fillrect* rect)
 {
+
   TRACE();
+
+  // Discard all writes not fitting to the display
+  if (st7586s_violates_boundaries(rect->dx, rect->dy, rect->width, rect->height))
+    return;
+
+  static unsigned short buf[] = { 0b000101100 };
+  unsigned short pattern[] = { DATA(rect->color) };
+  st7586s_make_window(info->par, rect->dx >> 1, rect->dy, rect->width >> 1, rect->height);
+  SPI_FLUSH(info->par, buf);
+
+  // TODO: Optimize
+  int x, y;
+  for (y = 0; y < rect->height; ++y)
+    for (x = 0; x < rect->width; x += 2)
+      SPI_FLUSH(info->par, pattern);
 }
 
 void st7586s_copyarea(struct fb_info* info, const struct fb_copyarea* area)
 {
   TRACE();
+
+  // Discard all writes not fitting to the display
+  if (st7586s_violates_boundaries(area->dx, area->dy, area->width, area->height))
+    return;
 }
 
 void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
@@ -95,34 +124,26 @@ void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
   }
 
   // Discard all writes not fitting to the display
-  if (image->dx > WIDTH ||
-    image->dx + image->width < 0 ||
-    image->dy > HEIGHT ||
-    image->dy + image->height < 0)
-  {
+  if (st7586s_violates_boundaries(image->dx, image->dy, image->width, image->height))
     return;
-  }
 
   static const unsigned short buf[] = { 0b000101100 };
   st7586s_make_window(info->par, image->dx >> 1, image->dy, image->width >> 1, image->height);
   SPI_FLUSH(info->par, buf);
 
   // TODO: Optimize
-  int x, y;
-  for (y = 0; y < image->height; ++y)
+  int i;
+  for (i = 0; i < image->width * image->height >> 3; ++i)
   {
-    for (x = 0; x < image->width; x += 8)
+    unsigned short byte = image->data[i];
+    unsigned short unpacked[] =
     {
-      unsigned char byte = image->data[(y * image->width >> 3) + (x >> 3)];
-      unsigned short unpacked[] =
-      {
-        0x100 | (0b111 * (byte >> 7 & 1)) << 5 | (0b111 * (byte >> 6 & 1)) << 2,
-        0x100 | (0b111 * (byte >> 5 & 1)) << 5 | (0b111 * (byte >> 4 & 1)) << 2,
-        0x100 | (0b111 * (byte >> 3 & 1)) << 5 | (0b111 * (byte >> 2 & 1)) << 2,
-        0x100 | (0b111 * (byte >> 1 & 1)) << 5 | (0b111 * (byte >> 0 & 1)) << 2,
-      };
-      SPI_FLUSH(info->par, unpacked);
-    }
+      0x100 | (0b111 * (byte >> 7 & 1)) << 5 | (0b111 * (byte >> 6 & 1)) << 2,
+      0x100 | (0b111 * (byte >> 5 & 1)) << 5 | (0b111 * (byte >> 4 & 1)) << 2,
+      0x100 | (0b111 * (byte >> 3 & 1)) << 5 | (0b111 * (byte >> 2 & 1)) << 2,
+      0x100 | (0b111 * (byte >> 1 & 1)) << 5 | (0b111 * (byte >> 0 & 1)) << 2,
+    };
+    SPI_FLUSH(info->par, unpacked);
   }
 }
 
