@@ -586,6 +586,15 @@ static struct gpio km_e2_gpios[] = {
 #define MMI_GPIO_LCD_DISP	GPIO_TO_PIN(1,28)
 #define MMI_GPIO_LCD_BACKLIGHT	GPIO_TO_PIN(3,17)
 #define MMI_GPIO_LCD_PENDOWN	GPIO_TO_PIN(2, 0)
+/* MMI: 24V IO */
+#define MMI_GPIO_OUT1		GPIO_TO_PIN(1,24)
+#define MMI_GPIO_OUT2		GPIO_TO_PIN(1,17)
+#define MMI_GPIO_OUT3		GPIO_TO_PIN(1,18)
+#define MMI_GPIO_OUT4		GPIO_TO_PIN(1,19)
+#define MMI_GPIO_IN1		GPIO_TO_PIN(1,20)
+#define MMI_GPIO_IN2		GPIO_TO_PIN(1,21)
+#define MMI_GPIO_IN3		GPIO_TO_PIN(1,22)
+#define MMI_GPIO_IN4		GPIO_TO_PIN(1,23)
 
 static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* PMIC INT */
@@ -614,6 +623,15 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLUP},
 	/* MMC CD */
 	{ "spi0_d0.gpio0_3",		AM33XX_PIN_INPUT_PULLUP },
+	/* 24V IOs - external pulls for safe default mode */
+	{ "gpmc_a1.gpio1_17",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_18",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_19",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_20",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_21",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_22",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_23",		AM33XX_PIN_INPUT },
+	{ "gpmc_a1.gpio1_24",		AM33XX_PIN_INPUT },
 	{NULL, 0},
 };
 
@@ -621,9 +639,17 @@ static struct gpio km_mmi_gpios[] = {
 	{ MMI_GPIO_3V3_FAIL,	GPIOF_IN, "3v3_fail" },
 	{ MMI_GPIO_USB_OC,	GPIOF_IN, "usb_oc" },
 	{ MMI_GPIO_WD_SET1,	GPIOF_OUT_INIT_HIGH, "wd_set1" },
-	/* TODO keeps the watchdog disabled, change when implemented */
+	/* REVISIT keeps the watchdog disabled, change when implemented */
 	{ MMI_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW, "wd_set2" },
 	{ MMI_GPIO_WDI,		GPIOF_OUT_INIT_LOW, "wdi" },
+	{ MMI_GPIO_OUT1,	GPIOF_OUT_INIT_LOW, "out1" },
+	{ MMI_GPIO_OUT2,	GPIOF_OUT_INIT_LOW, "out2" },
+	{ MMI_GPIO_OUT3,	GPIOF_OUT_INIT_LOW, "out3" },
+	{ MMI_GPIO_OUT4,	GPIOF_OUT_INIT_LOW, "out4" },
+	{ MMI_GPIO_IN1,		GPIOF_IN, "in1" },
+	{ MMI_GPIO_IN2,		GPIOF_IN, "in2" },
+	{ MMI_GPIO_IN3,		GPIOF_IN, "in3" },
+	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
 };
 
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
