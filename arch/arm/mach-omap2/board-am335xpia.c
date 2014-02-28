@@ -1743,7 +1743,7 @@ static void km_e2_setup(void)
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
 }
 
-static void km_mmi_setup(void)
+static void km_mmi_setup(int variant)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
 	am33xx_piaid = PIA335_KM_MMI;
@@ -1771,8 +1771,6 @@ static void km_mmi_setup(void)
 	//clkout2_32k_enable();
 	lis331dlh_init();
 
-	usb0_init(); /* since 0.02 */
-	km_mmi_can_init(); /* since 0.02, only extended */
 
 	km_mmi_tlv320aic3x_init();
 
@@ -1781,6 +1779,11 @@ static void km_mmi_setup(void)
 
 	km_mmi_leds_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
+	if (variant == 'X') {
+		/* only on eXtended variant */
+		usb0_init();
+		km_mmi_can_init();
+	}
 }
 
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
@@ -1833,7 +1836,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	if (!strncmp("PIA335E2", config.name, 8)) {
 		km_e2_setup();
 	} else if(!strncmp("PIA335MI", config.name, 8)) {
-		km_mmi_setup();
+		km_mmi_setup(config.opt[0]);
 	}
 
 	pia335x_gpios_init();
