@@ -3,7 +3,7 @@
 #include <linux/module.h>
 #include <linux/spi/spi.h>
 
-////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************/
 
 #ifdef DEBUG
 #define TRACE() \
@@ -12,7 +12,7 @@
 #define TRACE()
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************/
 
 #define DRVNAME "st7586s"
 #define WIDTH 384
@@ -37,22 +37,24 @@ static struct fb_var_screeninfo st7586s_var __devinitdata =
   .nonstd = 1,
 };
 
-////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************/
 
-#define DATA(arg) (arg & 0xff | 0x0100)
+#define DATA(arg) ((arg & 0xff) | 0x0100)
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (b) : (a))
 #define SPI_FLUSH(spi, buf) spi_write(spi, buf, sizeof(buf))
 
-static int st7586s_make_window(struct spi_device* spi, int x, int y, int w, int h)
+static int st7586s_prepare_transmission(struct spi_device* spi, int x, int y, int w, int h)
 {
-  int x_end = x + w - 1;
-  int y_end = y + h - 1;
-
+  int x_end, y_end;
+  
+  x_end = x + w - 1;
+  y_end = y + h - 1;
   unsigned short buf[] =
   {
-    0b000101010, DATA(x >> 8), DATA(x), DATA(x_end >> 8), DATA(x_end),
-    0b000101011, DATA(y >> 8), DATA(y), DATA(y_end >> 8), DATA(y_end),
+    0b000101010, DATA(x >> 8), DATA(x), DATA(x_end >> 8), DATA(x_end), /* Horizontal window */
+    0b000101011, DATA(y >> 8), DATA(y), DATA(y_end >> 8), DATA(y_end), /* Vertical window   */
+    0b000101100,                                                       /* Data transmission */
   };
 
   return SPI_FLUSH(spi, buf);
@@ -60,16 +62,14 @@ static int st7586s_make_window(struct spi_device* spi, int x, int y, int w, int 
 
 static int st7586s_configure(struct spi_device* spi)
 {
-  TRACE();
-
   unsigned short buf[] =
   {
-    0b000010001,                           // Sleep out mode
-    0b011000000, 0b100001100, 0b100000001, // Set VOP
-    0b011000011, 0b100000011,              // BIAS system
-    0b000111000,                           // Display mode gray
-    0b000111010, 0b100000010,              // Enable DDRAM interface
-    0b000101001,                           // Display ON
+    0b000010001,                           /* Sleep out mode         */
+    0b011000000, 0b100001100, 0b100000001, /* Set VOP                */
+    0b011000011, 0b100000011,              /* BIAS system            */
+    0b000111000,                           /* Display mode gray      */
+    0b000111010, 0b100000010,              /* Enable DDRAM interface */
+    0b000101001,                           /* Display ON             */
   };
 
   return SPI_FLUSH(spi, buf);
@@ -80,24 +80,27 @@ static int st7586s_violates_boundaries(int x, int y, int w, int h)
   return x > WIDTH || x + w < 0 || y > HEIGHT || y + h < 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************/
 
 void st7586s_fillrect(struct fb_info* info, const struct fb_fillrect* rect)
 {
-
+  int x, y;
+  int retval;
   TRACE();
 
-  // Discard all writes not fitting to the display
+  /* Discard all writes not fitting to the display */
   if (st7586s_violates_boundaries(rect->dx, rect->dy, rect->width, rect->height))
     return;
 
-  static unsigned short buf[] = { 0b000101100 };
-  unsigned short pattern[] = { DATA(rect->color) };
-  st7586s_make_window(info->par, rect->dx >> 1, rect->dy, rect->width >> 1, rect->height);
-  SPI_FLUSH(info->par, buf);
+  /* Prepare for data transmission */
+  if ((retval = st7586s_prepare_transmission(info->par, rect->dx >> 1, rect->dy, rect->width >> 1, rect->height)) != 0)
+  {
+    pr_err(DRVNAME ": Failed to prepare for data transmission (%i)\n", retval);
+    return;
+  }
 
-  // TODO: Optimize
-  int x, y;
+  /* TODO: Optimize */
+  const unsigned short pattern[] = { DATA(rect->color) };
   for (y = 0; y < rect->height; ++y)
     for (x = 0; x < rect->width; x += 2)
       SPI_FLUSH(info->par, pattern);
@@ -107,36 +110,42 @@ void st7586s_copyarea(struct fb_info* info, const struct fb_copyarea* area)
 {
   TRACE();
 
-  // Discard all writes not fitting to the display
+  /* Discard all writes not fitting to the display */
   if (st7586s_violates_boundaries(area->dx, area->dy, area->width, area->height))
     return;
+
+  pr_info(DRVNAME ": Area copying is not implemented yet\n");
 }
 
 void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 {
+  int i, retval;
+  unsigned short byte;
   TRACE();
 
-  // Refuse to blit non-monochrome images
+  /* Refuse to blit non-monochrome images */
   if (image->depth != 1)
   {
-    pr_info(DRVNAME ": Refusing to blit non-monochrome image");
+    pr_info(DRVNAME ": Refusing to blit non-monochrome image\n");
     return;
   }
 
-  // Discard all writes not fitting to the display
+  /* Discard all writes not fitting to the display */
   if (st7586s_violates_boundaries(image->dx, image->dy, image->width, image->height))
     return;
 
-  static const unsigned short buf[] = { 0b000101100 };
-  st7586s_make_window(info->par, image->dx >> 1, image->dy, image->width >> 1, image->height);
-  SPI_FLUSH(info->par, buf);
+  /* Prepare for data transmission */
+  if ((retval = st7586s_prepare_transmission(info->par, image->dx >> 1, image->dy, image->width >> 1, image->height)) != 0)
+  {
+    pr_err(DRVNAME ": Failed to prepare for data transmission (%i)\n", retval);
+    return;
+  }
 
-  // TODO: Optimize
-  int i;
+  /* TODO: Optimize */
   for (i = 0; i < image->width * image->height >> 3; ++i)
   {
-    unsigned short byte = image->data[i];
-    unsigned short unpacked[] =
+    byte = image->data[i];
+    const unsigned short unpacked[] =
     {
       0x100 | (0b111 * (byte >> 7 & 1)) << 5 | (0b111 * (byte >> 6 & 1)) << 2,
       0x100 | (0b111 * (byte >> 5 & 1)) << 5 | (0b111 * (byte >> 4 & 1)) << 2,
@@ -155,86 +164,62 @@ static struct fb_ops st7586s_ops =
   .fb_imageblit = st7586s_imageblit,
 };
 
-////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************/
 
 static int st7586s_probe(struct spi_device* spi)
 {
+  int retval;
+  struct fb_info* info;
   TRACE();
 
   spi->bits_per_word = 9;
-  int setup_result = spi_setup(spi);
-
-  if (setup_result)
+  if ((retval = spi_setup(spi)) != 0)
   {
     pr_err(DRVNAME ": Failed to switch to 9-bit words\n");
-    return setup_result;
+    return retval;
   }
 
-  int config_result = st7586s_configure(spi);
-  if (config_result)
+  if ((retval = st7586s_configure(spi)) != 0)
   {
     pr_err(DRVNAME ": Initial chip configuration failed\n");
-    return config_result;
+    return retval;
   }
 
-  struct st7586s_platfotm_data* pdata = spi->dev.platform_data;
-
-  struct st7586s_par* par;
-  int retval = -ENOMEM;
-
-  int vmem_size = WIDTH / 2 * HEIGHT;
-  u8* vmem = (u8*)kmalloc(vmem_size, GFP_KERNEL);
-  if (!vmem) return retval;
-
-  struct fb_info* info = framebuffer_alloc(/*sizeof(struct st7586s_par)*/0, &spi->dev);
-  if (!info)
+  if ((info = framebuffer_alloc(0, &spi->dev)) == NULL)
   {
     pr_err(DRVNAME ": Failed to allocate memory for framebuffer\n");
-    goto fballoc_fail;
+    return -ENOMEM;
   }
 
-  info->screen_base = vmem;
   info->fbops = &st7586s_ops;
   info->fix = st7586s_fix;
-  info->fix.smem_start = virt_to_phys(vmem);
-  info->fix.smem_len = vmem_size;
   info->var = st7586s_var;
-  // Fill pixel fmt
   info->flags = FBINFO_FLAG_DEFAULT | FBINFO_VIRTFB;
   info->par = spi;
 
-  retval = register_framebuffer(info);
-  if (retval < 0)
+  if ((retval = register_framebuffer(info)) != 0)
   {
     pr_err(DRVNAME ": Failed to register framebuffer\n");
-    goto fbreg_fail;
+    framebuffer_release(info);
+    return retval;
   }
 
+  spi_set_drvdata(spi, info);
   return 0;
-
-fbreg_fail:
-  framebuffer_release(info);
-
-fballoc_fail:
-  kfree(vmem);
-  return retval;
 }
 
 static int st7586s_remove(struct spi_device* spi)
 {
+  struct fb_info* info;
   TRACE();
 
-  struct fb_info* info = spi_get_drvdata(spi);
-  spi_set_drvdata(spi, NULL);
-
-  if (info)
+  if ((info = spi_get_drvdata(spi)) != NULL)
   {
-    struct st7586s_par* par = info->par;
     unregister_framebuffer(info);
-    kfree(info->screen_base);
     framebuffer_release(info);
   }
 
+  spi_set_drvdata(spi, NULL);
   return 0;
 }
 
