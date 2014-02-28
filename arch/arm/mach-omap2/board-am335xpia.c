@@ -100,7 +100,7 @@ static char am335x_mac_addr[2][ETH_ALEN];
 *  Configuration option	32	Codes(TBD) to show the configuration
 *				setup on this board.
 *
-*  Available		32720	Available space for other non-volatile
+*  Available		128	Available space for other non-volatile
 *				data.
 */
 struct pia335x_eeprom_config {
@@ -652,6 +652,17 @@ static struct gpio km_mmi_gpios[] = {
 	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
 };
 
+static struct gpio km_mmi_24v_gpios[] = {
+	{ MMI_GPIO_OUT1,	GPIOF_OUT_INIT_LOW, "out1" },
+	{ MMI_GPIO_OUT2,	GPIOF_OUT_INIT_LOW, "out2" },
+	{ MMI_GPIO_OUT3,	GPIOF_OUT_INIT_LOW, "out3" },
+	{ MMI_GPIO_OUT4,	GPIOF_OUT_INIT_LOW, "out4" },
+	{ MMI_GPIO_IN1,		GPIOF_IN, "in1" },
+	{ MMI_GPIO_IN2,		GPIOF_IN, "in2" },
+	{ MMI_GPIO_IN3,		GPIOF_IN, "in3" },
+	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
+};
+
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
 	int val = gpio_get_value(gpio);
@@ -660,9 +671,29 @@ static void pia_print_gpio_state(const char *msg, int gpio, int on)
 	else
 		pr_warn("  %s: Unable to read GPIO!\n", msg);
 }
+static void pia335x_gpios_export(struct gpio *gpiocfg, int count)
+{
+	int i;
+
+	if (gpiocfg == 0)
+		return;
+
+	for (i = 0; i < count; ++i) {
+		if (gpio_request_one(gpiocfg[i].gpio,
+				gpiocfg[i].flags,
+				gpiocfg[i].label) < 0) {
+			pr_err("Failed to request gpio: %s\n",
+					gpiocfg[i].label);
+			return;
+		}
+		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
+		gpio_export(gpiocfg[i].gpio, 0);
+	}
+}
+
 static void pia335x_gpios_init(void)
 {
-	int i, sz;
+	int sz;
 	struct pinmux_config *muxcfg;
 	struct gpio *gpiocfg;
 
@@ -696,17 +727,7 @@ static void pia335x_gpios_init(void)
 	}
 	setup_pin_mux(muxcfg);
 
-	for (i = 0; i < sz; ++i) {
-		if (gpio_request_one(gpiocfg[i].gpio,
-				gpiocfg[i].flags,
-				gpiocfg[i].label) < 0) {
-			pr_err("Failed to request gpio: %s\n",
-					gpiocfg[i].label);
-			return;
-		}
-		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
-		gpio_export(gpiocfg[i].gpio, 0);
-	}
+	pia335x_gpios_export(gpiocfg, sz);
 
 	/* board specific initializations */
 	if (am33xx_piaid == PIA335_KM_E2) {
@@ -1733,6 +1754,7 @@ static void km_e2_setup(void)
 	if (am33xx_piarev >= 3) {
 		km_e2_uart4_init();
 	}
+	pia335x_gpios_init();
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1)
@@ -1771,18 +1793,21 @@ static void km_mmi_setup(int variant)
 	//clkout2_32k_enable();
 	lis331dlh_init();
 
-
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
+	/* REVISIT: check if this stil works with the external IP175L switch */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
 	km_mmi_leds_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
+	pia335x_gpios_init();
 	if (variant == 'X') {
 		/* only on eXtended variant */
 		usb0_init();
 		km_mmi_can_init();
+		/* special 24V GPIOs */
+		pia335x_gpios_export(km_mmi_24v_gpios, ARRAY_SIZE(km_mmi_24v_gpios));
 	}
 }
 
@@ -1838,8 +1863,6 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	} else if(!strncmp("PIA335MI", config.name, 8)) {
 		km_mmi_setup(config.opt[0]);
 	}
-
-	pia335x_gpios_init();
 
 	return;
 
