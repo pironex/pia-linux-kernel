@@ -141,10 +141,10 @@ static struct omap2_mcspi_device_config st7586s_mcspi_config = {
 static struct spi_board_info pia_st7586s_info[] __initdata = {
 	[0] = {
 		.modalias = "st7586s",
-		.mode = SPI_MODE_3, // | SPI_3WIRE,
+		.mode = SPI_MODE_3,
 		.bus_num = 1,
 		.chip_select = 0,
-		.max_speed_hz = 3571429, // 100000000,
+		.max_speed_hz = 100000000,
 		.controller_data = &st7586s_mcspi_config,
 	},
 };
