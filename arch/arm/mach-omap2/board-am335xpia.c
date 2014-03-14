@@ -299,8 +299,8 @@ static struct pinmux_config km_e2_rs485_pin_mux[] = {
 
 /* E2 UART4 */
 static struct pinmux_config km_e2_uart4_pin_mux[] = {
-	{"mii1_rxd2.uart4_txd", AM33XX_PIN_OUTPUT_PULLUP},
-	{"mii1_rxd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP},
+	{"mii1_txd2.uart4_txd", AM33XX_PIN_OUTPUT_PULLUP},
+	{"mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP},
 	/* Boot0_E1 */
 	{"mii1_rxdv.gpio3_4",      AM33XX_PIN_INPUT_PULLDOWN},
 	{NULL, 0},
