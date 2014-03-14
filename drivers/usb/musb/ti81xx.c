@@ -1231,7 +1231,7 @@ int ti81xx_musb_set_mode(struct musb *musb, u8 musb_mode)
 		regval = musb_readl(reg_base, USB_MODE_REG);
 
 		regval &= ~USBMODE_USBID_HIGH;
-		if (usbid_sw_ctrl && (cpu_is_ti816x() || cpu_is_am335x()))
+		if (usbid_sw_ctrl && cpu_is_ti816x())
 			regval |= USBMODE_USBID_MUXSEL;
 
 		musb_writel(reg_base, USB_MODE_REG, regval);
@@ -1244,7 +1244,7 @@ int ti81xx_musb_set_mode(struct musb *musb, u8 musb_mode)
 		regval = musb_readl(reg_base, USB_MODE_REG);
 
 		regval |= USBMODE_USBID_HIGH;
-		if (usbid_sw_ctrl && (cpu_is_ti816x() || cpu_is_am335x()))
+		if (usbid_sw_ctrl && cpu_is_ti816x())
 			regval |= USBMODE_USBID_MUXSEL;
 
 		musb_writel(reg_base, USB_MODE_REG, regval);
@@ -1304,7 +1304,7 @@ int ti81xx_musb_init(struct musb *musb)
 	musb->a_wait_bcon = A_WAIT_BCON_TIMEOUT;
 	musb->isr = ti81xx_interrupt;
 
-	if (cpu_is_ti816x() || cpu_is_am335x())
+	if (cpu_is_ti816x())
 		usbid_sw_ctrl = 1;
 
 	if (is_otg_enabled(musb)) {
@@ -1312,7 +1312,7 @@ int ti81xx_musb_init(struct musb *musb)
 		 * configure the usb0 in peripheral mode and usb1 in
 		 * host mode
 		*/
-		if (usbid_sw_ctrl && (cpu_is_ti816x() || cpu_is_am335x()))
+		if (usbid_sw_ctrl && cpu_is_ti816x())
 			mode = musb->id ? MUSB_HOST : MUSB_PERIPHERAL;
 		else
 			mode = MUSB_OTG;
