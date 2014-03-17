@@ -903,7 +903,7 @@ static struct led_info km_e2_leds1_config[] = {
 		.default_trigger = "none",
 	},
 	{
-		.name = "null",
+		.name = "reserved1",
 		.default_trigger = "none",
 	},
 	{
@@ -912,7 +912,7 @@ static struct led_info km_e2_leds1_config[] = {
 	},
 	/* 10 and 11 only used in Rev 0.3 */
 	{
-		.name = "null",
+		.name = "reserved2",
 		.default_trigger = "none",
 	},
 	{
