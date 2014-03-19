@@ -751,6 +751,7 @@ static struct gpio km_mmi_24v_gpios[] = {
 	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
 };
 
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
 	int val = gpio_get_value(gpio);
@@ -759,6 +760,7 @@ static void pia_print_gpio_state(const char *msg, int gpio, int on)
 	else
 		pr_warn("  %s: Unable to read GPIO!\n", msg);
 }
+#endif
 static void pia335x_gpios_export(struct gpio *gpiocfg, int count)
 {
 	int i;
@@ -776,6 +778,9 @@ static void pia335x_gpios_export(struct gpio *gpiocfg, int count)
 		}
 		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
 		gpio_export(gpiocfg[i].gpio, 0);
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+		pia_print_gpio_state(gpiocfg[i].label, gpiocfg[i].gpio, 1);
+#endif
 	}
 }
 
