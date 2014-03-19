@@ -115,7 +115,6 @@ static struct pia335x_eeprom_config config;
 static struct pia335x_eeprom_config exp_config;
 
 static int am33xx_piaid = -EINVAL;
-static int am33xx_piarev = -EINVAL;
 struct pia335x_board_id {
 	const char *name; /* name as saved in EEPROM name field */
 	int id;   /* internal ID */
@@ -140,6 +139,7 @@ static struct pia335x_board_id pia335x_exp_id = {
 	.rev	= -EINVAL,
 	.type	= 1,
 };
+//static int am33xx_piarev = -EINVAL;
 
 static int pia335x_parse_rev(const char *in, int revtype)
 {
@@ -174,14 +174,14 @@ static void pia335x_parse_eeprom(int exp)
 }
 
 /*
-* am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
-*
-* Note:
-*	returns -EINVAL if Board detection hasn't happened yet.
-*/
+ * am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
+ * In case of a processor module + baseboard configuration,
+ * return the baseboard id.
+ */
 int am335x_pia_get_id(void)
 {
-	return am33xx_piaid;
+	return (pia335x_exp_id.id > 0 ?
+			pia335x_exp_id.id : pia335x_main_id.id);
 }
 EXPORT_SYMBOL(am335x_pia_get_id);
 
@@ -1795,21 +1795,14 @@ static struct i2c_board_info tps65910_boardinfo = {
 
 static void km_e2_setup(void)
 {
-	//daughter_brd_detected = false;
 	am33xx_piaid = PIA335_KM_E2;
-	if (0 == strncmp("0.01", config.version, 4)) {
-		am33xx_piarev = 1;
-	} else if (0 == strncmp("0.02", config.version, 4)) {
-		am33xx_piarev = 2;
-	} else if (0 == strncmp("0.03", config.version, 4)) {
-		am33xx_piarev = 3;
-	} else {
+	if (pia335x_main_id.rev < 1 || pia335x_main_id.rev > 3) {
 		pr_warn("PIA335E2: Unknown board revision %.4s, using "
 				"rev 3 configuration\n",
 				config.version);
-		am33xx_piarev = 3;
+		pia335x_main_id.rev = 3;
 	}
-	pr_info("piA335x: Setup KM E2 rev %d\n", am33xx_piarev);
+	pr_info("piA335x: Setup KM E2 rev %d\n", pia335x_main_id.rev);
 
 	setup_pin_mux(km_e2_board_pin_mux);
 
@@ -1855,15 +1848,10 @@ static void km_mmi_setup(int variant)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
 	am33xx_piaid = PIA335_KM_MMI;
-
-	if (0 == strncmp("0.01", config.version, 4)) {
-		am33xx_piarev = 1;
-	} else if (0 == strncmp("0.02", config.version, 4)) {
-		am33xx_piarev = 2;
-	} else {
+	if (pia335x_main_id.id < 1 || pia335x_main_id.id > 2) {
 		pr_info("PIA335MI: Unknown board revision %.4s\n",
 				config.version);
-		am33xx_piarev = 2;
+		pia335x_main_id.rev = 2;
 	}
 
 	setup_pin_mux(km_mmi_board_pin_mux);
@@ -1897,6 +1885,17 @@ static void km_mmi_setup(int variant)
 		/* special 24V GPIOs */
 		pia335x_gpios_export(km_mmi_24v_gpios, ARRAY_SIZE(km_mmi_24v_gpios));
 	}
+}
+
+static void expansion_setup(struct memory_accessor *mem_acc, void *context)
+{
+	// FIXME implement
+}
+
+/* only procesor module related parts, see expansion_setup() for the rest */
+static void pm_setup(void)
+{
+	// TODO implement
 }
 
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
@@ -1947,10 +1946,18 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	snprintf(tmp, sizeof(config.version) + 1, "%s", config.version);
 	pr_info("Board version: %s\n", tmp);
 
-	if (!strncmp("PIA335E2", config.name, 8)) {
+	switch (pia335x_main_id.id) {
+	case PIA335_KM_E2:
 		km_e2_setup();
-	} else if(!strncmp("PIA335MI", config.name, 8)) {
+		break;
+	case PIA335_KM_MMI:
 		km_mmi_setup(config.opt[0]);
+		break;
+	case PIA335_PM:
+		pm_setup();
+		break;
+	default:
+		break;
 	}
 
 	return;
