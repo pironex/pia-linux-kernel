@@ -112,9 +112,66 @@ struct pia335x_eeprom_config {
 	u8	opt[32];
 };
 static struct pia335x_eeprom_config config;
+static struct pia335x_eeprom_config exp_config;
 
 static int am33xx_piaid = -EINVAL;
 static int am33xx_piarev = -EINVAL;
+struct pia335x_board_id {
+	const char *name; /* name as saved in EEPROM name field */
+	int id;   /* internal ID */
+	int rev;  /* 0: "a.bc" or continuous, 1: reserved */
+	const int type; /* 0: main board/PM, 1: base board/expansion */
+};
+
+static struct pia335x_board_id pia335x_boards[] = {
+	{ "PIA335E2", PIA335_KM_E2,	0, 0},
+	{ "PIA335MI", PIA335_KM_MMI,	0, 0},
+	{ "PIA335PM", PIA335_PM,	0, 0},
+	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
+};
+
+static struct pia335x_board_id pia335x_main_id = {
+	.id	= -EINVAL,
+	.rev	= -EINVAL,
+	.type	= 0,
+};
+static struct pia335x_board_id pia335x_exp_id = {
+	.id	= -EINVAL,
+	.rev	= -EINVAL,
+	.type	= 1,
+};
+
+static int pia335x_parse_rev(const char *in, int revtype)
+{
+	int i = 0;
+	int rev = 0;
+	for (; i < 4; ++i) {
+		if (in[i] >= '0' && in[i] <= '9') {
+			rev = (rev * 10) + (in[i] - '0');
+		}
+		/* ignore everything else, like decimal point
+		 * if there is no valid number in the field, result is 0,
+		 * which is an invalid revision number */
+	}
+	return (rev ? rev : -EINVAL);
+}
+
+static void pia335x_parse_eeprom(int exp)
+{
+	int i = 0;
+	struct pia335x_board_id *id;
+	struct pia335x_eeprom_config *eeprom = (exp ? &exp_config : &config);
+	struct pia335x_board_id *cur = (exp ?
+			&pia335x_exp_id : &pia335x_main_id);
+	for (; i < ARRAY_SIZE(pia335x_boards); ++i) {
+		id = &pia335x_boards[i];
+		if (0 != strncmp(eeprom->name, id->name, 8))
+			continue;
+		cur->id = id->id;
+		cur->rev = pia335x_parse_rev(eeprom->version,
+				id->rev);
+	}
+}
 
 /*
 * am335x_pia_get_id - returns Board Type (PIA335_KM_E2/PIA335_KM_MMI ...)
@@ -1884,6 +1941,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		goto out;
 	}
 
+	pia335x_parse_eeprom(0);
 	snprintf(tmp, sizeof(config.name) + 1, "%s", config.name);
 	pr_info("Board name: %s\n", tmp);
 	snprintf(tmp, sizeof(config.version) + 1, "%s", config.version);
