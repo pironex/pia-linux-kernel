@@ -114,7 +114,6 @@ struct pia335x_eeprom_config {
 static struct pia335x_eeprom_config config;
 static struct pia335x_eeprom_config exp_config;
 
-static int am33xx_piaid = -EINVAL;
 struct pia335x_board_id {
 	const char *name; /* name as saved in EEPROM name field */
 	int id;   /* internal ID */
@@ -139,6 +138,7 @@ static struct pia335x_board_id pia335x_exp_id = {
 	.rev	= -EINVAL,
 	.type	= 1,
 };
+//static int am33xx_piaid = -EINVAL;
 //static int am33xx_piarev = -EINVAL;
 
 static int pia335x_parse_rev(const char *in, int revtype)
@@ -771,13 +771,13 @@ static void pia335x_gpios_export(struct gpio *gpiocfg, int count)
 	}
 }
 
-static void pia335x_gpios_init(void)
+static void pia335x_gpios_init(int boardid)
 {
 	int sz;
 	struct pinmux_config *muxcfg;
 	struct gpio *gpiocfg;
 
-	switch(am33xx_piaid) {
+	switch (boardid) {
 	case PIA335_KM_E2:
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 		if (am33xx_piarev == 1) {
@@ -810,9 +810,9 @@ static void pia335x_gpios_init(void)
 	pia335x_gpios_export(gpiocfg, sz);
 
 	/* board specific initializations */
-	if (am33xx_piaid == PIA335_KM_E2) {
-		/* clear reset status */
+	if (boardid == PIA335_KM_E2) {
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
+		/* clear reset status */
 		if (am33xx_piarev == 1)
 			gpio_set_value(E2_GPIO_CLEAR_RESET, 0);
 		else
@@ -1018,10 +1018,10 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{}      /* Terminator */
 };
 
-static void mmc0_init(void)
+static void mmc0_init(int boardid)
 {
 	setup_pin_mux(pia335x_mmc0_pin_mux);
-	switch(am33xx_piaid) {
+	switch (boardid) {
 	case PIA335_KM_E2:
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 		if (am33xx_piarev == 1) {
@@ -1795,7 +1795,6 @@ static struct i2c_board_info tps65910_boardinfo = {
 
 static void km_e2_setup(void)
 {
-	am33xx_piaid = PIA335_KM_E2;
 	if (pia335x_main_id.rev < 1 || pia335x_main_id.rev > 3) {
 		pr_warn("PIA335E2: Unknown board revision %.4s, using "
 				"rev 3 configuration\n",
@@ -1811,7 +1810,7 @@ static void km_e2_setup(void)
 
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
-	mmc0_init();
+	mmc0_init(pia335x_main_id.id);
 	km_e2_ethenet_init();
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
@@ -1830,10 +1829,10 @@ static void km_e2_setup(void)
 	km_e2_can_init();
 	km_e2_spi_init();
 	km_e2_rs485_init();
-	if (am33xx_piarev >= 3) {
+	if (pia335x_main_id.rev >= 3) {
 		km_e2_uart4_init();
 	}
-	pia335x_gpios_init();
+	pia335x_gpios_init(pia335x_main_id.id);
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1)
@@ -1847,7 +1846,6 @@ static void km_e2_setup(void)
 static void km_mmi_setup(int variant)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
-	am33xx_piaid = PIA335_KM_MMI;
 	if (pia335x_main_id.id < 1 || pia335x_main_id.id > 2) {
 		pr_info("PIA335MI: Unknown board revision %.4s\n",
 				config.version);
@@ -1862,7 +1860,7 @@ static void km_mmi_setup(int variant)
 	pia335x_rtc_init();
 	km_mmi_i2c1_init(); /* second i2c bus */
 
-	mmc0_init();
+	mmc0_init(pia335x_main_id.id);
 
 	km_mmi_ethernet_init();
 
@@ -1877,7 +1875,7 @@ static void km_mmi_setup(int variant)
 
 	km_mmi_leds_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
-	pia335x_gpios_init();
+	pia335x_gpios_init(pia335x_main_id.id);
 	if (variant == 'X') {
 		/* only on eXtended variant */
 		usb0_init();
