@@ -97,10 +97,11 @@ static char am335x_mac_addr[2][ETH_ALEN];
 *				YY = 2 digit year of production
 *				nnnn = incrementing board number
 *
-*  Configuration option	32	Codes(TBD) to show the configuration
-*				setup on this board.
+*  Configuration option	32	0: 'B' base version, 'X' extended
+*                                  only relevant for MMI
+*                               1: 'N' board has NAND
 *
-*  Available		128	Available space for other non-volatile
+*  Available		60	Available space for other non-volatile
 *				data.
 */
 struct pia335x_eeprom_config {
