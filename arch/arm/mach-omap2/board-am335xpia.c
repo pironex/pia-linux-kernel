@@ -203,6 +203,7 @@ static void setup_pin_mux(struct pinmux_config *pin_mux)
 
 }
 
+/* add additional device to an already registered and initialized adapter. */
 static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
 {
 	struct i2c_adapter *adapter;
@@ -224,6 +225,13 @@ static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
 	i2c_put_adapter(adapter);
 
 	return 0;
+}
+static void pia335x_register_i2c_devices(int busnum,
+		struct i2c_board_info *infos, int cnt)
+{
+	int i = 0;
+	for (; i < cnt; ++i)
+		pia335x_add_i2c_device(busnum, &infos[i]);
 }
 
 /** PINMUX tables */
@@ -1192,7 +1200,7 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 
 static void km_e2_i2c1_init(void)
 {
-	omap_register_i2c_bus(2, 400, km_e2_i2c1_boardinfo,
+	pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
 			ARRAY_SIZE(km_e2_i2c1_boardinfo));
 }
 
@@ -1203,16 +1211,45 @@ static struct at24_platform_data km_mmi_lcd_eeprom_info = {
 	.context        = (void *)NULL,
 };
 
+/* Accelerometer LIS331DLH */
+#include <linux/lis3lv02d.h>
+static struct lis3lv02d_platform_data lis331dlh_pdata = {
+	.click_flags = LIS3_CLICK_SINGLE_X |
+			LIS3_CLICK_SINGLE_Y |
+			LIS3_CLICK_SINGLE_Z,
+	.wakeup_flags = LIS3_WAKEUP_X_LO | LIS3_WAKEUP_X_HI |
+			LIS3_WAKEUP_Y_LO | LIS3_WAKEUP_Y_HI |
+			LIS3_WAKEUP_Z_LO | LIS3_WAKEUP_Z_HI,
+	.irq_cfg = LIS3_IRQ1_CLICK | LIS3_IRQ2_CLICK,
+	.wakeup_thresh	= 10,
+	.click_thresh_x = 10,
+	.click_thresh_y = 10,
+	.click_thresh_z = 10,
+	.g_range	= 2,
+	.st_min_limits[0] = 120,
+	.st_min_limits[1] = 120,
+	.st_min_limits[2] = 140,
+	.st_max_limits[0] = 550,
+	.st_max_limits[1] = 550,
+	.st_max_limits[2] = 750,
+	.irq2 = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT2)
+};
+
 static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("24c01", 0x51),
 		.platform_data = &km_mmi_lcd_eeprom_info,
-	}
+	},
+	{
+		I2C_BOARD_INFO("lis331dlh", 0x18),
+		.platform_data = &lis331dlh_pdata,
+		.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
+	},
 };
 
 static void km_mmi_i2c1_init(void)
 {
-	omap_register_i2c_bus(2, 400, km_mmi_i2c1_boardinfo,
+	pia335x_register_i2c_devices(1, km_mmi_i2c1_boardinfo,
 			ARRAY_SIZE(km_mmi_i2c1_boardinfo));
 }
 
@@ -1664,41 +1701,6 @@ static struct omap_musb_board_data musb_board_data = {
 	.instances	= 1,
 };
 
-/* Accelerometer LIS331DLH */
-#include <linux/lis3lv02d.h>
-static struct lis3lv02d_platform_data lis331dlh_pdata = {
-	.click_flags = LIS3_CLICK_SINGLE_X |
-			LIS3_CLICK_SINGLE_Y |
-			LIS3_CLICK_SINGLE_Z,
-	.wakeup_flags = LIS3_WAKEUP_X_LO | LIS3_WAKEUP_X_HI |
-			LIS3_WAKEUP_Y_LO | LIS3_WAKEUP_Y_HI |
-			LIS3_WAKEUP_Z_LO | LIS3_WAKEUP_Z_HI,
-	.irq_cfg = LIS3_IRQ1_CLICK | LIS3_IRQ2_CLICK,
-	.wakeup_thresh	= 10,
-	.click_thresh_x = 10,
-	.click_thresh_y = 10,
-	.click_thresh_z = 10,
-	.g_range	= 2,
-	.st_min_limits[0] = 120,
-	.st_min_limits[1] = 120,
-	.st_min_limits[2] = 140,
-	.st_max_limits[0] = 550,
-	.st_max_limits[1] = 550,
-	.st_max_limits[2] = 750,
-	.irq2 = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT2)
-};
-
-static struct i2c_board_info lis331dlh_i2c_boardinfo = {
-	I2C_BOARD_INFO("lis331dlh", 0x18),
-	.platform_data = &lis331dlh_pdata,
-	.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
-};
-
-static void lis331dlh_init(void)
-{
-	pia335x_add_i2c_device(1, &lis331dlh_i2c_boardinfo);
-}
-
 /*
  * Audio
  */
@@ -1865,7 +1867,6 @@ static void km_mmi_setup(int variant)
 	km_mmi_ethernet_init();
 
 	//clkout2_32k_enable();
-	lis331dlh_init();
 
 	km_mmi_tlv320aic3x_init();
 
@@ -1990,6 +1991,21 @@ static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 		.platform_data  = &pia335x_eeprom_info,
 	},
 };
+/* 24AA02E48T, expansion/base board ID EEPROM */
+static struct at24_platform_data expansion_eeprom_info = {
+	.byte_len       = 256,
+	.page_size      = 8,
+	.flags          = 0,
+	.setup          = expansion_setup,
+	.context        = (void *)NULL,
+};
+
+static struct i2c_board_info __initdata pia335x_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("at24", PIA335X_EEPROM_I2C_ADDR),
+		.platform_data  = &expansion_eeprom_info,
+	},
+};
 
 static void __init pia335x_i2c_init(void)
 {
@@ -1997,6 +2013,15 @@ static void __init pia335x_i2c_init(void)
 	pr_info("piA335x: %s", __func__);
 	omap_register_i2c_bus(1, 400, pia335x_i2c0_boardinfo,
 				ARRAY_SIZE(pia335x_i2c0_boardinfo));
+
+	/* REVISIT check if this works
+	 * initialize the second bus as well, in case we have an expansion
+	 * board/base board with another id eeprom
+	 * We expect the bootloader to initialize the correct pinmux for
+	 * the second bus!
+	 */
+	omap_register_i2c_bus(2, 400, pia335x_i2c1_boardinfo,
+				ARRAY_SIZE(pia335x_i2c1_boardinfo));
 }
 
 #ifdef CONFIG_MACH_AM335XEVM
