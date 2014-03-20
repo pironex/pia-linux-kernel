@@ -141,6 +141,52 @@ static struct pia335x_board_id pia335x_exp_id = {
 //static int am33xx_piaid = -EINVAL;
 //static int am33xx_piarev = -EINVAL;
 
+static int pm_setup_done = 0;
+void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
+static int pia335x_read_eeprom(struct memory_accessor *mem_acc, int exp)
+{
+	struct pia335x_eeprom_config *conf;
+	int ret;
+
+	if (!exp || pm_setup_done == 0) {
+		/* from evm code
+		 * 1st get the MAC address from EEPROM */
+		ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
+				0x60, sizeof(am335x_mac_addr));
+
+		if (ret != sizeof(am335x_mac_addr)) {
+			pr_warning("AM335X: MAC Config read fail: %d\n", ret);
+		}
+		/* Fillup global mac id */
+		am33xx_cpsw_macidfillup(&am335x_mac_addr[0][0],
+				&am335x_mac_addr[1][0]);
+		conf = &config;
+	} else {
+		conf = &exp_config;
+	}
+
+	/* get board specific data */
+	ret = mem_acc->read(mem_acc, (char *)conf, 0, sizeof(*conf));
+	if (ret != sizeof(*conf)) {
+		pr_err("piA335x config read fail, read %d bytes\n", ret);
+		return -1;
+	}
+
+	if (conf->header != 0xEE3355AA) { // header magic number
+		pr_err("piA335x: wrong header 0x%x, expected 0x%x\n",
+			conf->header, 0xEE3355AA);
+		return -1;
+	}
+
+	if (strncmp("PIA335", conf->name, 6) != 0) {
+		pr_err("Board %s doesn't look like a PIA335 board\n",
+			conf->name);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int pia335x_parse_rev(const char *in, int revtype)
 {
 	int i = 0;
@@ -158,7 +204,9 @@ static int pia335x_parse_rev(const char *in, int revtype)
 
 static void pia335x_parse_eeprom(int exp)
 {
+	char tmp[10];
 	int i = 0;
+
 	struct pia335x_board_id *id;
 	struct pia335x_eeprom_config *eeprom = (exp ? &exp_config : &config);
 	struct pia335x_board_id *cur = (exp ?
@@ -171,6 +219,10 @@ static void pia335x_parse_eeprom(int exp)
 		cur->rev = pia335x_parse_rev(eeprom->version,
 				id->rev);
 	}
+	snprintf(tmp, sizeof(eeprom->name) + 1, "%s", eeprom->name);
+	pr_info("Board name: %s\n", tmp);
+	snprintf(tmp, sizeof(eeprom->version) + 1, "%s", eeprom->version);
+	pr_info("Board version: %s\n", tmp);
 }
 
 /*
@@ -1891,64 +1943,26 @@ static void km_mmi_setup(int variant)
 	}
 }
 
-static void expansion_setup(struct memory_accessor *mem_acc, void *context)
-{
-	// FIXME implement
-}
-
 /* only procesor module related parts, see expansion_setup() for the rest */
 static void pm_setup(void)
 {
 	// TODO implement
 }
 
-void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
+static void expansion_setup(struct memory_accessor *mem_acc, void *context)
+{
+
+	}
+
+
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
 	/* generic board detection triggered by eeprom init */
-	int ret;
-	char tmp[10];
-
-	pr_info("piA335x: setup\n");
-
-	/* from evm code
-	 * 1st get the MAC address from EEPROM */
-	ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
-		0x60, sizeof(am335x_mac_addr));
-
-	if (ret != sizeof(am335x_mac_addr)) {
-		pr_warning("AM335X: EVM Config read fail: %d\n", ret);
-		return;
-	}
-
-	/* Fillup global mac id */
-	am33xx_cpsw_macidfillup(&am335x_mac_addr[0][0],
-				&am335x_mac_addr[1][0]);
-
-	/* get board specific data */
-	ret = mem_acc->read(mem_acc, (char *)&config, 0, sizeof(config));
-	if (ret != sizeof(config)) {
-		pr_err("piA335x config read fail, read %d bytes\n", ret);
+	pr_info("piA335x: main setup\n");
+	if (pia335x_read_eeprom(mem_acc, 0) != 0) {
 		goto out;
 	}
-
-	if (config.header != 0xEE3355AA) { // header magic number
-		pr_err("piA335x: wrong header 0x%x, expected 0x%x\n",
-			config.header, 0xEE3355AA);
-		goto out;
-	}
-
-	if (strncmp("PIA335", config.name, 6)) {
-		pr_err("Board %s\ndoesn't look like a PIA335 board\n",
-			config.name);
-		goto out;
-	}
-
 	pia335x_parse_eeprom(0);
-	snprintf(tmp, sizeof(config.name) + 1, "%s", config.name);
-	pr_info("Board name: %s\n", tmp);
-	snprintf(tmp, sizeof(config.version) + 1, "%s", config.version);
-	pr_info("Board version: %s\n", tmp);
 
 	switch (pia335x_main_id.id) {
 	case PIA335_KM_E2:
@@ -1963,6 +1977,10 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	default:
 		break;
 	}
+	/* we only care about this in case of a PM board with expansion,
+	 * we need to make sure, not to run pm_setup() in a configuration
+	 * with an EEPROM on I2C1 @0x50 */
+	pm_setup_done = 1;
 
 	return;
 
