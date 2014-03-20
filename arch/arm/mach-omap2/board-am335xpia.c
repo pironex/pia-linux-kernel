@@ -1951,9 +1951,33 @@ static void pm_setup(void)
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 {
+	pr_info("piA335x: expansion setup\n");
 
+	if (pia335x_read_eeprom(mem_acc, 1) != 0) {
+		goto out;
+	}
+	pia335x_parse_eeprom(1);
+
+	/* REVISIT Workaround for PM module without EEPROM
+	 * pm_setup_done will be only set, if there was an EEPROM on I2C0
+	 * and its setup function was called
+	 * Explicitly call pm_setup() otherwise */
+	if (pm_setup_done == 0) {
+		pr_warn("piA335x: assume PM module without EEPROM\n");
+		/* assume PM module without EEPROM here, use fake EEPROM */
+		config.header = 0xEE3355AA;
+		strncpy(config.name, "PIA335PM", 8);
+		strncpy(config.version, "0.01", 4);
+		pia335x_parse_eeprom(0);
+
+		/* now call real pm_setup before doing expansion init */
+		pm_setup();
 	}
 
+out:
+	pr_err("PIA335x: Board identification failed... Halting...\n");
+	machine_halt();
+}
 
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
