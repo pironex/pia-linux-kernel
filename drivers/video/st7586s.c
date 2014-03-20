@@ -85,7 +85,7 @@ static int st7586s_violates_boundaries(int x, int y, int w, int h)
 
 void st7586s_deferred_io(struct fb_info* info, struct list_head* pagelist)
 {
-  int i, retval;
+  int retval;
   TRACE();
 
   if ((retval = st7586s_prepare_transmission(info->par, 0, 0, WIDTH >> 1, HEIGHT)) != 0)
@@ -95,6 +95,7 @@ void st7586s_deferred_io(struct fb_info* info, struct list_head* pagelist)
   }
 
 #ifdef CORRECTION
+  int i;
   /* Make sure that everything in buffer have valid SPI data type */
   for (i = 1; i < WIDTH * HEIGHT; i += 2) info->screen_base[i] = 1;
 #endif
@@ -164,7 +165,7 @@ void st7586s_copyarea(struct fb_info* info, const struct fb_copyarea* area)
 
 void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 {
-  int x, y, i, retval;
+  int x, y, retval;
   unsigned int* line;
   unsigned char byte;
   TRACE();
