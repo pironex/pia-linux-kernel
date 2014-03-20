@@ -1899,7 +1899,8 @@ static void km_e2_setup(void)
 #endif
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:00");
+	/* FIXME according to DS of IPL175 the PHY ID is 05 */
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:05");
 }
 
 static void km_mmi_setup(int variant)
