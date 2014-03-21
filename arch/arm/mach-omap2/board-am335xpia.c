@@ -803,6 +803,27 @@ static struct gpio km_mmi_24v_gpios[] = {
 	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
 };
 
+/* PM */
+#define PM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
+#define PM_GPIO_LED1		GPIO_TO_PIN(1, 29)
+#define PM_GPIO_EMMC_RESET	GPIO_TO_PIN(2,  5)
+#define PM_GPIO_NOR_WPN		GPIO_TO_PIN(2, 20)
+#define PM_GPIO_NOR_RESET	GPIO_TO_PIN(2, 21)
+static struct pinmux_config pm_gpios_pin_mux[] = {
+	/* PMIC INT */
+	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_csn0.gpio1_29",		AM33XX_PIN_OUTPUT },
+	{ "gpmc_be0n_cle.gpio25",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxd1.gpio2_20",		AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxd0.gpio2_21",		AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+static struct gpio pm_gpios[] = {
+	{ PM_GPIO_EMMC_RESET,	GPIOF_OUT_INIT_HIGH, "emmc_reset" },
+	{ PM_GPIO_NOR_WPN,	GPIOF_OUT_INIT_HIGH, "nor_wpn" },
+	{ PM_GPIO_NOR_RESET,	GPIOF_OUT_INIT_HIGH, "nor_reset" },
+};
+
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -866,6 +887,11 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = km_mmi_gpios_pin_mux;
 		gpiocfg = km_mmi_gpios;
 		sz = ARRAY_SIZE(km_mmi_gpios);
+		break;
+	case PIA335_PM:
+		muxcfg = pm_gpios_pin_mux;
+		gpiocfg = pm_gpios;
+		sz = ARRAY_SIZE(pm_gpios);
 		break;
 	default:
 		return;
@@ -1219,11 +1245,42 @@ static struct platform_device km_mmi_leds = {
 	},
 };
 
-static void km_mmi_leds_init(void)
-{
-	int err;
+/* PM LED */
+static struct gpio_led pm_gpio_leds[] = {
+	{
+		.name			= "am335x:PM:usr1",
+		.gpio			= PM_GPIO_LED1,	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+};
 
-	err = platform_device_register(&km_mmi_leds);
+static struct gpio_led_platform_data pm_led_info = {
+	.leds		= pm_gpio_leds,
+	.num_leds	= ARRAY_SIZE(pm_gpio_leds),
+};
+
+static struct platform_device pm_leds = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &pm_led_info,
+	},
+};
+
+static void leds_init(int boardid)
+{
+	int err = 0;
+
+	switch (boardid) {
+		case PIA335_KM_MMI:
+			err = platform_device_register(&km_mmi_leds);
+			break;
+		case PIA335_PM:
+			err = platform_device_register(&pm_leds);
+		case PIA335_KM_E2:
+		default:
+			break;
+	}
 	if (err)
 		pr_err("failed to register gpio led device\n");
 }
@@ -1932,9 +1989,9 @@ static void km_mmi_setup(int variant)
 	/* REVISIT: check if this stil works with the external IP175L switch */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
-	km_mmi_leds_init();
 	pia335x_lcd_init(PIA335_KM_MMI);
 	pia335x_gpios_init(pia335x_main_id.id);
+	leds_init(pia335x_main_id.id);
 	if (variant == 'X') {
 		/* only on eXtended variant */
 		usb0_init();
@@ -1947,7 +2004,11 @@ static void km_mmi_setup(int variant)
 /* only procesor module related parts, see expansion_setup() for the rest */
 static void pm_setup(void)
 {
-	// TODO implement
+	pr_info("piA335x-PM: Setup PM.\n");
+
+	pia335x_gpios_init(pia335x_main_id.id);
+	leds_init(pia335x_main_id.id);
+	pm_setup_done = 1;
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
