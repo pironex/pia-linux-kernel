@@ -2190,7 +2190,9 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		pm_setup();
 		break;
 	default:
-		break;
+		pr_err("PIA335x: Unknown board, "
+				"check EEPROM configuration...\n");
+		goto out;
 	}
 	/* we only care about this in case of a PM board with expansion,
 	 * we need to make sure, not to run pm_setup() in a configuration
