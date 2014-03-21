@@ -337,17 +337,6 @@ static struct pinmux_config clkout2_pin_mux[] = {
 };
 #endif
 
-/* Module pin mux for mmc0 on board am335x_E2 */
-static struct pinmux_config pia335x_mmc0_pin_mux[] = {
-	{"mmc0_dat3.mmc0_dat3",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat2.mmc0_dat2",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat1.mmc0_dat1",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_dat0.mmc0_dat0",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_clk.mmc0_clk",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{"mmc0_cmd.mmc0_cmd",	OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
 /* E2 Ethernet MII2 + MDIO */
 static struct pinmux_config km_e2_mii2_pin_mux[] = {
 	{ "gpmc_a0.mii2_txen",	AM33XX_PIN_OUTPUT },
@@ -1091,6 +1080,31 @@ static void km_mmi_ethernet_init(void)
 	setup_pin_mux(km_mmi_mii1_pin_mux);
 }
 
+/* MMC */
+static struct pinmux_config pia335x_mmc0_pin_mux[] = {
+	{ "mmc0_dat3.mmc0_dat3",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mmc0_dat2.mmc0_dat2",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mmc0_dat1.mmc0_dat1",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mmc0_dat0.mmc0_dat0",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mmc0_clk.mmc0_clk",		AM33XX_PIN_INPUT_PULLUP },
+	{ "mmc0_cmd.mmc0_cmd",		AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
+
+static struct pinmux_config pm_mmc1_pin_mux[] = {
+	{ "gpmc_ad0.mmc1_dat0",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad1.mmc1_dat1",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad2.mmc1_dat2",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad3.mmc1_dat3",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad4.mmc1_dat4",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad5.mmc1_dat5",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad6.mmc1_dat6",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad7.mmc1_dat7",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_csn1.mmc1_clk",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_csn2.mmc1_cmd",	AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
+
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
@@ -1101,17 +1115,18 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 		.nonremovable = true,
 	},
 	{
-		.mmc            = 0,	/* will be set at runtime */
+		.mmc            = 0,	/* will be set if needed */
 	},
 	{
-		.mmc            = 0,	/* will be set at runtime */
+		.mmc            = 0,	/* will be set if needed */
 	},
 	{}      /* Terminator */
 };
 
-static void mmc0_init(int boardid)
+static void mmc_init(int boardid)
 {
-	setup_pin_mux(pia335x_mmc0_pin_mux);
+	struct pinmux_config *mux = pia335x_mmc0_pin_mux;
+
 	switch (boardid) {
 	case PIA335_KM_E2:
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1125,8 +1140,26 @@ static void mmc0_init(int boardid)
 	case PIA335_KM_MMI:
 		pia335x_mmc[0].gpio_cd = MMI_GPIO_MMC_CD;
 		break;
+	case PIA335_BB_EBTFT:
+		// TODO add CD GPIO
+		break;
+	case PIA335_PM:
+		// enable eMMC at second MMC bus
+		pia335x_mmc[1].mmc            = 2;
+		pia335x_mmc[1].caps           = MMC_CAP_8_BIT_DATA;
+		pia335x_mmc[1].gpio_cd        = -EINVAL;
+		pia335x_mmc[1].gpio_wp        = -EINVAL;
+		pia335x_mmc[1].ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34;
+		pia335x_mmc[1].nonremovable = true;
+		setup_pin_mux(pm_mmc1_pin_mux);
+		/* don't do anything here, wait for the expansion board setup */
+		/* fall trough to return */
+	default:
+		break;
+		return;
 	}
 
+	setup_pin_mux(mux);
 	omap2_hsmmc_init(pia335x_mmc);
 	return;
 }
@@ -1947,7 +1980,7 @@ static void km_e2_setup(void)
 
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
-	mmc0_init(pia335x_main_id.id);
+	mmc_init(pia335x_main_id.id);
 	km_e2_ethenet_init();
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
@@ -1997,7 +2030,7 @@ static void km_mmi_setup(int variant)
 	pia335x_rtc_init();
 	km_mmi_i2c1_init(); /* second i2c bus */
 
-	mmc0_init(pia335x_main_id.id);
+	mmc_init(pia335x_main_id.id);
 
 	km_mmi_ethernet_init();
 
@@ -2027,6 +2060,9 @@ static void pm_setup(void)
 	pr_info("piA335x-PM: Setup PM.\n");
 
 	pmic_init(pia335x_main_id.id);
+
+	/* prepare eMMC, will be initialized in baseboard setup */
+	mmc_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
 	pm_setup_done = 1;
