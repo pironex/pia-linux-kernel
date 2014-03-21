@@ -2140,6 +2140,15 @@ static void pm_setup(void)
 	pm_setup_done = 1;
 }
 
+static void ebtft_setup(void)
+{
+	pr_info("piA335x-EB_TFT: cpsw_init\n");
+
+	mmc_init(pia335x_exp_id.id);
+	/* connected to slave 1, slave 0 is not active */
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
+}
+
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 {
 	pr_info("piA335x: expansion setup\n");
@@ -2164,6 +2173,17 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 		/* now call real pm_setup before doing expansion init */
 		pm_setup();
 	}
+
+	switch (pia335x_exp_id.id) {
+		case PIA335_BB_EBTFT:
+			ebtft_setup();
+			break;
+		default:
+			pr_err("PIA335x: Expansion board identification "
+					"failed...\n");
+			goto out;
+	}
+	return;
 
 out:
 	pr_err("PIA335x: Board identification failed... Halting...\n");
