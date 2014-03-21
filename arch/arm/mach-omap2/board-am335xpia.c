@@ -1902,12 +1902,34 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
 	.gpio_base = (4 * 32),
 	.irq = -1, // set this in board specific setup
+	.irq_base = 128, /* REVISIT correct? last AM33XX IRQ is 127 */
 };
 
 static struct i2c_board_info tps65910_boardinfo = {
 	I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
 	.platform_data  = &pia335x_tps65910_info,
 };
+
+static void pmic_init(int boardid)
+{
+	switch (boardid) {
+		case PIA335_KM_E2:
+			pia335x_tps65910_info.irq =
+					OMAP_GPIO_IRQ(E2_GPIO_PMIC_INT);
+			break;
+		case PIA335_KM_MMI:
+			pia335x_tps65910_info.irq =
+					OMAP_GPIO_IRQ(MMI_GPIO_PMIC_INT);
+			break;
+		case PIA335_PM:
+			pia335x_tps65910_info.irq =
+					OMAP_GPIO_IRQ(PM_GPIO_PMIC_INT);
+			break;
+		default:
+			break;
+	}
+	pia335x_add_i2c_device(1, &tps65910_boardinfo);
+}
 
 static void km_e2_setup(void)
 {
@@ -1921,8 +1943,7 @@ static void km_e2_setup(void)
 
 	setup_pin_mux(km_e2_board_pin_mux);
 
-	pia335x_tps65910_info.irq = E2_GPIO_PMIC_INT;
-	pia335x_add_i2c_device(1, &tps65910_boardinfo);
+	pmic_init(pia335x_main_id.id);
 
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
@@ -1971,8 +1992,7 @@ static void km_mmi_setup(int variant)
 
 	setup_pin_mux(km_mmi_board_pin_mux);
 
-	pia335x_tps65910_info.irq = MMI_GPIO_PMIC_INT;
-	pia335x_add_i2c_device(1, &tps65910_boardinfo);
+	pmic_init(pia335x_main_id.id);
 
 	pia335x_rtc_init();
 	km_mmi_i2c1_init(); /* second i2c bus */
@@ -2006,6 +2026,7 @@ static void pm_setup(void)
 {
 	pr_info("piA335x-PM: Setup PM.\n");
 
+	pmic_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
 	pm_setup_done = 1;
