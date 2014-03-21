@@ -20,6 +20,7 @@
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/flash.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/if_ether.h>
@@ -441,23 +442,6 @@ static struct pinmux_config km_e2_uart4_pin_mux[] = {
 	{"mii1_rxd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP},
 	/* Boot0_E1 */
 	{"mii1_rxdv.gpio3_4",      AM33XX_PIN_INPUT_PULLDOWN},
-	{NULL, 0},
-};
-
-/* E2 SPI1 */
-static struct pinmux_config km_e2_spi_pin_mux[] = {
-	/* SPI0 */
-	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
-	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
-	{"spi0_d1.spi0_d1",	AM33XX_PIN_INPUT_PULLUP },
-	{"spi0_cs0.spi0_cs0",	AM33XX_PIN_INPUT_PULLUP }, /* only rev 0.01 */
-	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP }, /* APS */
-	/* SPI1 - only on exp. header since rev 0.02 */
-	{"mcasp0_aclkx.spi1_sclk",	AM33XX_PIN_INPUT_PULLUP },
-	{"mcasp0_fsx.spi1_d0", 		AM33XX_PIN_INPUT_PULLUP },
-	{"mcasp0_axr0.spi1_d1",		AM33XX_PIN_INPUT_PULLUP },
-	{"rmii1_refclk.spi1_cs0",	AM33XX_PIN_INPUT_PULLUP },
-	{"ecap0_in_pwm0_out.spi1_cs1",	AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
 
@@ -1624,6 +1608,22 @@ static void km_mmi_can_init(void)
 }
 
 /* SPI */
+static struct pinmux_config km_e2_spi_pin_mux[] = {
+	/* SPI0 */
+	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d1.spi0_d1",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_cs0.spi0_cs0",	AM33XX_PIN_INPUT_PULLUP }, /* only rev 0.01 */
+	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP }, /* APS */
+	/* SPI1 - only on exp. header since rev 0.02 */
+	{"mcasp0_aclkx.spi1_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_fsx.spi1_d0", 		AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_axr0.spi1_d1",		AM33XX_PIN_INPUT_PULLUP },
+	{"rmii1_refclk.spi1_cs0",	AM33XX_PIN_INPUT_PULLUP },
+	{"ecap0_in_pwm0_out.spi1_cs1",	AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
 	.turbo_mode	= 0,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
@@ -1715,6 +1715,76 @@ static void km_e2_spi_init(void)
 	/* expansion header - all revisions */
 	spi_register_board_info(km_e2_spi1_1_info,
 			ARRAY_SIZE(km_e2_spi1_1_info));
+}
+
+/* PM SPI */
+static struct pinmux_config pm_spi_pin_mux[] = {
+	/* SPI0 */
+	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d1.spi0_d1",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_cs0.spi0_cs0",	AM33XX_PIN_INPUT_PULLUP }, /* NOR Flash */
+	{NULL, 0},
+};
+
+/* SPI NOR flash */
+static struct mtd_partition pm_spi_partitions[] = {
+	/* REVISIT partitions big enough? */
+	/* All the partition sizes are listed in terms of erase size */
+	{
+		.name       = "SPL",
+		.offset     = 0,			/* Offset = 0x0 */
+		.size       = SZ_128K,
+	},
+	{
+		.name       = "U-Boot",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x20000 */
+		.size       = 2 * SZ_128K,
+	},
+	{
+		.name       = "U-Boot Env",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x60000 */
+		.size       = 2 * SZ_4K,
+	},
+	{
+		.name       = "Kernel",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x62000 */
+		.size       = 28 * SZ_128K,
+	},
+	{
+		.name       = "File System",
+		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x3E2000 */
+		.size       = MTDPART_SIZ_FULL,		/* size ~= 4.1 MiB */
+	}
+};
+
+static const struct flash_platform_data pm_spi_nor_flash = {
+	.type      = "w25q64",
+	.name      = "spi_flash",
+	.parts     = pm_spi_partitions,
+	.nr_parts  = ARRAY_SIZE(pm_spi_partitions),
+};
+
+/*
+ * SPI Flash works at 80Mhz however SPI Controller works at 48MHz.
+ * So setup Max speed to be less than that of Controller speed
+ */
+static struct spi_board_info pm_spi0_info[] = {
+	{
+		.modalias      = "m25p80",
+		.platform_data = &pm_spi_nor_flash,
+		.irq           = -1,
+		.max_speed_hz  = 24000000,
+		.bus_num       = 1,
+		.chip_select   = 0,
+	},
+};
+
+static void pm_spi_init(void)
+{
+	setup_pin_mux(pm_spi_pin_mux);
+	spi_register_board_info(pm_spi0_info,
+			ARRAY_SIZE(pm_spi0_info));
 }
 
 static void km_e2_rs485_init(void)
@@ -2063,6 +2133,8 @@ static void pm_setup(void)
 
 	/* prepare eMMC, will be initialized in baseboard setup */
 	mmc_init(pia335x_main_id.id);
+	pm_spi_init();
+
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
 	pm_setup_done = 1;
