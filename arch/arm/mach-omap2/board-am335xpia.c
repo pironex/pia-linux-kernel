@@ -748,9 +748,9 @@ static struct pinmux_config ebtft_gpios_pin_mux[] = {
 };
 static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_CAN0_TERM,	GPIOF_OUT_INIT_LOW, "can_term" },
-	{ EBTFT_GPIO_IN1,	GPIOF_IN },
-	{ EBTFT_GPIO_IN2,	GPIOF_IN },
-	{ EBTFT_GPIO_IN3,	GPIOF_IN },
+	{ EBTFT_GPIO_IN1,	GPIOF_IN, "in1" },
+	{ EBTFT_GPIO_IN2,	GPIOF_IN, "in2" },
+	{ EBTFT_GPIO_IN3,	GPIOF_IN, "in3" },
 	{ EBTFT_GPIO_RFID_IRQ,	GPIOF_IN, "rfid_int" },
 	{ EBTFT_GPIO_RFID_POWEN,GPIOF_OUT_INIT_LOW, "rfid_powen" },
 };
