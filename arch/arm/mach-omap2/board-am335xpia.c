@@ -2135,6 +2135,31 @@ static void km_mmi_tlv320aic3x_init(void)
 	mcasp0_init(PIA335_KM_MMI);
 }
 
+static struct pwmss_platform_data  pwm_pdata[3] = {
+	{
+		.version = PWM_VERSION_1,
+	},
+	{
+		.version = PWM_VERSION_1,
+	},
+	{
+		.version = PWM_VERSION_1,
+	},
+};
+static void ecap_init(int boardid)
+{
+	int idx = 0;
+	switch (boardid) {
+	case PIA335_BB_EBTFT:
+		idx = 1;
+		pwm_pdata[idx].chan_attrib[0].max_freq = 20000;
+		am33xx_register_ecap(idx, &pwm_pdata[idx]);
+		break;
+	default:
+		break;
+	}
+}
+
 static struct regulator_init_data pia335x_tps_dummy = {
 	.constraints.always_on	= true,
 };
@@ -2300,6 +2325,7 @@ static void ebtft_setup(void)
 	ethernet_init(pia335x_main_id.id);
 	can_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
+	ecap_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 	usb_init(pia335x_main_id.id);
