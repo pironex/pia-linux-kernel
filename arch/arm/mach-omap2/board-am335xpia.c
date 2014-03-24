@@ -357,20 +357,6 @@ static struct pinmux_config nand_pin_mux[] = {
 	{"gpmc_ben0_cle.gpmc_ben0_cle",	 OMAP_MUX_MODE0 | AM33XX_PULL_DISA},
 	{NULL, 0},
 };
-/* pinmux for usb0 */
-static struct pinmux_config usb0_pin_mux[] = {
-	{"usb0_drvvbus.usb0_drvvbus",    OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{NULL, 0},
-};
-
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-/* pinmux for usb1 */
-static struct pinmux_config usb1_pin_mux[] = {
-	/* other usb pins are not muxable */
-	{"usb1_drvvbus.usb1_drvvbus", OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT},
-	{NULL, 0},
-};
-#endif
 
 /* E2 RS485 */
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
@@ -994,19 +980,34 @@ static void nand_init(void)
 	omap_init_elm();
 }
 
-/* USB0 device */
-static void usb0_init(void)
-{
-	setup_pin_mux(usb0_pin_mux);
-}
+/* USB */
+static struct pinmux_config usb0_pin_mux[] = {
+	{"usb0_drvvbus.usb0_drvvbus", AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
+static struct pinmux_config usb1_pin_mux[] = {
+	{"usb1_drvvbus.usb1_drvvbus", AM33XX_PIN_OUTPUT},
+	{NULL, 0},
+};
 
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-/* USB1 host */
-static void usb1_init(void)
+static void usb_init(int boardid)
 {
-	setup_pin_mux(usb1_pin_mux);
-}
+	switch (boardid) {
+	case PIA335_BB_EBTFT:
+		setup_pin_mux(usb1_pin_mux);
+		/* fall-trough for USB0 */
+	case PIA335_KM_E2:
+		if (pia335x_main_id.rev == 1) {
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+			clkout2_12m_enable();
 #endif
+			setup_pin_mux(usb1_pin_mux);
+		}
+	case PIA335_KM_MMI:
+		setup_pin_mux(usb0_pin_mux);
+		break;
+	}
+}
 
 /* Ethernet */
 /* MMI Ethernet MII1 + MDIO */
@@ -2081,14 +2082,12 @@ static void km_e2_setup(void)
 
 	ethernet_init(pia335x_main_id.id);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
-	if (am33xx_piarev == 1) {
-		usb1_init();
-		clkout2_12m_enable();
+	if (pia335x_main_id.rev == 1) {
 	} else {
 #endif
 		/* since 0.02 only USB0, we have to init musb_board_data
 		 * before usb core driver is initialized */
-		usb0_init();
+		usb_init(pia335x_main_id.id);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	}
 #endif
@@ -2145,7 +2144,7 @@ static void km_mmi_setup(int variant)
 	leds_init(pia335x_main_id.id);
 	if (variant == 'X') {
 		/* only on eXtended variant */
-		usb0_init();
+		usb_init(pia335x_main_id.id);
 		can_init(pia335x_main_id.id);
 		/* special 24V GPIOs */
 		pia335x_gpios_export(km_mmi_24v_gpios, ARRAY_SIZE(km_mmi_24v_gpios));
@@ -2179,6 +2178,7 @@ static void ebtft_setup(void)
 	can_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
+	usb_init(pia335x_main_id.id);
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
