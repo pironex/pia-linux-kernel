@@ -372,22 +372,6 @@ static struct pinmux_config usb1_pin_mux[] = {
 };
 #endif
 
-/* E2 CAN 0+1 */
-static struct pinmux_config km_e2_can_pin_mux[] = {
-	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
-	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
-	{"uart1_rxd.d_can1_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
-	{"uart1_txd.d_can1_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
-/* MMI CAN 0 */
-static struct pinmux_config km_mmi_can_pin_mux[] = {
-	{"uart1_ctsn.d_can0_tx", OMAP_MUX_MODE2 | AM33XX_PULL_ENBL},
-	{"uart1_rtsn.d_can0_rx", OMAP_MUX_MODE2 | AM33XX_PIN_INPUT_PULLUP},
-	{NULL, 0},
-};
-
 /* E2 RS485 */
 static struct pinmux_config km_e2_rs485_pin_mux[] = {
 	{"mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT_PULLUP},
@@ -1597,20 +1581,43 @@ static void pia335x_lcd_init(int id)
 }
 
 /* CAN */
+static struct pinmux_config can0_pin_mux[] = {
+	{"uart1_ctsn.d_can0_tx", AM33XX_PULL_ENBL},
+	{"uart1_rtsn.d_can0_rx", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+/* E2 CAN 1 */
+static struct pinmux_config km_e2_can1_pin_mux[] = {
+	{"uart1_rxd.d_can1_tx", AM33XX_PULL_ENBL},
+	{"uart1_txd.d_can1_rx", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+/* EB_TFT CAN0 */
+static struct pinmux_config ebtft_can0_pin_mux[] = {
+	{"mii1_txd3.d_can0_tx", AM33XX_PULL_ENBL},
+	{"mii1_txd2.d_can0_rx", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
+
 extern void am33xx_d_can_init(unsigned int instance);
-static void km_e2_can_init(void)
+static void can_init(int boardid )
 {
-	setup_pin_mux(km_e2_can_pin_mux);
-	am33xx_d_can_init(0);
-	am33xx_d_can_init(1);
+	switch (boardid) {
+	case PIA335_KM_E2:
+		setup_pin_mux(km_e2_can1_pin_mux);
+		am33xx_d_can_init(1);
+		/* falltrough, CAN0 identical */
+	case PIA335_KM_MMI:
+		setup_pin_mux(can0_pin_mux);
+		am33xx_d_can_init(0);
+		break;
+	case PIA335_BB_EBTFT:
+		setup_pin_mux(ebtft_can0_pin_mux);
+		am33xx_d_can_init(0);
+	default:
+		break;
+	}
 
-}
-
-static void km_mmi_can_init(void)
-{
-	// TODO only enable for extended
-	setup_pin_mux(km_mmi_can_pin_mux);
-	am33xx_d_can_init(0);
 }
 
 /* SPI */
@@ -2073,7 +2080,7 @@ static void km_e2_setup(void)
 #endif
 	nand_init();
 
-	km_e2_can_init();
+	can_init(pia335x_main_id.id);
 	km_e2_spi_init();
 	km_e2_rs485_init();
 	if (pia335x_main_id.rev >= 3) {
@@ -2125,7 +2132,7 @@ static void km_mmi_setup(int variant)
 	if (variant == 'X') {
 		/* only on eXtended variant */
 		usb0_init();
-		km_mmi_can_init();
+		can_init(pia335x_main_id.id);
 		/* special 24V GPIOs */
 		pia335x_gpios_export(km_mmi_24v_gpios, ARRAY_SIZE(km_mmi_24v_gpios));
 	}
@@ -2144,6 +2151,8 @@ static void pm_setup(void)
 
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
+
+	// FIXME pia335x_rtc_init();
 	pm_setup_done = 1;
 }
 
@@ -2153,6 +2162,7 @@ static void ebtft_setup(void)
 
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_main_id.id);
+	can_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 }
