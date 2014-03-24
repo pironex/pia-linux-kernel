@@ -736,7 +736,6 @@ static struct pinmux_config ebtft_gpios_pin_mux[] = {
 };
 static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_CAN0_TERM,	GPIOF_OUT_INIT_LOW, "can_term" },
-	{ EBTFT_GPIO_MMC_CD,	GPIOF_IN },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
