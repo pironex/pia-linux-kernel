@@ -727,15 +727,24 @@ static struct gpio pm_gpios[] = {
 };
 
 /* EB_TFT */
+#define EBTFT_GPIO_IN2		GPIO_TO_PIN(0, 28)
+#define EBTFT_GPIO_IN1		GPIO_TO_PIN(2,  2)
 #define EBTFT_GPIO_CAN0_TERM	GPIO_TO_PIN(2, 18)
+#define EBTFT_GPIO_IN3		GPIO_TO_PIN(3, 10)
 #define EBTFT_GPIO_MMC_CD	GPIO_TO_PIN(3, 21)
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
-	{ "mii1_rxd3.gpio2_18", AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
+	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT },
+	{ "mii1_txd2.gpio3_10",		AM33XX_PIN_INPUT },
+	{ "mii1_rxd3.gpio2_18",		AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_ahclkx.gpio3_21",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_CAN0_TERM,	GPIOF_OUT_INIT_LOW, "can_term" },
+	{ EBTFT_GPIO_IN1,	GPIOF_IN },
+	{ EBTFT_GPIO_IN2,	GPIOF_IN },
+	{ EBTFT_GPIO_IN3,	GPIOF_IN },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -2230,6 +2239,7 @@ static void ebtft_setup(void)
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_main_id.id);
 	can_init(pia335x_main_id.id);
+	pia335x_gpios_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 	usb_init(pia335x_main_id.id);
