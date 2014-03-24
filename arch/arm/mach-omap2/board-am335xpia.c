@@ -728,12 +728,15 @@ static struct gpio pm_gpios[] = {
 
 /* EB_TFT */
 #define EBTFT_GPIO_CAN0_TERM	GPIO_TO_PIN(2, 18)
+#define EBTFT_GPIO_MMC_CD	GPIO_TO_PIN(3, 21)
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mii1_rxd3.gpio2_18", AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_ahclkx.gpio3_21", AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_CAN0_TERM,	GPIOF_OUT_INIT_LOW, "can_term" },
+	{ EBTFT_GPIO_MMC_CD,	GPIOF_IN },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1130,7 +1133,7 @@ static void mmc_init(int boardid)
 		pia335x_mmc[0].gpio_cd = MMI_GPIO_MMC_CD;
 		break;
 	case PIA335_BB_EBTFT:
-		// TODO add CD GPIO
+		pia335x_mmc[0].gpio_cd = EBTFT_GPIO_MMC_CD;
 		break;
 	case PIA335_PM:
 		// enable eMMC at second MMC bus
