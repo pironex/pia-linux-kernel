@@ -740,6 +740,16 @@ static struct gpio pm_gpios[] = {
 	{ PM_GPIO_NOR_RESET,	GPIOF_OUT_INIT_HIGH, "nor_reset" },
 };
 
+/* EB_TFT */
+#define EBTFT_GPIO_CAN0_TERM	GPIO_TO_PIN(2, 18)
+static struct pinmux_config ebtft_gpios_pin_mux[] = {
+	{ "mii1_rxd3.gpio2_18", AM33XX_PIN_INPUT_PULLDOWN },
+	{ NULL, 0 },
+};
+static struct gpio ebtft_gpios[] = {
+	{ EBTFT_GPIO_CAN0_TERM,	GPIOF_OUT_INIT_LOW, "can_term" },
+};
+
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -809,11 +819,15 @@ static void pia335x_gpios_init(int boardid)
 		gpiocfg = pm_gpios;
 		sz = ARRAY_SIZE(pm_gpios);
 		break;
+	case PIA335_BB_EBTFT:
+		muxcfg = ebtft_gpios_pin_mux;
+		gpiocfg = ebtft_gpios;
+		sz = ARRAY_SIZE(ebtft_gpios);
 	default:
 		return;
 	}
-	setup_pin_mux(muxcfg);
 
+	setup_pin_mux(muxcfg);
 	pia335x_gpios_export(gpiocfg, sz);
 
 	/* board specific initializations */
