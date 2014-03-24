@@ -731,11 +731,13 @@ static struct gpio pm_gpios[] = {
 #define EBTFT_GPIO_IN1		GPIO_TO_PIN(2,  2)
 #define EBTFT_GPIO_CAN0_TERM	GPIO_TO_PIN(2, 18)
 #define EBTFT_GPIO_IN3		GPIO_TO_PIN(3, 10)
+#define EBTFT_GPIO_LED		GPIO_TO_PIN(3, 17)
 #define EBTFT_GPIO_MMC_CD	GPIO_TO_PIN(3, 21)
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT },
 	{ "mii1_txd2.gpio3_10",		AM33XX_PIN_INPUT },
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mii1_rxd3.gpio2_18",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mcasp0_ahclkx.gpio3_21",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
@@ -1301,7 +1303,7 @@ static struct platform_device pm_leds = {
 };
 
 /* EB-TFT RGB Buttons */
-static struct led_info ebtft_leds_config[] = {
+static struct led_info ebtft_rgbleds_config[] = {
 	{
 		.name = "led:b1",
 		.default_trigger = "heartbeat",
@@ -1327,12 +1329,33 @@ static struct led_info ebtft_leds_config[] = {
 		.default_trigger = "none",
 	},
 };
-static struct pca9633_platform_data ebtft_leds_data = {
+static struct pca9633_platform_data ebtft_rgbleds_data = {
 	.leds = {
 		.num_leds = 6,
-		.leds = ebtft_leds_config,
+		.leds = ebtft_rgbleds_config,
 	},
 	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
+static struct gpio_led ebtft_gpio_leds[] = {
+	{
+		.name			= "led:usr1",
+		.gpio			= EBTFT_GPIO_LED,
+		.default_trigger	= "heartbeat",
+	},
+};
+
+static struct gpio_led_platform_data ebtft_led_info = {
+	.leds		= ebtft_gpio_leds,
+	.num_leds	= ARRAY_SIZE(ebtft_gpio_leds),
+};
+
+static struct platform_device ebtft_leds = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &ebtft_led_info,
+	},
 };
 
 static void leds_init(int boardid)
@@ -1346,13 +1369,14 @@ static void leds_init(int boardid)
 		case PIA335_PM:
 			err = platform_device_register(&pm_leds);
 		case PIA335_KM_E2:
+		case PIA335_BB_EBTFT:
+			err = platform_device_register(&ebtft_leds);
 		default:
 			break;
 	}
 	if (err)
 		pr_err("failed to register gpio led device\n");
 }
-
 
 /* FRAM is similar to at24 eeproms without write delay and page limits */
 static struct at24_platform_data km_e2_fram_info = {
@@ -1426,7 +1450,7 @@ static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 static struct i2c_board_info ebtft_i2c1_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("pca9634", 0x2A),
-		.platform_data = &ebtft_leds_data,
+		.platform_data = &ebtft_rgbleds_data,
 	},
 };
 
