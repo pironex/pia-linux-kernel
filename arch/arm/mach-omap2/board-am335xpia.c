@@ -338,47 +338,6 @@ static struct pinmux_config clkout2_pin_mux[] = {
 };
 #endif
 
-/* E2 Ethernet MII2 + MDIO */
-static struct pinmux_config km_e2_mii2_pin_mux[] = {
-	{ "gpmc_a0.mii2_txen",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_a1.mii2_rxdv",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a2.mii2_txd3",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_a3.mii2_txd2",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_a4.mii2_txd1",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_a5.mii2_txd0",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_a6.mii2_txclk",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a7.mii2_rxclk",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a8.mii2_rxd3",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a9.mii2_rxd2",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a10.mii2_rxd1",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_a11.mii2_rxd0",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mdio_data.mdio_data",AM33XX_PIN_INPUT_PULLUP },
-	{ "mdio_clk.mdio_clk",	AM33XX_PIN_OUTPUT_PULLUP },
-	{ NULL, 0 },
-};
-
-/* MMI Ethernet MII1 + MDIO */
-static struct pinmux_config km_mmi_mii1_pin_mux[] = {
-	{ "mii1_col.mii1_col",		AM33XX_PIN_INPUT },
-	{ "mii1_crs.mii1_crs",		AM33XX_PIN_INPUT },
-	{ "mii1_rxerr.mii1_rxerr",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_txen.mii1_txen",	AM33XX_PIN_OUTPUT },
-	{ "mii1_rxdv.mii1_rxdv",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_txd3.mii1_txd3",	AM33XX_PIN_OUTPUT },
-	{ "mii1_txd2.mii1_txd2",	AM33XX_PIN_OUTPUT },
-	{ "mii1_txd1.mii1_txd1",	AM33XX_PIN_OUTPUT },
-	{ "mii1_txd0.mii1_txd0",	AM33XX_PIN_OUTPUT },
-	{ "mii1_txclk.mii1_txclk",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_rxclk.mii1_rxclk",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_rxd3.mii1_rxd3",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_rxd2.mii1_rxd2",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_rxd1.mii1_rxd1",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_rxd0.mii1_rxd0",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mdio_data.mdio_data",	AM33XX_PIN_INPUT_PULLUP },
-	{ "mdio_clk.mdio_clk",		AM33XX_PIN_INPUT_PULLUP },
-	{NULL, 0},
-};
-
 /* Module pin mux for nand */
 static struct pinmux_config nand_pin_mux[] = {
 	{"gpmc_ad0.gpmc_ad0",	  OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLUP},
@@ -1052,16 +1011,63 @@ static void usb1_init(void)
 #endif
 
 /* Ethernet */
-static void km_e2_ethenet_init(void)
-{
-	pr_info("piA335x: %s\n", __func__);
-	setup_pin_mux(km_e2_mii2_pin_mux);
-}
+/* MMI Ethernet MII1 + MDIO */
+static struct pinmux_config mii1_pin_mux[] = {
+	{ "mii1_txen.mii1_txen",	AM33XX_PIN_OUTPUT },
+	{ "mii1_rxdv.mii1_rxdv",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_txd3.mii1_txd3",	AM33XX_PIN_OUTPUT },
+	{ "mii1_txd2.mii1_txd2",	AM33XX_PIN_OUTPUT },
+	{ "mii1_txd1.mii1_txd1",	AM33XX_PIN_OUTPUT },
+	{ "mii1_txd0.mii1_txd0",	AM33XX_PIN_OUTPUT },
+	{ "mii1_txclk.mii1_txclk",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_rxclk.mii1_rxclk",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_rxd3.mii1_rxd3",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_rxd2.mii1_rxd2",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_rxd1.mii1_rxd1",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_rxd0.mii1_rxd0",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mdio_data.mdio_data",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mdio_clk.mdio_clk",		AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+/* optional signals used on EBTFT */
+static struct pinmux_config mii2_opt_pin_mux[] = {
+	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_wpn.mii2_rxerr", AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_be1n.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
+};
+/* E2 Ethernet MII2 + MDIO */
+static struct pinmux_config mii2_base_pin_mux[] = {
+	{ "gpmc_a0.mii2_txen",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_a1.mii2_rxdv",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a2.mii2_txd3",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_a3.mii2_txd2",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_a4.mii2_txd1",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_a5.mii2_txd0",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_a6.mii2_txclk",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a7.mii2_rxclk",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a8.mii2_rxd3",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a9.mii2_rxd2",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a10.mii2_rxd1",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_a11.mii2_rxd0",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mdio_data.mdio_data",AM33XX_PIN_INPUT_PULLUP },
+	{ "mdio_clk.mdio_clk",	AM33XX_PIN_OUTPUT_PULLUP },
+	{ NULL, 0 },
+};
 
-static void km_mmi_ethernet_init(void)
+static void ethernet_init(int boardid)
 {
 	pr_info("piA335x: %s\n", __func__);
-	setup_pin_mux(km_mmi_mii1_pin_mux);
+	switch (boardid) {
+	case PIA335_BB_EBTFT:
+		setup_pin_mux(mii2_opt_pin_mux);
+		/* fall-trough to MII2 base config */
+	case PIA335_KM_E2:
+		setup_pin_mux(mii2_base_pin_mux);
+		break;
+	case PIA335_KM_MMI:
+		setup_pin_mux(mii1_pin_mux);
+		break;
+	}
 }
 
 /* MMC */
@@ -2051,7 +2057,8 @@ static void km_e2_setup(void)
 	pia335x_rtc_init();
 	km_e2_i2c1_init(); /* second i2c bus */
 	mmc_init(pia335x_main_id.id);
-	km_e2_ethenet_init();
+
+	ethernet_init(pia335x_main_id.id);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 	if (am33xx_piarev == 1) {
 		usb1_init();
@@ -2102,7 +2109,7 @@ static void km_mmi_setup(int variant)
 
 	mmc_init(pia335x_main_id.id);
 
-	km_mmi_ethernet_init();
+	ethernet_init(pia335x_main_id.id);
 
 	//clkout2_32k_enable();
 
@@ -2145,6 +2152,7 @@ static void ebtft_setup(void)
 	pr_info("piA335x-EB_TFT: cpsw_init\n");
 
 	mmc_init(pia335x_exp_id.id);
+	ethernet_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 }
