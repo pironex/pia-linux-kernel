@@ -1337,12 +1337,6 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 	}
 };
 
-static void km_e2_i2c1_init(void)
-{
-	pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
-			ARRAY_SIZE(km_e2_i2c1_boardinfo));
-}
-
 static struct at24_platform_data km_mmi_lcd_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
@@ -1386,10 +1380,20 @@ static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 	},
 };
 
-static void km_mmi_i2c1_init(void)
+static void i2c1_init(int boardid)
 {
-	pia335x_register_i2c_devices(1, km_mmi_i2c1_boardinfo,
-			ARRAY_SIZE(km_mmi_i2c1_boardinfo));
+	switch (boardid) {
+	case PIA335_KM_E2:
+		pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
+				ARRAY_SIZE(km_e2_i2c1_boardinfo));
+		break;
+	case PIA335_KM_MMI:
+		pia335x_register_i2c_devices(1, km_mmi_i2c1_boardinfo,
+				ARRAY_SIZE(km_mmi_i2c1_boardinfo));
+		break;
+	default:
+		break;
+	}
 }
 
 /* LCD Display */
@@ -2080,7 +2084,7 @@ static void km_e2_setup(void)
 	pmic_init(pia335x_main_id.id);
 
 	pia335x_rtc_init();
-	km_e2_i2c1_init(); /* second i2c bus */
+	i2c1_init(pia335x_main_id.id);
 	mmc_init(pia335x_main_id.id);
 
 	ethernet_init(pia335x_main_id.id);
@@ -2128,7 +2132,7 @@ static void km_mmi_setup(int variant)
 	pmic_init(pia335x_main_id.id);
 
 	pia335x_rtc_init();
-	km_mmi_i2c1_init(); /* second i2c bus */
+	i2c1_init(pia335x_main_id.id);
 
 	mmc_init(pia335x_main_id.id);
 
