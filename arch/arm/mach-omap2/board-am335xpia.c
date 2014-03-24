@@ -1292,6 +1292,41 @@ static struct platform_device pm_leds = {
 	},
 };
 
+/* EB-TFT RGB Buttons */
+static struct led_info ebtft_leds_config[] = {
+	{
+		.name = "led:b1",
+		.default_trigger = "heartbeat",
+	},
+	{
+		.name = "led:g1",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led:r1",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led:b2",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led:g2",
+		.default_trigger = "none",
+	},
+	{
+		.name = "led:r2",
+		.default_trigger = "none",
+	},
+};
+static struct pca9633_platform_data ebtft_leds_data = {
+	.leds = {
+		.num_leds = 6,
+		.leds = ebtft_leds_config,
+	},
+	.outdrv = PCA9633_OPEN_DRAIN,
+};
+
 static void leds_init(int boardid)
 {
 	int err = 0;
@@ -1380,6 +1415,13 @@ static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 	},
 };
 
+static struct i2c_board_info ebtft_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("pca9634", 0x2A),
+		.platform_data = &ebtft_leds_data,
+	},
+};
+
 static void i2c1_init(int boardid)
 {
 	switch (boardid) {
@@ -1391,6 +1433,11 @@ static void i2c1_init(int boardid)
 		pia335x_register_i2c_devices(1, km_mmi_i2c1_boardinfo,
 				ARRAY_SIZE(km_mmi_i2c1_boardinfo));
 		break;
+	case PIA335_BB_EBTFT:
+		pia335x_register_i2c_devices(1, ebtft_i2c1_boardinfo,
+				ARRAY_SIZE(ebtft_i2c1_boardinfo));
+		break;
+	case PIA335_PM:
 	default:
 		break;
 	}
@@ -2180,6 +2227,7 @@ static void ebtft_setup(void)
 {
 	pr_info("piA335x-EB_TFT: cpsw_init\n");
 
+	i2c1_init(pia335x_main_id.id);
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_main_id.id);
 	can_init(pia335x_main_id.id);
