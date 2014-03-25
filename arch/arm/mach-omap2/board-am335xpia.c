@@ -2321,10 +2321,12 @@ static void ebtft_setup(void)
 	pr_info("piA335x-EB_TFT: cpsw_init\n");
 
 	i2c1_init(pia335x_main_id.id);
+	pia335x_gpios_init(pia335x_main_id.id);
+
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_main_id.id);
 	can_init(pia335x_main_id.id);
-	pia335x_gpios_init(pia335x_main_id.id);
+
 	ecap_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
