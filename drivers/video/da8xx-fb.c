@@ -278,7 +278,7 @@ static struct da8xx_panel known_lcd_panels[] = {
 	},
 	/* Newhaven Display */
 	[3] = {
-		.name = "NHD-4.3-ATXI#-T-1",
+		.name = "NHD_NHD-4.3-ATXI#-T-1",
 		.width = 480,
 		.height = 272,
 		.hfp = 8,
