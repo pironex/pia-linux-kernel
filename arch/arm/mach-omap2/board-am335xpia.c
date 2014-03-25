@@ -733,6 +733,8 @@ static struct gpio pm_gpios[] = {
 #define EBTFT_GPIO_IN3		GPIO_TO_PIN(3, 10)
 #define EBTFT_GPIO_LED		GPIO_TO_PIN(3, 17)
 #define EBTFT_GPIO_MMC_CD	GPIO_TO_PIN(3, 21)
+#define EBTFT_GPIO_RFID_IRQ	GPIO_TO_PIN(3,  4)
+#define EBTFT_GPIO_RFID_POWEN	GPIO_TO_PIN(3,  0)
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT },
@@ -740,6 +742,8 @@ static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mii1_rxd3.gpio2_18",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mcasp0_ahclkx.gpio3_21",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_col.gpio3_0",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ NULL, 0 },
 };
 static struct gpio ebtft_gpios[] = {
@@ -747,6 +751,8 @@ static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_IN1,	GPIOF_IN },
 	{ EBTFT_GPIO_IN2,	GPIOF_IN },
 	{ EBTFT_GPIO_IN3,	GPIOF_IN },
+	{ EBTFT_GPIO_RFID_IRQ,	GPIOF_IN, "rfid_int" },
+	{ EBTFT_GPIO_RFID_POWEN,GPIOF_OUT_INIT_LOW, "rfid_powen" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1868,6 +1874,25 @@ static struct spi_board_info pm_spi0_info[] = {
 	},
 };
 
+static struct pinmux_config ebtft_spi_pin_mux[] = {
+	/* SPI0 */
+	{"mcasp0_aclkx.spi1_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_fsx.spi1_d0",		AM33XX_PIN_INPUT_PULLUP },
+	{"mcasp0_axr0.spi1_d1",		AM33XX_PIN_INPUT_PULLUP },
+	{"rmii1_refclk.spi1_cs0",	AM33XX_PIN_INPUT_PULLUP }, /* RFID */
+	{NULL, 0},
+};
+
+static struct spi_board_info ebtft_spi_info[] = {
+	{
+		.modalias      = "spidev",
+		.max_speed_hz  = 2000000,
+		.bus_num       = 2,
+		.chip_select   = 0,
+		.irq           = -1, /* spidev doesn't support interrupts */
+	},
+};
+
 static void spi_init(int boardid)
 {
 	switch (boardid) {
@@ -1875,6 +1900,11 @@ static void spi_init(int boardid)
 		setup_pin_mux(pm_spi_pin_mux);
 		spi_register_board_info(pm_spi0_info,
 				ARRAY_SIZE(pm_spi0_info));
+		break;
+	case PIA335_BB_EBTFT:
+		setup_pin_mux(ebtft_spi_pin_mux);
+		spi_register_board_info(ebtft_spi_info,
+				ARRAY_SIZE(ebtft_spi_info));
 		break;
 	case PIA335_KM_E2:
 		setup_pin_mux(km_e2_spi_pin_mux);
