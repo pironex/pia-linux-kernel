@@ -290,6 +290,21 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 9000000,
 		.invert_pxl_clk = 0,
 	},
+	/* DLC0430LZG[-T] */
+	[4] = {
+		.name = "DLC_DLC0430LZG",
+		.width = 480,
+		.height = 272,
+		.hfp = 2,
+		.hbp = 2,
+		.hsw = 41, /* hcycle 525 */
+		.vfp = 2,
+		.vbp = 2,
+		.vsw = 10, /* vcycle 286 */
+		.pxl_clk = 9000000,
+		.invert_pxl_clk = 0,
+	},
+
 };
 
 static inline bool is_raster_enabled(void)
