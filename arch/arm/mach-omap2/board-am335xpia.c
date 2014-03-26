@@ -739,6 +739,8 @@ static struct gpio pm_gpios[] = {
 #define EBTFT_GPIO_MMC_CD	GPIO_TO_PIN(3, 21)
 #define EBTFT_GPIO_RFID_IRQ	GPIO_TO_PIN(3,  4)
 #define EBTFT_GPIO_RFID_POWEN	GPIO_TO_PIN(3,  0)
+#define EBTFT_GPIO_LCD_BACKLIGHT GPIO_TO_PIN(2, 0)
+#define EBTFT_GPIO_LCD_DISP	GPIO_TO_PIN(2,  4)
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT },
@@ -748,6 +750,11 @@ static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mcasp0_ahclkx.gpio3_21",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_col.gpio3_0",		AM33XX_PIN_INPUT_PULLDOWN },
+	/* LCD Backlight Enable */
+	{ "gpmc_csn3.gpio2_0",		AM33XX_PIN_INPUT_PULLDOWN },
+	/* LCD Display Enable */
+	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_INPUT_PULLDOWN },
+
 	{ NULL, 0 },
 };
 static struct gpio ebtft_gpios[] = {
@@ -1619,6 +1626,14 @@ struct da8xx_lcdc_platform_data  km_mmi_lcd_pdata = {
 	.type                   = "NHD-4.3-ATXI#-T-1",
 };
 
+/* REVISIT check if config identical to NewHaven */
+struct da8xx_lcdc_platform_data  ebtft_lcd_pdata = {
+	/* display is a ADKOM DLC0430LZG */
+	.manu_name              = "DLC",
+	.controller_data        = &lcd_cfg,
+	.type                   = "DLC0430LZG",
+};
+
 static int __init conf_disp_pll(int rate)
 {
 	struct clk *disp_pll;
@@ -1676,6 +1691,10 @@ static void pia335x_lcd_init(int boardid)
 		exp_lcd.gpio_den = MMI_GPIO_LCD_DISP;
 
 		break;
+	case PIA335_BB_EBTFT:
+		lcdc_pdata = &ebtft_lcd_pdata;
+		exp_lcd.gpio_blen = EBTFT_GPIO_LCD_BACKLIGHT;
+		exp_lcd.gpio_den = EBTFT_GPIO_LCD_DISP;
 
 		break;
 	default:
@@ -2335,6 +2354,9 @@ static void ebtft_setup(void)
 	can_init(pia335x_main_id.id);
 
 	ecap_init(pia335x_main_id.id);
+
+	pia335x_lcd_init(pia335x_main_id.id);
+
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 	usb_init(pia335x_main_id.id);
