@@ -139,8 +139,6 @@ static struct pia335x_board_id pia335x_exp_id = {
 	.rev	= -EINVAL,
 	.type	= 1,
 };
-//static int am33xx_piaid = -EINVAL;
-//static int am33xx_piarev = -EINVAL;
 
 static int pm_setup_done = 0;
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
@@ -674,6 +672,10 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "gpmc_a1.gpio1_22",		AM33XX_PIN_INPUT },
 	{ "gpmc_a1.gpio1_23",		AM33XX_PIN_INPUT },
 	{ "gpmc_a1.gpio1_24",		AM33XX_PIN_INPUT },
+	/* display enable GPIO */
+	{ "gpmc_ben1.gpio1_28",		AM33XX_PIN_INPUT_PULLDOWN },
+	/* backlight GPIO */
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLDOWN },
 	{NULL, 0},
 };
 
@@ -692,6 +694,8 @@ static struct gpio km_mmi_gpios[] = {
 	{ MMI_GPIO_IN2,		GPIOF_IN, "in2" },
 	{ MMI_GPIO_IN3,		GPIOF_IN, "in3" },
 	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
+	{ MMI_GPIO_LCD_DISP,	GPIOF_OUT_INIT_LOW, "lcd:den" },
+	{ MMI_GPIO_LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd:blen" },
 };
 
 static struct gpio km_mmi_24v_gpios[] = {
@@ -1481,7 +1485,19 @@ static void i2c1_init(int boardid)
 	}
 }
 
-/* LCD Display */
+/* LCD + TSC*/
+/* display related info */
+struct pia335x_lcd {
+	int gpio_blen;
+	int gpio_den;
+	int gpio_tsc;
+};
+static struct pia335x_lcd exp_lcd = {
+	.gpio_blen = -EINVAL,
+	.gpio_den  = -EINVAL,
+	.gpio_tsc  = -EINVAL
+};
+
 static struct pinmux_config lcdc_pin_mux[] = {
 	{ "lcd_data0.lcd_data0", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
 	{ "lcd_data1.lcd_data1", AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA },
@@ -1511,23 +1527,19 @@ static struct pinmux_config lcdc_pin_mux[] = {
 	{ "lcd_hsync.lcd_hsync", AM33XX_PIN_OUTPUT },
 	{ "lcd_pclk.lcd_pclk", AM33XX_PIN_OUTPUT },
 	{ "lcd_ac_bias_en.lcd_ac_bias_en", AM33XX_PIN_OUTPUT },
-	/* display enable GPIO */
-	{ "gpmc_ben1.gpio1_28",		AM33XX_PIN_OUTPUT },
-	/* backlight GPIO */
-	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_OUTPUT},
 	{NULL, 0},
 };
 
 /* Touch resitive integrated */
 #include <linux/input/ti_tsc.h>
-static struct tsc_data km_mmi_touch_res_data  = {
+static struct tsc_data pia335x_res_touch_data  = {
 	.wires  = 4,
 	.x_plate_resistance = 200,
 	.steps_to_configure = 5,
 };
 
-static struct mfd_tscadc_board km_mmi_tscadc = {
-	.tsc_init = &km_mmi_touch_res_data,
+static struct mfd_tscadc_board pia335x_tscadc = {
+	.tsc_init = &pia335x_res_touch_data,
 	.adc_init = 0,
 };
 
@@ -1550,19 +1562,28 @@ static struct i2c_board_info km_mmi_i2c1_touch = {
 };
 #endif
 
-static void pia335x_touch_init(void)
+static void pia335x_touch_init(int boardid)
 {
-	int err;
+	int err = 0;
 
-	pr_info("pia335x_init: init touch controller FT5x06\n");
+	pr_info("pia335x_init: TS\n");
 
+	switch (boardid) {
+	case PIA335_KM_MMI:
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
-	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
-	/* I2C adapter request */
-	pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
+		defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
+		pr_info("pia335x_init: init touch controller FT5x06\n");
+		/* I2C adapter request */
+		pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
 #endif
+		/* resitive */
+		err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
+		break;
+	default:
+		pr_warn("pia335x_init: no TSC defined\n");
+		break;
+	}
 
-	err = am33xx_register_mfd_tscadc(&km_mmi_tscadc);
 	if (err)
 		pr_err("failed to register TSADC device\n");
 }
@@ -1615,27 +1636,31 @@ out:
 	return ret;
 }
 
-
-static void pia335x_mmi_lcd_power_ctrl(int val) {
-	if (!gpio_is_valid(MMI_GPIO_LCD_BACKLIGHT)) {
-		pr_warn("LCD power control: invalid GPIO: %d\n", val);
+static void pia335x_lcd_power_ctrl(int val) {
+	if (!gpio_is_valid(exp_lcd.gpio_den) ||
+			!gpio_is_valid(exp_lcd.gpio_blen)) {
+		pr_warn("LCD power control: invalid GPIO: BLEN or DEN\n");
 		return;
 	}
 
 	if (val == 0) {
 		pr_info("Turning off LCD\n");
-		gpio_set_value(MMI_GPIO_LCD_BACKLIGHT, 0);
+		gpio_set_value(exp_lcd.gpio_blen, 0);
+		usleep_range(10000, 11000); /* min 10 ms display hold time */
+		gpio_set_value(exp_lcd.gpio_den, 0);
 	} else {
 		pr_info("Turning on LCD\n");
-		gpio_set_value(MMI_GPIO_LCD_BACKLIGHT, 1);
+		gpio_set_value(exp_lcd.gpio_den, 1);
+		usleep_range(10, 100); /* min 10 µs display setup time */
+		gpio_set_value(exp_lcd.gpio_blen, 1);
 	}
 }
 
-static void pia335x_lcd_init(int id)
+static void pia335x_lcd_init(int boardid)
 {
-	int ret;
-	//int use_lcd = 1;
 	struct da8xx_lcdc_platform_data *lcdc_pdata;
+
+	pr_info("pia335x_init: LCD\n");
 	setup_pin_mux(lcdc_pin_mux);
 
 	if (conf_disp_pll(300000000)) {
@@ -1643,46 +1668,28 @@ static void pia335x_lcd_init(int id)
 				"register LCDC\n");
 		return;
 	}
-	switch (id) {
+	switch (boardid) {
 	case PIA335_KM_MMI:
-		km_mmi_lcd_pdata.panel_power_ctrl =
-				pia335x_mmi_lcd_power_ctrl;
-		/* backlight GPIO */
-		if ((ret = gpio_request_one(MMI_GPIO_LCD_BACKLIGHT,
-				GPIOF_DIR_OUT | GPIOF_INIT_LOW, "lcd-backlight")) != 0) {
-			pr_err("%s: GPIO_LCD_BACKLIGHT request failed: %d\n", __func__, ret);
-			return;
-		} else {
-			//gpio_direction_output(GPIO_LCD_BACKLIGHT, 0);
-			omap_mux_init_gpio(MMI_GPIO_LCD_BACKLIGHT, OMAP_PIN_INPUT_PULLDOWN);
-			gpio_export(MMI_GPIO_LCD_BACKLIGHT, true);
-		}
-
-		/* DISPLAY_EN GPIO */
-	if ((ret = gpio_request_one(MMI_GPIO_LCD_DISP,
-			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "lcd-disp")) != 0) {
-		pr_err("%s: GPIO_LCD_DISP request failed: %d\n", __func__, ret);
-		gpio_free(MMI_GPIO_LCD_BACKLIGHT);
-			return;
-		} else {
-			//TODO gpio_direction_output(GPIO_LCD_DISP, 1);
-			omap_mux_init_gpio(MMI_GPIO_LCD_DISP, OMAP_PIN_INPUT_PULLDOWN);
-			gpio_export(MMI_GPIO_LCD_DISP, true);
-		}
 		lcdc_pdata = &km_mmi_lcd_pdata;
+		/* Backlight and Display enable GPIOs will be set in GPIO init */
+		exp_lcd.gpio_blen = MMI_GPIO_LCD_BACKLIGHT;
+		exp_lcd.gpio_den = MMI_GPIO_LCD_DISP;
+
+		break;
 
 		break;
 	default:
-		pr_err("LCDC not supported on this device (%d)\n", id);
+		pr_err("LCDC not supported on this device\n");
 		return;
 	}
 
-	pr_info("pia335x_init: init LCD: %s\n", lcdc_pdata->type);
+	km_mmi_lcd_pdata.panel_power_ctrl = pia335x_lcd_power_ctrl;
+
 	if (am33xx_register_lcdc(lcdc_pdata))
 		pr_info("Failed to register LCDC device\n");
 
 	/* initialize touch interface only for LCD display */
-	pia335x_touch_init();
+	pia335x_touch_init(boardid);
 
 	return;
 }
