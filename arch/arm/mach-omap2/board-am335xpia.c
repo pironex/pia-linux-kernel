@@ -1586,6 +1586,11 @@ static void pia335x_touch_init(int boardid)
 		/* resitive */
 		err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
 		break;
+	case PIA335_BB_EBTFT:
+		if (exp_config.opt[2] == 'R')
+			err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
+
+		break;
 	default:
 		pr_warn("pia335x_init: no TSC defined\n");
 		break;
