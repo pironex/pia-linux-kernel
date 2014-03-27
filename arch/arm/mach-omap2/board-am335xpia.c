@@ -86,24 +86,18 @@ static char am335x_mac_addr[2][ETH_ALEN];
 *  Header		4	0xAA, 0x55, 0x33, 0xEE
 *
 *  Board Name		8	Name for board in ASCII.
-*				example "A33515BB" = "AM335X
-				Low Cost EVM board"
 *
 *  Version		4	Hardware version code for board in
-*				in ASCII. "1.0A" = rev.01.0A
+*				in ASCII. e.g. "0.01"
 *
-*  Serial Number	12	Serial number of the board. This is a 12
-*				character string which is WWYY4P16nnnn, where
-*				WW = 2 digit week of the year of production
-*				YY = 2 digit year of production
-*				nnnn = incrementing board number
+*  Serial Number	12	currently not used on piA boards
 *
-*  Configuration option	32	0: 'B' base version, 'X' extended
-*                                  only relevant for MMI
-*                               1: 'N' board has NAND
+* Configuration option	32	0: 'B' base version, 'X' extended
+*				   only relevant for MMI
+*				1: 'N' board has NAND
+*				2: 'R' resitive Touch, 'C' capacitive touch
 *
-*  Available		60	Available space for other non-volatile
-*				data.
+*  Available		60	Available space for other non-volatile data.
 */
 struct pia335x_eeprom_config {
 	u32	header;
@@ -2099,11 +2093,8 @@ static struct omap_musb_board_data musb_board_data = {
 	.instances	= 1,
 };
 
-/*
- * Audio
- */
-
-/* Module pin mux for mcasp0 */
+/* Audio */
+/* MMI McASP1 */
 static struct pinmux_config mcasp0_pin_mux[] = {
 	/* Audio.BCLK */
 	{"mcasp0_aclkx.mcasp0_aclkx", OMAP_MUX_MODE0 | AM33XX_PIN_INPUT_PULLDOWN},
@@ -2161,6 +2152,9 @@ static void km_mmi_tlv320aic3x_init(void)
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);
 
+	/* REVISIT is the order required or can we register the I2C part of
+	 * the device in the boards's generic I2C1 setup?
+	 */
 	pia335x_add_i2c_device(1, &tlv320aic3x_i2c_boardinfo);
 
 	mcasp0_init(PIA335_KM_MMI);
@@ -2185,6 +2179,7 @@ static void ecap_init(int boardid)
 		idx = 1;
 		pwm_pdata[idx].chan_attrib[0].max_freq = 20000;
 		am33xx_register_ecap(idx, &pwm_pdata[idx]);
+		// TODO use something like "pwm-beeper" @ ecap.1
 		break;
 	default:
 		break;
