@@ -1804,32 +1804,6 @@ static struct spi_board_info km_e2_spi1_1_info[] = {
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
-static void km_e2_spi_init(void)
-{
-	setup_pin_mux(km_e2_spi_pin_mux);
-	spi_register_board_info(km_e2_spi_aps_info,
-			ARRAY_SIZE(km_e2_spi_aps_info));
-
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-	if (am33xx_piarev == 1) {
-		/* CAN device only on rev 0.01 */
-		spi_register_board_info(km_e2_spi_mcp2515_info,
-				ARRAY_SIZE(km_e2_spi_mcp2515_info));
-		/* quad encoder only on rev 0.01 */
-		spi_register_board_info(km_e2_spi_qenc_info,
-				ARRAY_SIZE(km_e2_spi_qenc_info));
-	} else {
-#endif
-		/* expansion header */
-		spi_register_board_info(km_e2_spi1_0_info,
-				ARRAY_SIZE(km_e2_spi1_0_info));
-#ifdef CONFIG_PIAAM335X_PROTOTYPE
-	}
-#endif
-	/* expansion header - all revisions */
-	spi_register_board_info(km_e2_spi1_1_info,
-			ARRAY_SIZE(km_e2_spi1_1_info));
-}
 
 /* PM SPI */
 static struct pinmux_config pm_spi_pin_mux[] = {
@@ -1894,11 +1868,43 @@ static struct spi_board_info pm_spi0_info[] = {
 	},
 };
 
-static void pm_spi_init(void)
+static void spi_init(int boardid)
 {
-	setup_pin_mux(pm_spi_pin_mux);
-	spi_register_board_info(pm_spi0_info,
-			ARRAY_SIZE(pm_spi0_info));
+	switch (boardid) {
+	case PIA335_PM:
+		setup_pin_mux(pm_spi_pin_mux);
+		spi_register_board_info(pm_spi0_info,
+				ARRAY_SIZE(pm_spi0_info));
+		break;
+	case PIA335_KM_E2:
+		setup_pin_mux(km_e2_spi_pin_mux);
+		spi_register_board_info(km_e2_spi_aps_info,
+				ARRAY_SIZE(km_e2_spi_aps_info));
+
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+		if (am33xx_piarev == 1) {
+			/* CAN device only on rev 0.01 */
+			spi_register_board_info(km_e2_spi_mcp2515_info,
+					ARRAY_SIZE(km_e2_spi_mcp2515_info));
+			/* quad encoder only on rev 0.01 */
+			spi_register_board_info(km_e2_spi_qenc_info,
+					ARRAY_SIZE(km_e2_spi_qenc_info));
+		} else {
+#endif
+			/* expansion header */
+			spi_register_board_info(km_e2_spi1_0_info,
+					ARRAY_SIZE(km_e2_spi1_0_info));
+#ifdef CONFIG_PIAAM335X_PROTOTYPE
+		}
+#endif
+		/* expansion header - all revisions */
+		spi_register_board_info(km_e2_spi1_1_info,
+				ARRAY_SIZE(km_e2_spi1_1_info));
+		break;
+	case PIA335_KM_MMI:
+	default:
+		break;
+	}
 }
 
 static void km_e2_rs485_init(void)
@@ -2180,7 +2186,7 @@ static void km_e2_setup(void)
 	nand_init();
 
 	can_init(pia335x_main_id.id);
-	km_e2_spi_init();
+	spi_init(pia335x_main_id.id);
 	km_e2_rs485_init();
 	if (pia335x_main_id.rev >= 3) {
 		km_e2_uart4_init();
@@ -2246,7 +2252,7 @@ static void pm_setup(void)
 
 	/* prepare eMMC, will be initialized in baseboard setup */
 	mmc_init(pia335x_main_id.id);
-	pm_spi_init();
+	spi_init(pia335x_main_id.id);
 
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
