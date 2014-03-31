@@ -84,4 +84,14 @@ config MAX517
 	  This driver can also be built as a module.  If so, the module
 	  will be called max517.
 
+config MAX536
+	tristate "Maxim MAX536x DAC driver"
+	depends on I2C && EXPERIMENTAL
+	help
+	  If you say yes here you get support for the Maxim chips MAX5360,
+	  MAX5361 and MAX5362 (I2C single output 6-Bit DACs).
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called max536.
+
 endmenu

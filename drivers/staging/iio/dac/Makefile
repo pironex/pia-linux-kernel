@@ -10,3 +10,4 @@ obj-$(CONFIG_AD5446) += ad5446.o
 obj-$(CONFIG_AD5791) += ad5791.o
 obj-$(CONFIG_AD5686) += ad5686.o
 obj-$(CONFIG_MAX517) += max517.o
+obj-$(CONFIG_MAX536) += max536.o
