@@ -215,7 +215,7 @@ static void pia335x_parse_eeprom(int exp)
 	snprintf(tmp, sizeof(eeprom->name) + 1, "%s", eeprom->name);
 	pr_info("Board name: %s\n", tmp);
 	snprintf(tmp, sizeof(eeprom->version) + 1, "%s", eeprom->version);
-	pr_info("Board version: %s\n", tmp);
+	pr_info("Board version: %s (%d)\n", tmp, cur->rev);
 }
 
 /*
@@ -2287,7 +2287,7 @@ static void km_e2_setup(void)
 static void km_mmi_setup(int variant)
 {
 	pr_info("piA335x MMI: Setup KM MMI.\n");
-	if (pia335x_main_id.id < 1 || pia335x_main_id.id > 2) {
+	if (pia335x_main_id.rev < 1 || pia335x_main_id.rev > 2) {
 		pr_info("PIA335MI: Unknown board revision %.4s\n",
 				config.version);
 		pia335x_main_id.rev = 2;
