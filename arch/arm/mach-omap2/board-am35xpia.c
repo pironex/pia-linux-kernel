@@ -1377,7 +1377,7 @@ static void __init pia35x_ems_io_init(int revision) {
 			ARRAY_SIZE(pia35x_ems_io_i2c_info));
 }
 #else
-static inline void __init pia35x_ems_io_init(void) {
+static inline void __init pia35x_ems_io_init(int revision) {
 	pr_err("pia35x: piA-EMS_IO driver PCA9672|MCP2515|MAX3140 missing\n");
 }
 #endif

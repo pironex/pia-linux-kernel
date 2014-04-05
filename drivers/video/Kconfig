@@ -2241,7 +2241,7 @@ config FB_DA8XX
 config FB_ST7586S
 	tristate "ST7586S Framebuffer support"
 	depends on FB
-	select FB_SYS_DEFERRED_IO
+	select FB_DEFERRED_IO
 	---help---
 	  This is the frame buffer device driver for the ST7586S LCD controller
 
