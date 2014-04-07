@@ -2354,6 +2354,16 @@ static int __init lcdboard_setup(char *str)
 	return 0;
 }
 
+static int re_gpio_pin(int number, const char* desc)
+{
+  int res = gpio_request_one(number, GPIOF_IN, desc);
+  if (res) return res;
+
+  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
+  gpio_export(number, false);
+  return res;
+}
+
 static void __init pia35x_init(void)
 {
 	int ret;
@@ -2376,6 +2386,16 @@ static void __init pia35x_init(void)
 				OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
+
+  // TODO: Relocate somewhere
+  if (re_gpio_pin(13, "kbd.but1")
+    || re_gpio_pin(12, "kbd.but2")
+    || re_gpio_pin(18, "kbd.but3")
+    || re_gpio_pin(21, "kbd.but4")
+    || re_gpio_pin(17, "kbd.but5"))
+  {
+    pr_err("pia35x: Failed to initialize one of push buttons");
+  }
 
 	pia35x_i2c_init();
 	omap_display_init(&pia35x_dss_data);
