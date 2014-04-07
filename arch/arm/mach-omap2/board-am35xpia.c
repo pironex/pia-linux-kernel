@@ -2359,7 +2359,17 @@ static int re_gpio_pin(int number, const char* desc)
   int res = gpio_request_one(number, GPIOF_IN, desc);
   if (res) return res;
 
-  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLDOWN);
+  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP);
+  gpio_export(number, false);
+  return res;
+}
+
+static int re_gpio_pin_out(int number, const char* desc)
+{
+  int res = gpio_request_one(number, GPIOF_OUT_INIT_LOW, desc);
+  if (res) return res;
+
+  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
   gpio_export(number, false);
   return res;
 }
@@ -2392,7 +2402,8 @@ static void __init pia35x_init(void)
     || re_gpio_pin(12, "kbd.but2")
     || re_gpio_pin(18, "kbd.but3")
     || re_gpio_pin(21, "kbd.but4")
-    || re_gpio_pin(17, "kbd.but5"))
+    || re_gpio_pin(17, "kbd.but5")
+    || re_gpio_pin_out(16, "kbd.test"))
   {
     pr_err("pia35x: Failed to initialize one of push buttons");
   }
