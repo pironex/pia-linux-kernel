@@ -114,6 +114,7 @@ struct pia335x_board_id {
 	int id;   /* internal ID */
 	int rev;  /* 0: "a.bc" or continuous, 1: reserved */
 	const int type; /* 0: main board/PM, 1: base board/expansion */
+	struct pia335x_eeprom_config *config;
 };
 
 static struct pia335x_board_id pia335x_boards[] = {
@@ -127,21 +128,28 @@ static struct pia335x_board_id pia335x_main_id = {
 	.id	= -EINVAL,
 	.rev	= -EINVAL,
 	.type	= 0,
+	.config = &config,
 };
 static struct pia335x_board_id pia335x_exp_id = {
 	.id	= -EINVAL,
 	.rev	= -EINVAL,
 	.type	= 1,
+	.config = &exp_config,
 };
 
 static int pm_setup_done = 0;
 void am33xx_cpsw_macidfillup(char *eeprommacid0, char *eeprommacid1);
-static int pia335x_read_eeprom(struct memory_accessor *mem_acc, int exp)
+static int pia335x_read_eeprom(struct memory_accessor *mem_acc,
+		struct pia335x_board_id* id)
 {
 	struct pia335x_eeprom_config *conf;
 	int ret;
 
-	if (!exp || pm_setup_done == 0) {
+	if (!id || !id->config)
+		return -ENODEV;
+
+	conf = id->config;
+	if (!pm_setup_done) {
 		/* from evm code
 		 * 1st get the MAC address from EEPROM */
 		ret = mem_acc->read(mem_acc, (char *)&am335x_mac_addr,
@@ -153,27 +161,22 @@ static int pia335x_read_eeprom(struct memory_accessor *mem_acc, int exp)
 		/* Fillup global mac id */
 		am33xx_cpsw_macidfillup(&am335x_mac_addr[0][0],
 				&am335x_mac_addr[1][0]);
-		conf = &config;
-	} else {
-		conf = &exp_config;
 	}
 
 	/* get board specific data */
 	ret = mem_acc->read(mem_acc, (char *)conf, 0, sizeof(*conf));
+	if (ret == -ETIMEDOUT) {
+		pr_warn("piA335x config read timed out\n");
+		return ret;
+	}
 	if (ret != sizeof(*conf)) {
 		pr_err("piA335x config read fail, read %d bytes\n", ret);
-		return -1;
+		return ret;
 	}
 
 	if (conf->header != 0xEE3355AA) { // header magic number
 		pr_err("piA335x: wrong header 0x%x, expected 0x%x\n",
 			conf->header, 0xEE3355AA);
-		return -1;
-	}
-
-	if (strncmp("PIA335", conf->name, 6) != 0) {
-		pr_err("Board %s doesn't look like a PIA335 board\n",
-			conf->name);
 		return -1;
 	}
 
@@ -195,27 +198,27 @@ static int pia335x_parse_rev(const char *in, int revtype)
 	return (rev ? rev : -EINVAL);
 }
 
-static void pia335x_parse_eeprom(int exp)
+static void pia335x_parse_eeprom(struct pia335x_board_id *id)
 {
 	char tmp[10];
 	int i = 0;
+	struct pia335x_board_id *it;
+	struct pia335x_eeprom_config *eeprom = id->config;
 
-	struct pia335x_board_id *id;
-	struct pia335x_eeprom_config *eeprom = (exp ? &exp_config : &config);
-	struct pia335x_board_id *cur = (exp ?
-			&pia335x_exp_id : &pia335x_main_id);
+	if (!id || !id->config)
+		return;
+
 	for (; i < ARRAY_SIZE(pia335x_boards); ++i) {
-		id = &pia335x_boards[i];
-		if (0 != strncmp(eeprom->name, id->name, 8))
+		it = &pia335x_boards[i];
+		if (0 != strncmp(eeprom->name, it->name, 8))
 			continue;
-		cur->id = id->id;
-		cur->rev = pia335x_parse_rev(eeprom->version,
-				id->rev);
+		id->id = it->id;
+		id->rev = pia335x_parse_rev(eeprom->version, it->rev);
 	}
 	snprintf(tmp, sizeof(eeprom->name) + 1, "%s", eeprom->name);
 	pr_info("Board name: %s\n", tmp);
 	snprintf(tmp, sizeof(eeprom->version) + 1, "%s", eeprom->version);
-	pr_info("Board version: %s (%d)\n", tmp, cur->rev);
+	pr_info("Board version: %s (%d)\n", tmp, id->rev);
 }
 
 /*
@@ -2366,10 +2369,17 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 {
 	pr_info("piA335x: expansion setup\n");
 
-	if (pia335x_read_eeprom(mem_acc, 1) != 0) {
+	if (pia335x_read_eeprom(mem_acc, &pia335x_exp_id) != 0) {
+		/* no readable EEPROM, check if we have a baseboard already
+		 * setup, otherwise halt.*/
+		if (pm_setup_done) {
+			pr_info("PIA335x: no expansion board detected\n");
+			return;
+		}
+
 		goto out;
 	}
-	pia335x_parse_eeprom(1);
+	pia335x_parse_eeprom(&pia335x_exp_id);
 
 	/* REVISIT Workaround for PM module without EEPROM
 	 * pm_setup_done will be only set, if there was an EEPROM on I2C0
@@ -2399,18 +2409,30 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 	return;
 
 out:
-	pr_err("PIA335x: Board identification failed... Halting...\n");
+	pr_err("PIA335x: Neither base nor expansion board detected, "
+			"halting...\n");
 	machine_halt();
 }
 
 static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 {
+	int res = 0;
 	/* generic board detection triggered by eeprom init */
 	pr_info("piA335x: main setup\n");
-	if (pia335x_read_eeprom(mem_acc, 0) != 0) {
-		goto out;
+	res = pia335x_read_eeprom(mem_acc, &pia335x_main_id);
+	if (res == -ETIMEDOUT || res == -1) {
+		pr_warn("None or empty EEPROM, try with expansion setup");
+		/* no EEPROM, we might have a PM board without EEPROM
+		 * do nothing here, because eventually the expansion_setup
+		 * will run pm_setup() if the board is a PM */
+		return;
 	}
-	pia335x_parse_eeprom(0);
+
+	if (res != 0)
+		goto out;
+
+	/* EEPROM found, branch into specific board setups */
+	pia335x_parse_eeprom(&pia335x_main_id);
 
 	switch (pia335x_main_id.id) {
 	case PIA335_KM_E2:
@@ -2452,6 +2474,8 @@ static struct at24_platform_data pia335x_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
 	.flags          = 0,
+	/* Setup gets called, even if there is no eeprom on the board.
+	 * Make sure to handle this case! */
 	.setup          = pia335x_setup,
 	.context        = (void *)NULL,
 };
