@@ -18,8 +18,10 @@
 
 #define PIA335_KM_E2		20
 #define PIA335_KM_MMI		21
+#define PIA335_LCD_KM_MMI	22
 #define PIA335_PM		22
 #define PIA335_BB_EBTFT		30
+#define PIA335_LCD_EBTFT	40
 
 #ifndef __ASSEMBLER__
 int am335x_pia_get_id(void);
