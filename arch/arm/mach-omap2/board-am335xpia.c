@@ -2219,11 +2219,43 @@ static struct regulator_init_data pia335x_tps_dummy = {
 	.constraints.always_on	= true,
 };
 
+static struct regulator_consumer_supply am335x_vdd1_supply[] = {
+	REGULATOR_SUPPLY("vdd_mpu", NULL),
+};
+
+static struct regulator_init_data am335x_vdd1 = {
+	.constraints = {
+		.min_uV			= 600000,
+		.max_uV			= 1500000,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
+		.valid_ops_mask		= REGULATOR_CHANGE_VOLTAGE,
+		.always_on		= 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(am335x_vdd1_supply),
+	.consumer_supplies	= am335x_vdd1_supply,
+};
+
+static struct regulator_consumer_supply am335x_vdd2_supply[] = {
+	REGULATOR_SUPPLY("vdd_core", NULL),
+};
+
+static struct regulator_init_data am335x_vdd2 = {
+	.constraints = {
+		.min_uV			= 600000,
+		.max_uV			= 1500000,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
+		.valid_ops_mask		= REGULATOR_CHANGE_VOLTAGE,
+		.always_on		= 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(am335x_vdd2_supply),
+	.consumer_supplies	= am335x_vdd2_supply,
+};
+
 static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VRTC]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VIO]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &pia335x_tps_dummy,
-	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &pia335x_tps_dummy,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD1]	= &am335x_vdd1,
+	.tps65910_pmic_init_data[TPS65910_REG_VDD2]	= &am335x_vdd2,
 	.tps65910_pmic_init_data[TPS65910_REG_VDD3]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VDIG1]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VDIG2]	= &pia335x_tps_dummy,
@@ -2233,7 +2265,7 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
-	.gpio_base = (4 * 32),
+	.gpio_base = (4 * 32), /* OMAP_MAX_GPIO_LINES? */
 	.irq = -1, // set this in board specific setup
 	.irq_base = 128, /* REVISIT correct? last AM33XX IRQ is 127 */
 };
