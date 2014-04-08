@@ -2339,7 +2339,7 @@ static void km_mmi_setup(int variant)
 
 	pr_info("piA335x: cpsw_init\n");
 	/* REVISIT: check if this stil works with the external IP175L switch */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:ff");
 
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
