@@ -646,7 +646,7 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* PMIC INT */
 	{ "gpmc_clk.gpio2_1",		AM33XX_PIN_INPUT_PULLUP },
 	/* PMIC SLEEP 3_16 - not currently used */
-	{ "mcasp0_acr0.gpio3_16",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_axr0.gpio3_16",	AM33XX_PIN_INPUT_PULLUP },
 	/* WDI        1_0 */
 	{ "gpmc_ad0.gpio1_0",		AM33XX_PIN_INPUT},
 	/* WD_SET1  1_1 - external pullup */
@@ -658,7 +658,7 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	/* USB OC */
 	{ "spi0_cs0.gpio0_5",		AM33XX_PIN_INPUT_PULLUP },
 	/* LED1 */
-	{ "gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT},
+	{ "gpmc_wait0.gpio0_30",	AM33XX_PIN_INPUT_PULLUP},
 	/* LED2 */
 	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT},
 	/* ACC INT1 */
@@ -671,13 +671,13 @@ static struct pinmux_config km_mmi_gpios_pin_mux[] = {
 	{ "spi0_d0.gpio0_3",		AM33XX_PIN_INPUT_PULLUP },
 	/* 24V IOs - external pulls for safe default mode */
 	{ "gpmc_a1.gpio1_17",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_18",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_19",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_20",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_21",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_22",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_23",		AM33XX_PIN_INPUT },
-	{ "gpmc_a1.gpio1_24",		AM33XX_PIN_INPUT },
+	{ "gpmc_a2.gpio1_18",		AM33XX_PIN_INPUT },
+	{ "gpmc_a3.gpio1_19",		AM33XX_PIN_INPUT },
+	{ "gpmc_a4.gpio1_20",		AM33XX_PIN_INPUT },
+	{ "gpmc_a5.gpio1_21",		AM33XX_PIN_INPUT },
+	{ "gpmc_a6.gpio1_22",		AM33XX_PIN_INPUT },
+	{ "gpmc_a7.gpio1_23",		AM33XX_PIN_INPUT },
+	{ "gpmc_a8.gpio1_24",		AM33XX_PIN_INPUT },
 	/* display enable GPIO */
 	{ "gpmc_ben1.gpio1_28",		AM33XX_PIN_INPUT_PULLDOWN },
 	/* backlight GPIO */
@@ -692,14 +692,6 @@ static struct gpio km_mmi_gpios[] = {
 	/* REVISIT keeps the watchdog disabled, change when implemented */
 	{ MMI_GPIO_WD_SET2,	GPIOF_OUT_INIT_LOW, "wd_set2" },
 	{ MMI_GPIO_WDI,		GPIOF_OUT_INIT_LOW, "wdi" },
-	{ MMI_GPIO_OUT1,	GPIOF_OUT_INIT_LOW, "out1" },
-	{ MMI_GPIO_OUT2,	GPIOF_OUT_INIT_LOW, "out2" },
-	{ MMI_GPIO_OUT3,	GPIOF_OUT_INIT_LOW, "out3" },
-	{ MMI_GPIO_OUT4,	GPIOF_OUT_INIT_LOW, "out4" },
-	{ MMI_GPIO_IN1,		GPIOF_IN, "in1" },
-	{ MMI_GPIO_IN2,		GPIOF_IN, "in2" },
-	{ MMI_GPIO_IN3,		GPIOF_IN, "in3" },
-	{ MMI_GPIO_IN4,		GPIOF_IN, "in4" },
 	{ MMI_GPIO_LCD_DISP,	GPIOF_OUT_INIT_LOW, "lcd:den" },
 	{ MMI_GPIO_LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd:blen" },
 };
