@@ -2391,7 +2391,9 @@ static void ebtft_setup(void)
 
 	ecap_init(pia335x_main_id.id);
 
-	pia335x_lcd_init(pia335x_main_id.id);
+	pia335x_lcd_exp_id.id = PIA335_LCD_EBTFT;
+	pia335x_lcd_exp_id.rev = 1;
+	pia335x_lcd_init(pia335x_lcd_exp_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
