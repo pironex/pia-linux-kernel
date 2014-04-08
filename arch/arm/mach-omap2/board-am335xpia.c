@@ -108,12 +108,13 @@ struct pia335x_eeprom_config {
 };
 static struct pia335x_eeprom_config config;
 static struct pia335x_eeprom_config exp_config;
+static struct pia335x_eeprom_config lcd_exp_config;
 
 struct pia335x_board_id {
 	const char *name; /* name as saved in EEPROM name field */
 	int id;   /* internal ID */
 	int rev;  /* 0: "a.bc" or continuous, 1: reserved */
-	const int type; /* 0: main board/PM, 1: base board/expansion */
+	const int type; /* 0: main board/PM, 1: base board/expansion, 2 LCD */
 	struct pia335x_eeprom_config *config;
 };
 
@@ -122,6 +123,7 @@ static struct pia335x_board_id pia335x_boards[] = {
 	{ "PIA335MI", PIA335_KM_MMI,	0, 0},
 	{ "PIA335PM", PIA335_PM,	0, 0},
 	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
+	{ "LCDKMMMI", PIA335_LCD_KM_MMI,0, 2},
 };
 
 static struct pia335x_board_id pia335x_main_id = {
@@ -135,6 +137,13 @@ static struct pia335x_board_id pia335x_exp_id = {
 	.rev	= -EINVAL,
 	.type	= 1,
 	.config = &exp_config,
+};
+
+static struct pia335x_board_id pia335x_lcd_exp_id = {
+	.id	= -EINVAL,
+	.rev	= -EINVAL,
+	.type	= 2,
+	.config = &lcd_exp_config,
 };
 
 static int pm_setup_done = 0;
@@ -1418,10 +1427,12 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 	}
 };
 
+static void lcd_expansion_setup(struct memory_accessor *mem_acc, void *context);
 static struct at24_platform_data km_mmi_lcd_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
 	.flags          = 0,
+	.setup          = lcd_expansion_setup,
 	.context        = (void *)NULL,
 };
 
@@ -1451,13 +1462,15 @@ static struct lis3lv02d_platform_data lis331dlh_pdata = {
 
 static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 	{
-		I2C_BOARD_INFO("24c01", 0x51),
-		.platform_data = &km_mmi_lcd_eeprom_info,
-	},
-	{
 		I2C_BOARD_INFO("lis331dlh", 0x18),
 		.platform_data = &lis331dlh_pdata,
 		.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
+	},
+};
+static struct i2c_board_info km_mmi_i2c2_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("24c01", 0x51),
+		.platform_data = &km_mmi_lcd_eeprom_info,
 	},
 };
 
@@ -1478,6 +1491,8 @@ static void i2c1_init(int boardid)
 	case PIA335_KM_MMI:
 		pia335x_register_i2c_devices(1, km_mmi_i2c1_boardinfo,
 				ARRAY_SIZE(km_mmi_i2c1_boardinfo));
+		pia335x_register_i2c_devices(2, km_mmi_i2c2_boardinfo,
+				ARRAY_SIZE(km_mmi_i2c2_boardinfo));
 		break;
 	case PIA335_BB_EBTFT:
 		pia335x_register_i2c_devices(1, ebtft_i2c1_boardinfo,
@@ -1570,10 +1585,10 @@ static void pia335x_touch_init(int boardid)
 {
 	int err = 0;
 
-	pr_info("pia335x_init: TS\n");
+	pr_info("pia335x_init: Touch Interface\n");
 
 	switch (boardid) {
-	case PIA335_KM_MMI:
+	case PIA335_LCD_KM_MMI:
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
 		defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 		pr_info("pia335x_init: init touch controller FT5x06\n");
@@ -1589,7 +1604,8 @@ static void pia335x_touch_init(int boardid)
 
 		break;
 	default:
-		pr_warn("pia335x_init: no TSC defined\n");
+		pr_warn("pia335x_init: TSC not detected/defined, id:%d\n",
+				boardid);
 		break;
 	}
 
@@ -1686,7 +1702,7 @@ static void pia335x_lcd_init(int boardid)
 		return;
 	}
 	switch (boardid) {
-	case PIA335_KM_MMI:
+	case PIA335_LCD_KM_MMI:
 		lcdc_pdata = &km_mmi_lcd_pdata;
 		/* Backlight and Display enable GPIOs will be set in GPIO init */
 		exp_lcd.gpio_blen = MMI_GPIO_LCD_BACKLIGHT;
@@ -1700,7 +1716,7 @@ static void pia335x_lcd_init(int boardid)
 
 		break;
 	default:
-		pr_err("LCDC not supported on this device\n");
+		pr_err("LCD not connected/supported, id:%d\n", boardid);
 		return;
 	}
 
@@ -1713,6 +1729,24 @@ static void pia335x_lcd_init(int boardid)
 	pia335x_touch_init(boardid);
 
 	return;
+}
+
+static void lcd_expansion_setup(struct memory_accessor *mem_acc,
+		void *context)
+{
+	int res = 0;
+	/* generic board detection triggered by eeprom init */
+	pr_info("piA335x: lcd expansion setup\n");
+	res = pia335x_read_eeprom(mem_acc, &pia335x_lcd_exp_id);
+
+	if (res != 0) {
+		pr_info("piA335x: no lcd expansion board detected\n");
+		return;
+	}
+
+	/* EEPROM found, branch into specific board setups */
+	pia335x_parse_eeprom(&pia335x_lcd_exp_id);
+	pia335x_lcd_init(pia335x_lcd_exp_id.id);
 }
 
 /* CAN */
@@ -2315,7 +2349,6 @@ static void km_mmi_setup(int variant)
 	/* REVISIT: check if this stil works with the external IP175L switch */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, NULL);
 
-	pia335x_lcd_init(PIA335_KM_MMI);
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
 	if (variant == 'X') {
