@@ -1143,6 +1143,7 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 static void mmc_init(int boardid)
 {
 	struct pinmux_config *mux = pia335x_mmc0_pin_mux;
+	pr_info("piA335x: %s\n", __func__);
 
 	switch (boardid) {
 	case PIA335_KM_E2:
@@ -2079,7 +2080,6 @@ static int pia335x_rtc_init(void)
 
 	/*
 	 * Enable the 32K OSc
-	 * TODO: Need a better way to handle this
 	 * Since we want the clock to be running before mmc init
 	 * we need to do it before the rtc probe happens
 	 *
@@ -2181,9 +2181,6 @@ static void km_mmi_tlv320aic3x_init(void)
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);
 
-	/* REVISIT is the order required or can we register the I2C part of
-	 * the device in the boards's generic I2C1 setup?
-	 */
 	pia335x_add_i2c_device(1, &tlv320aic3x_i2c_boardinfo);
 
 	mcasp0_init(PIA335_KM_MMI);
@@ -2570,8 +2567,7 @@ static void __init pia335x_i2c_init(void)
 	omap_register_i2c_bus(1, 400, pia335x_i2c0_boardinfo,
 				ARRAY_SIZE(pia335x_i2c0_boardinfo));
 
-	/* REVISIT check if this works
-	 * initialize the second bus as well, in case we have an expansion
+	/* initialize the second bus as well, in case we have an expansion
 	 * board/base board with another id eeprom
 	 * We expect the bootloader to initialize the correct pinmux for
 	 * the second bus!
@@ -2581,7 +2577,7 @@ static void __init pia335x_i2c_init(void)
 }
 
 #ifdef CONFIG_MACH_AM335XEVM
-/* FIXME for some reason board specific stuff is called from mach code
+/* for some reason board specific stuff is called from mach code
  * e.g.
  * pm33xx.c depends on definitions from board-am33xevm.c
  * or
