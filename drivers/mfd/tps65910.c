@@ -177,7 +177,7 @@ static __devinit int tps65910_i2c_probe(struct i2c_client *i2c,
 	}
 
 	/* Check that the device is actually there */
-	ret = tps65910_reg_read(tps65910, 0x0, &buff);
+	ret = tps65910_reg_read(tps65910, TPS65910_JTAGVERNUM, &buff);
 	if (ret < 0) {
 		dev_err(tps65910->dev, "could not be detected\n");
 		ret = -ENODEV;
