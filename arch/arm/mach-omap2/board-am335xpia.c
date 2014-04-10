@@ -1421,12 +1421,18 @@ static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 };
 
 static void lcd_expansion_setup(struct memory_accessor *mem_acc, void *context);
+/* AT24CS01 device with UID */
 static struct at24_platform_data km_mmi_lcd_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
 	.flags          = 0,
 	.setup          = lcd_expansion_setup,
 	.context        = (void *)NULL,
+};
+static struct at24_platform_data km_mmi_lcd_eepromuid_info = {
+	.byte_len       = 256,
+	.page_size      = 8,
+	.flags          = AT24_FLAG_READONLY,
 };
 
 /* Accelerometer LIS331DLH */
@@ -1464,6 +1470,10 @@ static struct i2c_board_info km_mmi_i2c2_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("24c01", 0x51),
 		.platform_data = &km_mmi_lcd_eeprom_info,
+	},
+	{
+		I2C_BOARD_INFO("24c01", 0x51 + 0x08),
+		.platform_data = &km_mmi_lcd_eepromuid_info,
 	},
 };
 
@@ -2535,8 +2545,20 @@ static struct at24_platform_data pia335x_eeprom_info = {
 	.setup          = pia335x_setup,
 	.context        = (void *)NULL,
 };
+/* 24CS01 read-only unique ID area
+ * these devices allow read on addresses 0x80..0xff only, so we need to
+ * flag it as a 256 Byte Device */
+static struct at24_platform_data pia335x_eepromuid_info = {
+	.byte_len       = 256,
+	.page_size      = 8,
+	.flags          = AT24_FLAG_READONLY,
+};
 
 static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR + 0x08),
+		.platform_data  = &pia335x_eepromuid_info,
+	},
 	{
 		/* Board ID EEPROM, KM E2 Rev 0.01 & 0.02 use 24c00,
 		 * 0.03 uses 24cs01 (taking only 1 address 0x50) */
