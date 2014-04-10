@@ -2264,7 +2264,7 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
 	.gpio_base = (4 * 32), /* OMAP_MAX_GPIO_LINES? */
 	.irq = -1, // set this in board specific setup
-	.irq_base = 128, /* REVISIT correct? last AM33XX IRQ is 127 */
+	.irq_base = TWL4030_IRQ_BASE,
 };
 
 static struct i2c_board_info tps65910_boardinfo = {
