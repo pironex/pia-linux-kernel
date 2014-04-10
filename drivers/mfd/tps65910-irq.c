@@ -158,6 +158,7 @@ int tps65910_irq_init(struct tps65910 *tps65910, int irq,
 {
 	int ret, cur_irq;
 	int flags = IRQF_ONESHOT;
+	u32 reg;
 
 	if (!irq) {
 		dev_warn(tps65910->dev, "No interrupt support, no core IRQ\n");
@@ -202,6 +203,10 @@ int tps65910_irq_init(struct tps65910 *tps65910, int irq,
 #endif
 	}
 
+	/* make sure we active low interrupt polarity is enabled */
+	tps65910_reg_read(tps65910, TPS65910_DEVCTRL2, &reg);
+	reg &= ~DEVCTRL2_IT_POL_MASK;
+	tps65910_reg_write(tps65910, TPS65910_DEVCTRL2, reg);
 	ret = request_threaded_irq(irq, NULL, tps65910_irq, flags,
 				   "tps65910", tps65910);
 
