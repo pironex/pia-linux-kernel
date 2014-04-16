@@ -1598,9 +1598,7 @@ static void pia335x_touch_init(int boardid)
 		/* I2C adapter request */
 		pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
 #endif
-		/* resitive */
-		err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
-		break;
+		/* fall-through to resitive variant */
 	case PIA335_BB_EBTFT:
 		if (exp_config.opt[2] == 'R')
 			err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
