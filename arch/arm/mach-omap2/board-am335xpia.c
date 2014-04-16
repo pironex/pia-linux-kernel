@@ -2097,7 +2097,7 @@ static int pia335x_rtc_init(void)
 
 	iounmap(base);
 
-	// TODO check pia335x_rtc_info.pm_off = true;
+	// pia335x_rtc_info.pm_off = true;
 
 	clk_disable(clk);
 	clk_put(clk);
@@ -2346,8 +2346,7 @@ static void km_e2_setup(void)
 #endif
 
 	pr_info("piA335x: cpsw_init\n");
-	/* FIXME according to DS of IPL175 the PHY ID is 05 */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:05");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 }
 
 static void km_mmi_setup(int variant)
@@ -2375,7 +2374,6 @@ static void km_mmi_setup(int variant)
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
-	/* REVISIT: check if this stil works with the external IP175L switch */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:ff");
 
 	pia335x_gpios_init(pia335x_main_id.id);
