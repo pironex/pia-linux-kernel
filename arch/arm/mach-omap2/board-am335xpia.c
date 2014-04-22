@@ -2391,17 +2391,17 @@ static void pm_setup(void)
 
 static void ebtft_setup(void)
 {
-	pr_info("piA335x-EB_TFT: cpsw_init\n");
+	pr_info("piA335x-EB_TFT: ebtft_setup\n");
 
-	i2c1_init(pia335x_main_id.id);
-	pia335x_gpios_init(pia335x_main_id.id);
+	i2c1_init(pia335x_exp_id.id);
+	pia335x_gpios_init(pia335x_exp_id.id);
 	leds_init(pia335x_exp_id.id);
 
 	mmc_init(pia335x_exp_id.id);
-	ethernet_init(pia335x_main_id.id);
-	can_init(pia335x_main_id.id);
+	ethernet_init(pia335x_exp_id.id);
+	can_init(pia335x_exp_id.id);
 
-	ecap_init(pia335x_main_id.id);
+	ecap_init(pia335x_exp_id.id);
 
 	pia335x_lcd_exp_id.id = PIA335_LCD_EBTFT;
 	pia335x_lcd_exp_id.rev = 1;
@@ -2409,7 +2409,7 @@ static void ebtft_setup(void)
 
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
-	usb_init(pia335x_main_id.id);
+	usb_init(pia335x_exp_id.id);
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
