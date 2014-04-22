@@ -717,7 +717,7 @@ static struct pinmux_config pm_gpios_pin_mux[] = {
 	/* PMIC INT */
 	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_csn0.gpio1_29",		AM33XX_PIN_OUTPUT },
-	{ "gpmc_be0n_cle.gpio25",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ben0_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_rxd1.gpio2_20",		AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_rxd0.gpio2_21",		AM33XX_PIN_INPUT_PULLUP },
 	{NULL, 0},
@@ -742,7 +742,7 @@ static struct gpio pm_gpios[] = {
 static struct pinmux_config ebtft_gpios_pin_mux[] = {
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT },
-	{ "mii1_txd2.gpio3_10",		AM33XX_PIN_INPUT },
+	{ "mii1_rxclk.gpio3_10",	AM33XX_PIN_INPUT },
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mii1_rxd3.gpio2_18",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mcasp0_ahclkx.gpio3_21",	AM33XX_PIN_INPUT_PULLUP },
@@ -1060,7 +1060,7 @@ static struct pinmux_config mii1_pin_mux[] = {
 static struct pinmux_config mii2_opt_pin_mux[] = {
 	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_wpn.mii2_rxerr", AM33XX_PIN_INPUT_PULLDOWN },
-	{ "gpmc_be1n.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_ben1.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
 };
 /* E2 Ethernet MII2 + MDIO */
 static struct pinmux_config mii2_base_pin_mux[] = {
