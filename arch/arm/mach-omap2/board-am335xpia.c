@@ -2438,7 +2438,7 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 		config.header = 0xEE3355AA;
 		strncpy(config.name, "PIA335PM", 8);
 		strncpy(config.version, "0.01", 4);
-		pia335x_parse_eeprom(0);
+		pia335x_parse_eeprom(&pia335x_main_id);
 
 		/* now call real pm_setup before doing expansion init */
 		pm_setup();
