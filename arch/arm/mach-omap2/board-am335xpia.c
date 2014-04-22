@@ -803,6 +803,8 @@ static void pia335x_gpios_init(int boardid)
 	struct pinmux_config *muxcfg;
 	struct gpio *gpiocfg;
 
+	pr_info("pia335x_init: GPIOs: %d\n", boardid);
+
 	switch (boardid) {
 	case PIA335_KM_E2:
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1143,7 +1145,7 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 static void mmc_init(int boardid)
 {
 	struct pinmux_config *mux = pia335x_mmc0_pin_mux;
-	pr_info("piA335x: %s\n", __func__);
+	pr_info("piA335x: %s: %d\n", __func__, boardid);
 
 	switch (boardid) {
 	case PIA335_KM_E2:
@@ -1486,6 +1488,7 @@ static struct i2c_board_info ebtft_i2c1_boardinfo[] = {
 
 static void i2c1_init(int boardid)
 {
+	pr_info("pia335x_init: I2C1: %d\n", boardid);
 	switch (boardid) {
 	case PIA335_KM_E2:
 		pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
@@ -2279,6 +2282,7 @@ static struct tps65910_board pia335x_tps65910_info = {
 
 static void pmic_init(int boardid)
 {
+	pr_info("piA335x: %s: %d\n", __func__, boardid);
 	switch (boardid) {
 		case PIA335_KM_E2:
 			pia335x_tps65910_info.irq =
