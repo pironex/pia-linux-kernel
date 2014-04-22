@@ -1296,28 +1296,6 @@ static struct platform_device km_mmi_leds = {
 	},
 };
 
-/* PM LED */
-static struct gpio_led pm_gpio_leds[] = {
-	{
-		.name			= "am335x:PM:usr1",
-		.gpio			= PM_GPIO_LED1,	/* LED1 */
-		.default_trigger	= "heartbeat",
-	},
-};
-
-static struct gpio_led_platform_data pm_led_info = {
-	.leds		= pm_gpio_leds,
-	.num_leds	= ARRAY_SIZE(pm_gpio_leds),
-};
-
-static struct platform_device pm_leds = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &pm_led_info,
-	},
-};
-
 /* EB-TFT RGB Buttons */
 static struct led_info ebtft_rgbleds_config[] = {
 	{
@@ -1355,7 +1333,12 @@ static struct pca9633_platform_data ebtft_rgbleds_data = {
 
 static struct gpio_led ebtft_gpio_leds[] = {
 	{
-		.name			= "led:usr1",
+		.name			= "led:PM:usr1",
+		.gpio			= PM_GPIO_LED1,	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "led:EBTFT:usr1",
 		.gpio			= EBTFT_GPIO_LED,
 		.default_trigger	= "heartbeat",
 	},
@@ -1377,16 +1360,18 @@ static struct platform_device ebtft_leds = {
 static void leds_init(int boardid)
 {
 	int err = 0;
+	pr_info("pia335x_init: LEDs\n");
 
 	switch (boardid) {
 		case PIA335_KM_MMI:
 			err = platform_device_register(&km_mmi_leds);
 			break;
 		case PIA335_PM:
-			err = platform_device_register(&pm_leds);
 		case PIA335_KM_E2:
+			break;
 		case PIA335_BB_EBTFT:
 			err = platform_device_register(&ebtft_leds);
+			break;
 		default:
 			break;
 	}
@@ -2399,7 +2384,6 @@ static void pm_setup(void)
 	spi_init(pia335x_main_id.id);
 
 	pia335x_gpios_init(pia335x_main_id.id);
-	leds_init(pia335x_main_id.id);
 
 	// FIXME pia335x_rtc_init();
 	pm_setup_done = 1;
@@ -2411,6 +2395,7 @@ static void ebtft_setup(void)
 
 	i2c1_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
+	leds_init(pia335x_exp_id.id);
 
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_main_id.id);
