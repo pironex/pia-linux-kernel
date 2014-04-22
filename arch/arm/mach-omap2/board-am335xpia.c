@@ -2373,7 +2373,6 @@ static void km_mmi_setup(int variant)
 
 	pmic_init(pia335x_main_id.id);
 
-	pia335x_rtc_init();
 	i2c1_init(pia335x_main_id.id);
 
 	mmc_init(pia335x_main_id.id);
