@@ -839,6 +839,7 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = ebtft_gpios_pin_mux;
 		gpiocfg = ebtft_gpios;
 		sz = ARRAY_SIZE(ebtft_gpios);
+		break;
 	default:
 		return;
 	}
