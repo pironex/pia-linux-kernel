@@ -1176,7 +1176,6 @@ static void mmc_init(int boardid)
 		/* don't do anything here, wait for the expansion board setup */
 		/* fall trough to return */
 	default:
-		break;
 		return;
 	}
 
