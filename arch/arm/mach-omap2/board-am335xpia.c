@@ -1401,8 +1401,12 @@ static struct at24_platform_data km_e2_fram_info = {
 	.flags          = AT24_FLAG_ADDR16,
 	.context        = (void *)NULL,
 };
-
+static struct tps65910_board pia335x_tps65910_info;
 static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
+		.platform_data  = &pia335x_tps65910_info,
+	},
 	{
 		I2C_BOARD_INFO("pca9634", 0x22),
 		.platform_data = &km_e2_leds1_data,
@@ -1461,6 +1465,10 @@ static struct lis3lv02d_platform_data lis331dlh_pdata = {
 
 static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 	{
+		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
+		.platform_data  = &pia335x_tps65910_info,
+	},
+	{
 		I2C_BOARD_INFO("lis331dlh", 0x18),
 		.platform_data = &lis331dlh_pdata,
 		.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
@@ -1474,6 +1482,13 @@ static struct i2c_board_info km_mmi_i2c2_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("24c01", 0x51 + 0x08),
 		.platform_data = &km_mmi_lcd_eepromuid_info,
+	},
+};
+
+static struct i2c_board_info pm_i2c1_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
+		.platform_data  = &pia335x_tps65910_info,
 	},
 };
 
@@ -1502,6 +1517,8 @@ static void i2c1_init(int boardid)
 				ARRAY_SIZE(ebtft_i2c1_boardinfo));
 		break;
 	case PIA335_PM:
+		pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
+				ARRAY_SIZE(pm_i2c1_boardinfo));
 	default:
 		break;
 	}
@@ -2270,14 +2287,9 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX2]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VAUX33]	= &pia335x_tps_dummy,
 	.tps65910_pmic_init_data[TPS65910_REG_VMMC]	= &pia335x_tps_dummy,
-	.gpio_base = (4 * 32),
+	.gpio_base = OMAP_MAX_GPIO_LINES,
 	.irq = 0, // set this in board specific setup
 	.irq_base = TWL4030_IRQ_BASE,
-};
-
-static struct i2c_board_info tps65910_boardinfo = {
-	I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
-	.platform_data  = &pia335x_tps65910_info,
 };
 
 static void pmic_init(int boardid)
@@ -2298,7 +2310,6 @@ static void pmic_init(int boardid)
 		default:
 			break;
 	}
-	pia335x_add_i2c_device(1, &tps65910_boardinfo);
 }
 
 static void km_e2_setup(void)
