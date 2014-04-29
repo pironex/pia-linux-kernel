@@ -1316,7 +1316,7 @@ static struct platform_device km_mmi_leds = {
 static struct led_info ebtft_rgbleds_config[] = {
 	{
 		.name = "led:b1",
-		.default_trigger = "heartbeat",
+		.default_trigger = "none",
 	},
 	{
 		.name = "led:g1",
@@ -1356,7 +1356,7 @@ static struct gpio_led ebtft_gpio_leds[] = {
 	{
 		.name			= "led:EBTFT:usr1",
 		.gpio			= EBTFT_GPIO_LED,
-		.default_trigger	= "heartbeat",
+		.default_trigger	= "default-on",
 	},
 };
 
