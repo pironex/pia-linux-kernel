@@ -774,6 +774,8 @@ static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_IN3,	GPIOF_IN, "in3" },
 	{ EBTFT_GPIO_RFID_IRQ,	GPIOF_IN, "rfid_int" },
 	{ EBTFT_GPIO_RFID_POWEN,GPIOF_OUT_INIT_LOW, "rfid_powen" },
+	{ EBTFT_GPIO_LCD_DISP,	GPIOF_OUT_INIT_LOW, "lcd:den" },
+	{ EBTFT_GPIO_LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd:blen" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1680,9 +1682,16 @@ static void pia335x_touch_init(int boardid)
 		pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
 #endif
 		/* fall-through to resitive variant */
-	case PIA335_BB_EBTFT:
+	case PIA335_LCD_EBTFT:
 		if (exp_config.opt[2] == 'R')
 			err = am33xx_register_mfd_tscadc(&pia335x_tscadc);
+		if (exp_config.opt[2] == 'D') {
+			pr_info("pia335x: init touch controller FT5x06\n");
+			km_mmi_touch_data.irq_gpio = GPIO_TO_PIN(2, 1),
+			km_mmi_i2c1_touch.irq =
+					OMAP_GPIO_IRQ(GPIO_TO_PIN(2, 1)),
+			pia335x_add_i2c_device(2, &km_mmi_i2c1_touch);
+		}
 
 		break;
 	default:
@@ -1731,7 +1740,7 @@ struct da8xx_lcdc_platform_data  ebtft_lcd_pdata = {
 	/* display is a ADKOM DLC0430LZG */
 	.manu_name              = "DLC",
 	.controller_data        = &lcd_cfg,
-	.type                   = "DLC0430LZG",
+	.type                   = "DLC_DLC0430LZG",
 };
 
 static int __init conf_disp_pll(int rate)
@@ -1783,16 +1792,28 @@ static void pia335x_lcd_init(int boardid)
 				"register LCDC\n");
 		return;
 	}
-	switch (boardid) {
+	switch (pia335x_lcd_exp_id.id) {
 	case PIA335_LCD_KM_MMI:
 		lcdc_pdata = &km_mmi_lcd_pdata;
 		/* Backlight and Display enable GPIOs will be set in GPIO init */
 		exp_lcd.gpio_blen = MMI_GPIO_LCD_BACKLIGHT;
 		exp_lcd.gpio_den = MMI_GPIO_LCD_DISP;
+		km_mmi_lcd_pdata.panel_power_ctrl = pia335x_lcd_power_ctrl;
 
 		break;
-	case PIA335_BB_EBTFT:
-		lcdc_pdata = &ebtft_lcd_pdata;
+	case PIA335_LCD_EBTFT:
+		if (exp_config.opt[2] == 'D') {
+			pr_info("piA335x: EBTFT with KM LCD\n");
+			/* special demo version with KM display */
+			lcdc_pdata = &km_mmi_lcd_pdata;
+			km_mmi_lcd_pdata.panel_power_ctrl =
+					pia335x_lcd_power_ctrl;
+		} else {
+			pr_info("piA335x: EBTFT with normal LCD\n");
+			lcdc_pdata = &ebtft_lcd_pdata;
+			ebtft_lcd_pdata.panel_power_ctrl =
+					pia335x_lcd_power_ctrl;
+		}
 		exp_lcd.gpio_blen = EBTFT_GPIO_LCD_BACKLIGHT;
 		exp_lcd.gpio_den = EBTFT_GPIO_LCD_DISP;
 
@@ -1801,8 +1822,6 @@ static void pia335x_lcd_init(int boardid)
 		pr_err("LCD not connected/supported, id:%d\n", boardid);
 		return;
 	}
-
-	km_mmi_lcd_pdata.panel_power_ctrl = pia335x_lcd_power_ctrl;
 
 	if (am33xx_register_lcdc(lcdc_pdata))
 		pr_info("Failed to register LCDC device\n");
