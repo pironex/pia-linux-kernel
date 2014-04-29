@@ -1909,8 +1909,12 @@ static struct pinmux_config km_e2_spi_pin_mux[] = {
 	{NULL, 0},
 };
 
-static struct omap2_mcspi_device_config km_e2_spi_def_cfg = {
-	.turbo_mode	= 0,
+static struct omap2_mcspi_device_config spi_d1_mosi_cfg = {
+	.turbo_mode	= 1,
+	.d0_mosi	= 0,
+};
+static struct omap2_mcspi_device_config spi_d0_mosi_cfg = {
+	.turbo_mode	= 1,
 	.d0_mosi	= 1, /* we use MOSI on D0 for all SPI devices */
 };
 
@@ -1920,7 +1924,7 @@ static struct spi_board_info km_e2_spi_aps_info[] = {
 		.modalias      = "spidev",
 		.bus_num         = 1,
 		.chip_select     = 1,
-		.controller_data = &km_e2_spi_def_cfg,
+		.controller_data = &spi_d1_mosi_cfg,
 		.max_speed_hz    = 1E6, /* 1MHz */
 	},
 };
@@ -1931,7 +1935,7 @@ static struct spi_board_info km_e2_spi_qenc_info[] = {
 		.modalias      = "spidev",
 		.bus_num         = 1,
 		.chip_select     = 0,
-		.controller_data = &km_e2_spi_def_cfg,
+		.controller_data = &spi_d0_mosi_cfg,
 		.max_speed_hz    = 5E6, /* 5MHz */
 	},
 };
@@ -1950,7 +1954,7 @@ static struct spi_board_info km_e2_spi_mcp2515_info[] = {
 		.max_speed_hz  = 8E6, /* 5 MHz */
 		.mode          = SPI_MODE_0,
 		.irq           = OMAP_GPIO_IRQ(KM_E2_CAN2_INT_GPIO),
-		.controller_data = &km_e2_spi_def_cfg,
+		.controller_data = &spi_d0_mosi_cfg,
 		.platform_data = &km_e2_mcp2515_data,
 	},
 };
@@ -2032,6 +2036,7 @@ static struct spi_board_info pm_spi0_info[] = {
 	{
 		.modalias      = "m25p80",
 		.platform_data = &pm_spi_nor_flash,
+		.controller_data = &spi_d0_mosi_cfg,
 		.irq           = -1,
 		.max_speed_hz  = 24000000,
 		.bus_num       = 1,
@@ -2051,6 +2056,7 @@ static struct pinmux_config ebtft_spi_pin_mux[] = {
 static struct spi_board_info ebtft_spi_info[] = {
 	{
 		.modalias      = "spidev",
+		.controller_data = &spi_d0_mosi_cfg,
 		.max_speed_hz  = 2000000,
 		.bus_num       = 2,
 		.chip_select   = 0,
