@@ -2012,7 +2012,7 @@ static struct mtd_partition pm_spi_partitions[] = {
 	{
 		.name       = "Kernel",
 		.offset     = MTDPART_OFS_APPEND,	/* Offset = 0x62000 */
-		.size       = 28 * SZ_128K,
+		.size       = 30 * SZ_128K,
 	},
 	{
 		.name       = "File System",
