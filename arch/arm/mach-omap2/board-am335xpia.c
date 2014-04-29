@@ -2371,7 +2371,7 @@ static void km_e2_setup(void)
 #endif
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 }
 
 static void km_mmi_setup(int variant)
@@ -2396,7 +2396,7 @@ static void km_mmi_setup(int variant)
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:ff");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:0f");
 
 	mmc_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
@@ -2445,7 +2445,7 @@ static void ebtft_setup(void)
 	pia335x_lcd_init(pia335x_lcd_exp_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 	usb_init(pia335x_main_id.id);
 	// REVISIT there is some strange deadlock when called before mmc_init
 	spi_init(pia335x_main_id.id);
