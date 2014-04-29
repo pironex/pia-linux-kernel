@@ -333,6 +333,15 @@ static struct pinmux_config km_mmi_board_pin_mux[] = {
 	{NULL, 0},
 };
 
+static struct pinmux_config pm_board_pin_mux[] = {
+	/* I2C1*/
+	{ "mii1_crs.i2c1_sda",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "mii1_rxerr.i2c1_scl",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{NULL, 0},
+};
+
 static struct pinmux_config clkout1_pin_mux[] = {
 	{"xdma_event_intr0.clkout1", AM33XX_PIN_OUTPUT},
 	{NULL, 0},
@@ -1497,7 +1506,7 @@ static struct i2c_board_info pm_i2c1_boardinfo[] = {
 	},
 };
 
-static struct i2c_board_info ebtft_i2c1_boardinfo[] = {
+static struct i2c_board_info ebtft_i2c2_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("pca9634", 0x2A),
 		.platform_data = &ebtft_rgbleds_data,
@@ -1520,12 +1529,13 @@ static void i2c1_init(int boardid)
 				ARRAY_SIZE(km_mmi_i2c2_boardinfo));
 		break;
 	case PIA335_BB_EBTFT:
-		pia335x_register_i2c_devices(1, ebtft_i2c1_boardinfo,
-				ARRAY_SIZE(ebtft_i2c1_boardinfo));
+		pia335x_register_i2c_devices(2, ebtft_i2c2_boardinfo,
+				ARRAY_SIZE(ebtft_i2c2_boardinfo));
 		break;
 	case PIA335_PM:
 		pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
 				ARRAY_SIZE(pm_i2c1_boardinfo));
+		break;
 	default:
 		break;
 	}
@@ -2424,7 +2434,9 @@ static void pm_setup(void)
 {
 	pr_info("piA335x-PM: Setup PM rev %d\n", pia335x_main_id.rev);
 
+	setup_pin_mux(pm_board_pin_mux);
 	pmic_init(pia335x_main_id.id);
+	i2c1_init(pia335x_main_id.id);
 
 	/* prepare eMMC, will be initialized in baseboard setup */
 	mmc_init(pia335x_main_id.id);
