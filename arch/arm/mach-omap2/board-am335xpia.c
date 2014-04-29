@@ -280,6 +280,8 @@ static int pia335x_add_i2c_device(int busnum, struct i2c_board_info *info)
 				info->addr, busnum);
 		return -1;
 	}
+	pr_info("I2C new device: %s 0x%x@%d", client->name, client->addr,
+			client->adapter->nr);
 	i2c_put_adapter(adapter);
 
 	return 0;
@@ -996,6 +998,7 @@ static void nand_init(void)
 		{ NULL, 0 },
 		/*{ NULL, 0 },*/
 	};
+	pr_info("piA335x: %s\n", __func__);
 
 	setup_pin_mux(nand_pin_mux);
 	pdata = omap_nand_init(pia335x_nand_partitions,
@@ -1024,6 +1027,7 @@ static struct pinmux_config usb1_pin_mux[] = {
 
 static void usb_init(int boardid)
 {
+	pr_info("piA335x: %s\n", __func__);
 	switch (boardid) {
 	case PIA335_BB_EBTFT:
 		setup_pin_mux(usb1_pin_mux);
@@ -1363,7 +1367,7 @@ static struct platform_device ebtft_leds = {
 static void leds_init(int boardid)
 {
 	int err = 0;
-	pr_info("pia335x_init: LEDs\n");
+	pr_info("piA335x: %s\n", __func__);
 
 	switch (boardid) {
 		case PIA335_KM_MMI:
@@ -1502,7 +1506,8 @@ static struct i2c_board_info ebtft_i2c1_boardinfo[] = {
 
 static void i2c1_init(int boardid)
 {
-	pr_info("pia335x_init: I2C1: %d\n", boardid);
+	pr_info("piA335x: %s: %d\n", __func__, boardid);
+
 	switch (boardid) {
 	case PIA335_KM_E2:
 		pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
@@ -1607,7 +1612,7 @@ static void pia335x_touch_init(int boardid)
 {
 	int err = 0;
 
-	pr_info("pia335x_init: Touch Interface\n");
+	pr_info("piA335x: %s\n", __func__);
 
 	switch (boardid) {
 	case PIA335_LCD_KM_MMI:
@@ -1630,7 +1635,7 @@ static void pia335x_touch_init(int boardid)
 	}
 
 	if (err)
-		pr_err("failed to register TSADC device\n");
+		pr_err("failed to register touch device\n");
 }
 
 static const struct display_panel disp_panel = {
@@ -1713,7 +1718,7 @@ static void pia335x_lcd_init(int boardid)
 {
 	struct da8xx_lcdc_platform_data *lcdc_pdata;
 
-	pr_info("pia335x_init: LCD\n");
+	pr_info("piA335x: %s\n", __func__);
 	setup_pin_mux(lcdc_pin_mux);
 
 	if (conf_disp_pll(300000000)) {
@@ -1791,6 +1796,8 @@ static struct pinmux_config ebtft_can0_pin_mux[] = {
 extern void am33xx_d_can_init(unsigned int instance);
 static void can_init(int boardid )
 {
+	pr_info("piA335x: %s\n", __func__);
+
 	switch (boardid) {
 	case PIA335_KM_E2:
 		setup_pin_mux(km_e2_can1_pin_mux);
@@ -1977,6 +1984,8 @@ static struct spi_board_info ebtft_spi_info[] = {
 
 static void spi_init(int boardid)
 {
+	pr_info("piA335x: %s: %d\n", __func__, boardid);
+
 	switch (boardid) {
 	case PIA335_PM:
 		setup_pin_mux(pm_spi_pin_mux);
@@ -2021,6 +2030,8 @@ static void spi_init(int boardid)
 
 static void km_e2_rs485_init(void)
 {
+	pr_info("piA335x: %s\n", __func__);
+
 	setup_pin_mux(km_e2_rs485_pin_mux);
 	/* use GPIO for RS485 Driver Enable signal
 	 * Auto-RTS functionality (MUX MODE 6) cannot be used, because it
@@ -2048,6 +2059,8 @@ static void km_e2_rs485_init(void)
 
 static void km_e2_uart4_init(void)
 {
+	pr_info("piA335x: %s\n", __func__);
+
 	setup_pin_mux(km_e2_uart4_pin_mux);
 	/* */
 	if (gpio_request(E2_GPIO_BOOT0_E1, "boot0_e1") < 0) {
@@ -2084,6 +2097,8 @@ static int pia335x_rtc_init(void)
 	struct omap_hwmod *oh;
 	struct platform_device *pdev;
 	char *dev_name = "am33xx-rtc";
+
+	pr_info("piA335x: %s\n", __func__);
 
 	clk = clk_get(NULL, "rtc_fck");
 	if (IS_ERR(clk)) {
@@ -2205,6 +2220,8 @@ static struct i2c_board_info tlv320aic3x_i2c_boardinfo = {
 
 static void km_mmi_tlv320aic3x_init(void)
 {
+	pr_info("piA335x: %s\n", __func__);
+
 	/* Enable clkout1 */
 	setup_pin_mux(clkout1_pin_mux);
 
@@ -2227,6 +2244,9 @@ static struct pwmss_platform_data  pwm_pdata[3] = {
 static void ecap_init(int boardid)
 {
 	int idx = 0;
+
+	pr_info("piA335x: %s\n", __func__);
+
 	switch (boardid) {
 	case PIA335_BB_EBTFT:
 		idx = 1;
@@ -2365,7 +2385,7 @@ static void km_e2_setup(void)
 
 static void km_mmi_setup(int variant)
 {
-	pr_info("piA335x MMI: Setup KM MMI.\n");
+	pr_info("piA335x MMI: Setup KM MMI rev %d\n", pia335x_main_id.rev);
 	if (pia335x_main_id.rev < 1 || pia335x_main_id.rev > 2) {
 		pr_info("PIA335MI: Unknown board revision %.4s\n",
 				config.version);
@@ -2403,7 +2423,7 @@ static void km_mmi_setup(int variant)
 /* only procesor module related parts, see expansion_setup() for the rest */
 static void pm_setup(void)
 {
-	pr_info("piA335x-PM: Setup PM.\n");
+	pr_info("piA335x-PM: Setup PM rev %d\n", pia335x_main_id.rev);
 
 	pmic_init(pia335x_main_id.id);
 
@@ -2419,7 +2439,7 @@ static void pm_setup(void)
 
 static void ebtft_setup(void)
 {
-	pr_info("piA335x-EB_TFT: ebtft_setup\n");
+	pr_info("piA335x-EB_TFT: ebtft_setup rev %d\n", pia335x_exp_id.rev);
 
 	i2c1_init(pia335x_exp_id.id);
 	pia335x_gpios_init(pia335x_exp_id.id);
@@ -2666,7 +2686,6 @@ static void __init pia335x_init(void)
 	pia335x_cpuidle_init();
 	am33xx_mux_init(board_mux);
 	omap_serial_init();
-	pr_info("piA335x: i2c_init\n");
 	pia335x_i2c_init();
 	pr_info("piA335x: sdrc_init\n");
 	omap_sdrc_init(NULL, NULL);
