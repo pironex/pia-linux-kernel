@@ -106,6 +106,7 @@ struct pia335x_eeprom_config {
 	u8	serial[12];
 	u8	opt[32];
 };
+#define PIA335X_EEPROM_I2C_ADDR 0x50
 static struct pia335x_eeprom_config config;
 static struct pia335x_eeprom_config exp_config;
 static struct pia335x_eeprom_config lcd_exp_config;
@@ -1439,6 +1440,15 @@ static struct at24_platform_data km_mmi_lcd_eepromuid_info = {
 	.flags          = AT24_FLAG_READONLY,
 };
 
+/* 24CS01 read-only unique ID area
+ * these devices allow read on addresses 0x80..0xff only, so we need to
+ * flag it as a 256 Byte Device */
+static struct at24_platform_data pia335x_eepromuid_info = {
+	.byte_len       = 256,
+	.page_size      = 8,
+	.flags          = AT24_FLAG_READONLY,
+};
+
 /* Accelerometer LIS331DLH */
 #include <linux/lis3lv02d.h>
 static struct lis3lv02d_platform_data lis331dlh_pdata = {
@@ -1472,6 +1482,10 @@ static struct i2c_board_info km_mmi_i2c1_boardinfo[] = {
 		I2C_BOARD_INFO("lis331dlh", 0x18),
 		.platform_data = &lis331dlh_pdata,
 		.irq = OMAP_GPIO_IRQ(MMI_GPIO_ACC_INT1),
+	},
+	{
+		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR + 0x08),
+		.platform_data  = &pia335x_eepromuid_info,
 	},
 };
 static struct i2c_board_info km_mmi_i2c2_boardinfo[] = {
@@ -2541,7 +2555,6 @@ out:
 /**
  * I2C devices
  */
-#define PIA335X_EEPROM_I2C_ADDR 0x50
 static struct at24_platform_data pia335x_eeprom_info = {
 	.byte_len       = 128,
 	.page_size      = 8,
@@ -2551,14 +2564,6 @@ static struct at24_platform_data pia335x_eeprom_info = {
 	.setup          = pia335x_setup,
 	.context        = (void *)NULL,
 };
-/* 24CS01 read-only unique ID area
- * these devices allow read on addresses 0x80..0xff only, so we need to
- * flag it as a 256 Byte Device */
-static struct at24_platform_data pia335x_eepromuid_info = {
-	.byte_len       = 256,
-	.page_size      = 8,
-	.flags          = AT24_FLAG_READONLY,
-};
 
 static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 	{
@@ -2566,10 +2571,6 @@ static struct i2c_board_info __initdata pia335x_i2c0_boardinfo[] = {
 		 * 0.03 uses 24cs01 (taking only 1 address 0x50) */
 		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR),
 		.platform_data  = &pia335x_eeprom_info,
-	},
-	{
-		I2C_BOARD_INFO("24c01", PIA335X_EEPROM_I2C_ADDR + 0x08),
-		.platform_data  = &pia335x_eepromuid_info,
 	},
 };
 /* 24AA02E48T, expansion/base board ID EEPROM */
