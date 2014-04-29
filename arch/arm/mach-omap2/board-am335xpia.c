@@ -1157,9 +1157,52 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{}      /* Terminator */
 };
 
-static void mmc_init(int boardid)
+static int ebtft_mmc0_cd(struct device *dev, int slot)
+{
+	struct omap_mmc_platform_data *mmc = dev->platform_data;
+
+	/* high active CD */
+	int cd = gpio_get_value_cansleep(mmc->slots[0].switch_pin);
+	pr_info("EBTFT MMCCD: %d", cd);
+	return (cd);
+}
+static int ebtft_mmccd_init(struct device *dev)
+{
+	int ret = 0;
+	struct platform_device *pdev = container_of(dev,
+						struct platform_device, dev);
+	struct omap_mmc_platform_data *pdata = dev->platform_data;
+
+	/* Setting MMC1 (external) Card detect */
+	if (pdev->id == 0)
+		pdata->slots[0].card_detect = ebtft_mmc0_cd;
+
+	return ret;
+}
+
+static __init void mmc_extra_init(struct device *dev,
+		struct pia335x_board_id *id)
+{
+	struct omap_mmc_platform_data *pd;
+
+	if (!dev || !id)
+		return;
+
+	switch (id->id) {
+	case PIA335_BB_EBTFT:
+		if (id->rev == 1) {
+			pd = dev->platform_data;
+			pd->init = ebtft_mmccd_init;
+		}
+		break;
+	default:
+		break;
+	}
+}
+static void __init mmc_init(int boardid)
 {
 	struct pinmux_config *mux = pia335x_mmc0_pin_mux;
+	struct omap2_hsmmc_info *slot;
 	pr_info("piA335x: %s: %d\n", __func__, boardid);
 
 	switch (boardid) {
@@ -1189,12 +1232,16 @@ static void mmc_init(int boardid)
 		setup_pin_mux(pm_mmc1_pin_mux);
 		/* don't do anything here, wait for the expansion board setup */
 		/* fall trough to return */
+		return;
 	default:
 		return;
 	}
 
 	setup_pin_mux(mux);
 	omap2_hsmmc_init(pia335x_mmc);
+	for (slot = pia335x_mmc; slot->mmc; slot++)
+		mmc_extra_init(slot->dev, &pia335x_exp_id);
+
 	return;
 }
 
