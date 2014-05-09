@@ -307,6 +307,7 @@ static struct omap_hwmod_addr_space am35xx_uart4_addr_space[] = {
 		.pa_end		= AM35XX_UART4_BASE + SZ_1K - 1,
 		.flags		= ADDR_MAP_ON_INIT | ADDR_TYPE_RT,
 	},
+	{ }
 };
 
 static struct omap_hwmod_ocp_if am35xx_l4_core__uart4 = {
@@ -1332,11 +1333,13 @@ static struct omap_hwmod omap3xxx_uart4_hwmod = {
 
 static struct omap_hwmod_irq_info am35xx_uart4_mpu_irqs[] = {
 	{ .irq = INT_35XX_UART4_IRQ, },
+	{ .irq = -1 }
 };
 
 static struct omap_hwmod_dma_info am35xx_uart4_sdma_reqs[] = {
 	{ .name = "rx",	.dma_req = AM35XX_DMA_UART4_RX, },
 	{ .name = "tx",	.dma_req = AM35XX_DMA_UART4_TX, },
+	{ .dma_req = -1 }
 };
 
 static struct omap_hwmod_ocp_if *am35xx_uart4_slaves[] = {
