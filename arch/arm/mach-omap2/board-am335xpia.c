@@ -1992,7 +1992,6 @@ static struct pinmux_config pm_spi_pin_mux[] = {
 
 /* SPI NOR flash */
 static struct mtd_partition pm_spi_partitions[] = {
-	/* REVISIT partitions big enough? */
 	/* All the partition sizes are listed in terms of erase size */
 	{
 		.name       = "SPL",
@@ -2561,7 +2560,7 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 	}
 	pia335x_parse_eeprom(&pia335x_exp_id);
 
-	/* REVISIT Workaround for PM module without EEPROM
+	/* Workaround for PM module without EEPROM
 	 * pm_setup_done will be only set, if there was an EEPROM on I2C0
 	 * and its setup function was called
 	 * Explicitly call pm_setup() otherwise */
