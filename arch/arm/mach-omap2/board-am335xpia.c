@@ -1606,7 +1606,7 @@ static struct ft5x06_ts_platform_data km_mmi_touch_data = {
 	.y_max    = 272,
 	.irq_gpio = MMI_GPIO_LCD_PENDOWN,
 	.irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-	.touch_threshold = 0x35 * 4,
+	.touch_threshold = 0x2B * 4,
 };
 static struct i2c_board_info km_mmi_i2c1_touch = {
 	/* j043wqcn */
