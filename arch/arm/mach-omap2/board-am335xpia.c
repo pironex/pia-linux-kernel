@@ -2342,7 +2342,6 @@ static void km_e2_setup(void)
 
 	pia335x_rtc_init();
 	i2c1_init(pia335x_main_id.id);
-	mmc_init(pia335x_main_id.id);
 
 	ethernet_init(pia335x_main_id.id);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -2356,6 +2355,7 @@ static void km_e2_setup(void)
 	}
 #endif
 	nand_init();
+	mmc_init(pia335x_main_id.id);
 
 	can_init(pia335x_main_id.id);
 	spi_init(pia335x_main_id.id);
@@ -2389,8 +2389,6 @@ static void km_mmi_setup(int variant)
 
 	i2c1_init(pia335x_main_id.id);
 
-	mmc_init(pia335x_main_id.id);
-
 	ethernet_init(pia335x_main_id.id);
 
 	//clkout2_32k_enable();
@@ -2400,6 +2398,7 @@ static void km_mmi_setup(int variant)
 	pr_info("piA335x: cpsw_init\n");
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:ff");
 
+	mmc_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
 	if (variant == 'X') {
@@ -2420,7 +2419,6 @@ static void pm_setup(void)
 
 	/* prepare eMMC, will be initialized in baseboard setup */
 	mmc_init(pia335x_main_id.id);
-	spi_init(pia335x_main_id.id);
 
 	pia335x_gpios_init(pia335x_main_id.id);
 	leds_init(pia335x_main_id.id);
@@ -2449,6 +2447,9 @@ static void ebtft_setup(void)
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:ff", "0:00");
 	usb_init(pia335x_main_id.id);
+	// REVISIT there is some strange deadlock when called before mmc_init
+	spi_init(pia335x_main_id.id);
+	spi_init(pia335x_exp_id.id);
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
