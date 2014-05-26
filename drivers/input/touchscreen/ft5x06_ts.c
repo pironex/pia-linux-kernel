@@ -587,7 +587,7 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	txbuf[1] = pdata->touch_threshold / 4;
 	dev_info(&client->dev, "[FTS] Setting touch threshold to %d.\n",
 			pdata->touch_threshold);
-	err = ft5x06_i2c_write(client, &reg_value, 1);
+	err = ft5x06_i2c_write(client, txbuf, 2);
 	if (err < 0)
 		dev_err(&client->dev, "threshold write failed: %d", err);
 
