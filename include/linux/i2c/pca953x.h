@@ -19,10 +19,10 @@ struct pca953x_platform_data {
 	void		*context;	/* param to setup/teardown */
 
 	int		(*setup)(struct i2c_client *client,
-				unsigned gpio, unsigned ngpio,
+				int gpio, unsigned ngpio,
 				void *context);
 	int		(*teardown)(struct i2c_client *client,
-				unsigned gpio, unsigned ngpio,
+				int gpio, unsigned ngpio,
 				void *context);
 	const char	*const *names;
 };
