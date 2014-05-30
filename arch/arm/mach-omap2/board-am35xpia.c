@@ -1171,6 +1171,20 @@ static struct pcf857x_platform_data ems_io_pca9672_data[5] = {
 	EMS_IO_GPIO_DEV_DATA(4),
 };
 
+#include <linux/i2c/pca953x.h>
+static struct pca953x_platform_data ems_io_pca9536_data = {
+	.gpio_base = 192,
+	.invert = 0,
+	.setup     = ems_io_gpio_setup,
+	.teardown  = ems_io_gpio_teardown,
+};
+
+static struct i2c_board_info pia35x_ems_io_pca9536 = {
+	.type          = "pca9538",
+	.addr          = 0x70,
+	.platform_data = &ems_io_pca9536_data,
+};
+
 #define GPIO_EMS_IO_RESET    14
 #define GPIO_EMS_IO_DIN1_INT 21
 #define GPIO_EMS_IO_DIN2_INT 19
@@ -1296,33 +1310,6 @@ static void __init pia35x_ems_io_init_v3(void) {
 	pia35x_ems_io_i2c_info[EMS_IO_DIN1].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN1_INT);
 	pia35x_ems_io_i2c_info[EMS_IO_DIN2].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DIN2_INT);
 	pia35x_ems_io_i2c_info[EMS_IO_DISP].irq = OMAP_GPIO_IRQ(GPIO_EMSV3_IO_DISP_INT);
-	/* USB */
-	/* Configure GPIO for EHCI port */
-//	if (omap_mux_init_gpio(GPIO_EMSV3_USB_NRESET, OMAP_PIN_OUTPUT)) {
-//		pr_err("Can not configure mux for GPIO_USB_NRESET %d\n",
-//			GPIO_EMSV3_USB_NRESET);
-//		return;
-//	}
-
-//	if (omap_mux_init_gpio(GPIO_USB_POWER, OMAP_PIN_OUTPUT)) {
-//		pr_err("Can not configure mux for GPIO_USB_POWER %d\n",
-//			GPIO_USB_POWER);
-//		return;
-//	}
-//
-//	ret = gpio_request_one(GPIO_USB_POWER,
-//			GPIOF_DIR_OUT | GPIOF_INIT_HIGH, "usb_ehci_enable");
-//	if (ret < 0) {
-//		pr_err("Can not request GPIO %d\n", GPIO_USB_POWER);
-//		return;
-//	}
-//
-//	//ret = gpio_direction_output(GPIO_USB_POWER, 1);
-//	if (ret < 0) {
-//		gpio_free(GPIO_USB_POWER);
-//		pr_err("Unable to initialize EHCI power\n");
-//		return;
-//	}
 
 	usbhs_init(&usbhs_pdata);
 }
@@ -1334,6 +1321,9 @@ static void __init pia35x_ems_io_init(int revision) {
 		pia35x_ems_io_init_v1();
 	} else if (3 == revision) {
 		pia35x_ems_io_init_v3();
+	} else if (4 == revision) {
+		/* DOUT IO expander on Rev 1.0 replaced with a pca9653 */
+		pia35x_ems_io_i2c_info[0] = pia35x_ems_io_pca9536;
 	} else {
 		return;
 	}
@@ -2270,7 +2260,7 @@ static int __init pia35x_expansion_init(void)
 		ret++;
 	} else if (0 == strncmp(expansionboard_name, "pia_ems_io", 10)) {
 		switch (expansionboard_name[10]) {
-			case 0:
+			case '0':
 				revision = 1;
 				break;
 			case '2':
@@ -2280,6 +2270,7 @@ static int __init pia35x_expansion_init(void)
 				revision = 3;
 				break;
 			default:
+				revision = 4;
 				break;
 		}
 		pia35x_ems_io_init(revision);
