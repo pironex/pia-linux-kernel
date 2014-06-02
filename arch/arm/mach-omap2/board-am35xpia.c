@@ -1324,6 +1324,7 @@ static void __init pia35x_ems_io_init(int revision) {
 	} else if (4 == revision) {
 		/* DOUT IO expander on Rev 1.0 replaced with a pca9653 */
 		pia35x_ems_io_i2c_info[0] = pia35x_ems_io_pca9536;
+		pia35x_ems_io_init_v3();
 	} else {
 		return;
 	}
