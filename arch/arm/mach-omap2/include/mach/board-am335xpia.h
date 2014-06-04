@@ -20,6 +20,7 @@
 #define PIA335_KM_MMI		21
 #define PIA335_LCD_KM_MMI	22
 #define PIA335_PM		22
+#define PIA335_LOKISA_EM	23
 #define PIA335_BB_EBTFT		30
 #define PIA335_LCD_EBTFT	40
 

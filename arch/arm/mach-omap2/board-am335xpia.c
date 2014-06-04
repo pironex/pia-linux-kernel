@@ -123,6 +123,7 @@ static struct pia335x_board_id pia335x_boards[] = {
 	{ "PIA335E2", PIA335_KM_E2,	0, 0},
 	{ "PIA335MI", PIA335_KM_MMI,	0, 0},
 	{ "PIA335PM", PIA335_PM,	0, 0},
+	{ "PIA335EM", PIA335_LOKISA_EM, 0, 0},
 	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
 	{ "LCDKMMMI", PIA335_LCD_KM_MMI,0, 2},
 };
@@ -2623,6 +2624,9 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		break;
 	case PIA335_PM:
 		pm_setup();
+		break;
+	case PIA335_LOKISA_EM:
+		/* TODO implement em_setup */
 		break;
 	default:
 		pr_err("PIA335x: Unknown board, "
