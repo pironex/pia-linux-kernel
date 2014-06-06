@@ -1077,9 +1077,13 @@ static struct pinmux_config mii1_pin_mux[] = {
 	{NULL, 0},
 };
 /* optional signals used on EBTFT */
-static struct pinmux_config mii2_opt_pin_mux[] = {
+static struct pinmux_config ebtft_mii2_opt_pin_mux[] = {
 	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_wpn.mii2_rxerr", AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_ben1.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
+};
+static struct pinmux_config em_mii2_opt_pin_mux[] = {
+	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_ben1.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
 };
 /* E2 Ethernet MII2 + MDIO */
@@ -1106,10 +1110,15 @@ static void ethernet_init(int boardid)
 	pr_info("piA335x: %s\n", __func__);
 	switch (boardid) {
 	case PIA335_BB_EBTFT:
-		setup_pin_mux(mii2_opt_pin_mux);
-		/* fall-trough to MII2 base config */
+		setup_pin_mux(mii2_base_pin_mux);
+		setup_pin_mux(ebtft_mii2_opt_pin_mux);
+		break;
 	case PIA335_KM_E2:
 		setup_pin_mux(mii2_base_pin_mux);
+		break;
+	case PIA335_LOKISA_EM:
+		setup_pin_mux(mii2_base_pin_mux);
+		setup_pin_mux(em_mii2_opt_pin_mux);
 		break;
 	case PIA335_KM_MMI:
 		setup_pin_mux(mii1_pin_mux);
@@ -2563,6 +2572,10 @@ static void em_setup(void)
 		pia335x_main_id.rev);
 
 	mmc_init(pia335x_main_id.id);
+	ethernet_init(pia335x_exp_id.id);
+
+	/* connected to slave 1, slave 0 is not active */
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
