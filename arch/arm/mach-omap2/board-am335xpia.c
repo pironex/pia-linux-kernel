@@ -1236,6 +1236,17 @@ static void __init mmc_init(int boardid)
 		/* don't do anything here, wait for the expansion board setup */
 		/* fall trough to return */
 		return;
+	case PIA335_LOKISA_EM:
+		pia335x_mmc[0].gpio_cd = EM_GPIO_MMC_CD;
+		// identical to PM
+		pia335x_mmc[1].mmc            = 2;
+		pia335x_mmc[1].caps           = MMC_CAP_8_BIT_DATA;
+		pia335x_mmc[1].gpio_cd        = -EINVAL;
+		pia335x_mmc[1].gpio_wp        = -EINVAL;
+		pia335x_mmc[1].ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34;
+		pia335x_mmc[1].nonremovable = true;
+		setup_pin_mux(pm_mmc1_pin_mux);
+		break;
 	default:
 		return;
 	}
@@ -2546,6 +2557,14 @@ static void ebtft_setup(void)
 	spi_init(pia335x_exp_id.id);
 }
 
+static void em_setup(void)
+{
+	pr_info("Lokisa Energy Manager: em_setup rev %d\n",
+		pia335x_main_id.rev);
+
+	mmc_init(pia335x_main_id.id);
+}
+
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 {
 	pr_info("piA335x: expansion setup\n");
@@ -2626,7 +2645,7 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 		pm_setup();
 		break;
 	case PIA335_LOKISA_EM:
-		/* TODO implement em_setup */
+		em_setup();
 		break;
 	default:
 		pr_err("PIA335x: Unknown board, "
