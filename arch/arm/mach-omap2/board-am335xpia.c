@@ -1606,6 +1606,8 @@ static void i2c1_init(int boardid)
 		pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
 				ARRAY_SIZE(pm_i2c1_boardinfo));
 		break;
+	case PIA335_LOKISA_EM:
+		break;
 	default:
 		break;
 	}
@@ -2571,6 +2573,8 @@ static void em_setup(void)
 	pr_info("Lokisa Energy Manager: em_setup rev %d\n",
 		pia335x_main_id.rev);
 
+	setup_pin_mux(pm_board_pin_mux);
+	i2c1_init(pia335x_main_id.id);
 	mmc_init(pia335x_main_id.id);
 	ethernet_init(pia335x_exp_id.id);
 
