@@ -780,11 +780,22 @@ static struct gpio ebtft_gpios[] = {
 
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
+#define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
+#define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
 static struct pinmux_config em_gpios_pin_mux[] = {
 	/* MMC CD */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
+	/* Smartcard Controller */
+	{ "lcd_vsync.gpio2_22",		AM33XX_PIN_OUTPUT },
+	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_OUTPUT },
 	{ NULL, 0 },
 };
+static struct gpio em_gpios[] = {
+	{ EM_GPIO_SC_RESET,	GPIOF_OUT_INIT_LOW,	"sc:reset" },
+	{ EM_GPIO_SC_BOOTLDR,	GPIOF_OUT_INIT_HIGH,	"sc:bootldr" },
+};
+
+
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
