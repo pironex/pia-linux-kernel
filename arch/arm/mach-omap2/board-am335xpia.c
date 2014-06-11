@@ -782,6 +782,7 @@ static struct gpio ebtft_gpios[] = {
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
+#define EM_GPIO_FOIL_IRQ	GPIO_TO_PIN(3, 17)
 static struct pinmux_config em_gpios_pin_mux[] = {
 	/* MMC CD */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
@@ -1613,7 +1614,101 @@ static struct max536_platform_data em_dac_data = {
 	 * max V output DAC is 5 V */
 	.vref_mv	= 3300 / 10 * 9 * 2,
 };
+/* Lokisa EM I2C */
+#include <linux/i2c/pca953x.h>
+static const char *em_xra1200_names[] = {
+	"disp:green",
+	"disp:red",
+	"disp:up",
+	"disp:left",
+	"disp:enter",
+	"disp:right",
+	"disp:down",
+	"disp:led",
+};
+static struct gpio_led em_disp_leds[] = {
+	[0 ... 2] = {
+		.active_low = 0,
+		.gpio = -1,
+		.name = NULL,
+	},
+};
+
+static struct gpio_led_platform_data em_disp_leds_pdata = {
+	.leds = em_disp_leds,
+	.num_leds = ARRAY_SIZE(em_disp_leds),
+};
+
+static struct platform_device em_disp_leds_device = {
+	.name		= "leds-gpio",
+	.id		= -1,
+	.dev = {
+		.platform_data = &em_disp_leds_pdata
+	}
+};
+
+static void em_disp_leds_init(unsigned gpio)
+{
+	int i;
+	struct gpio_led *led;
+
+	/* 3 LEDs @ P0, P1, P7 */
+	i = 0;
+	led = &em_disp_leds[0];
+	led->gpio = gpio + i;
+	led->name = em_xra1200_names[0];
+	led->default_trigger = "heartbeat";
+
+	i = 1;
+	led = &em_disp_leds[1];
+	led->gpio = gpio + i;
+	led->name = em_xra1200_names[1];
+
+	i = 2;
+	led = &em_disp_leds[2];
+	led->gpio = gpio + i;
+	led->name = em_xra1200_names[7];
+}
+
+static int em_xra1200_setup(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio,
+		void *c)
+{
+	int ret = 0;
+	pr_info("piA335x: %s\n", __func__);
+
+	/* prepare LED data */
+	em_disp_leds_init(gpio);
+	ret = platform_device_register(&em_disp_leds_device);
+	if (ret) {
+		pr_warning("Error during setup of IO-Expander");
+	}
+	/* TODO implement keys */
+	return ret;
+}
+static int em_xra1200_teardown(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *c)
+{
+	platform_device_unregister(&em_disp_leds_device);
+	/* TODO implement keys */
+
+	return 0;
+}
+static struct pca953x_platform_data em_xra1200_data = {
+	/* FUTURE gpio and irq bases are not well defined on AM33xx */
+	.gpio_base	= OMAP_MAX_GPIO_LINES + 8, /* some room for TPS */
+	.irq_base	= TWL4030_IRQ_BASE + 8,
+	.names		= em_xra1200_names,
+	.setup		= em_xra1200_setup,
+	.teardown	= em_xra1200_teardown,
+};
+
 static struct i2c_board_info em_i2c2_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("pca9554", 0x27),
+		.irq = OMAP_GPIO_IRQ(EM_GPIO_FOIL_IRQ),
+		.platform_data = &em_xra1200_data,
+	},
 	{
 		I2C_BOARD_INFO("max5362", 0x30),
 		.platform_data = &em_dac_data,
