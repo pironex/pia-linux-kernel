@@ -779,6 +779,12 @@ static struct gpio ebtft_gpios[] = {
 };
 
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
+#define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
+static struct pinmux_config em_gpios_pin_mux[] = {
+	/* MMC CD */
+	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -854,6 +860,11 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = ebtft_gpios_pin_mux;
 		gpiocfg = ebtft_gpios;
 		sz = ARRAY_SIZE(ebtft_gpios);
+		break;
+	case PIA335_LOKISA_EM:
+		muxcfg = em_gpios_pin_mux;
+		gpiocfg = em_gpios;
+		sz = ARRAY_SIZE(em_gpios);
 		break;
 	default:
 		return;
@@ -2728,7 +2739,10 @@ static void em_setup(void)
 	setup_pin_mux(pm_board_pin_mux);
 	pmic_init(pia335x_main_id.id);
 	i2c1_init(pia335x_main_id.id);
+
 	mmc_init(pia335x_main_id.id);
+	pia335x_gpios_init(pia335x_main_id.id);
+
 	ethernet_init(pia335x_exp_id.id);
 	can_init(pia335x_main_id.id);
 
