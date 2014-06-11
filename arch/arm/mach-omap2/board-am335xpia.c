@@ -54,9 +54,6 @@
 #include <plat/mcspi.h>
 #include <plat/nand.h>
 #include <plat/lcdc.h>
-#include <video/omapdss.h>
-#include <video/omap-panel-generic-dpi.h>
-#include <video/omap-panel-dvi.h>
 
 #include "board-flash.h"
 #include "common.h"
@@ -1218,7 +1215,7 @@ static void __init mmc_init(int boardid)
 {
 	struct pinmux_config *mux = pia335x_mmc0_pin_mux;
 	struct omap2_hsmmc_info *slot;
-	pr_info("piA335x: %s: %d\n", __func__, boardid);
+	pr_info("piA335x: %s\n", __func__);
 
 	switch (boardid) {
 	case PIA335_KM_E2:
@@ -2698,7 +2695,8 @@ static void em_setup(void)
 	ethernet_init(pia335x_exp_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:05", "0:00");
+
 	/* setup sleep/wake sequence for core voltage scalling */
 	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
 				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
