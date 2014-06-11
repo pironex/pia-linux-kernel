@@ -1594,6 +1594,25 @@ static struct i2c_board_info ebtft_i2c2_boardinfo[] = {
 	},
 };
 
+/* Lokisa EM DACs */
+#include <linux/../../drivers/staging/iio/dac/max536.h>
+static struct max536_platform_data em_dac_data = {
+	/* Vref for MAX DAC is 0.9 * VDD (3.3V)
+	 * amplifier is 2 x
+	 * max V output DAC is 5 V */
+	.vref_mv	= 3300 / 10 * 9 * 2,
+};
+static struct i2c_board_info em_i2c2_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("max5362", 0x30),
+		.platform_data = &em_dac_data,
+	},
+	{
+		I2C_BOARD_INFO("max5362", 0x31),
+		.platform_data = &em_dac_data,
+	},
+};
+
 static void i2c1_init(int boardid)
 {
 	pr_info("piA335x: %s: %d\n", __func__, boardid);
@@ -1618,6 +1637,9 @@ static void i2c1_init(int boardid)
 				ARRAY_SIZE(pm_i2c1_boardinfo));
 		break;
 	case PIA335_LOKISA_EM:
+		/* only PMIC and EEPROM on first bus */
+		pia335x_register_i2c_devices(2, em_i2c2_boardinfo,
+				ARRAY_SIZE(em_i2c2_boardinfo));
 		break;
 	default:
 		break;
