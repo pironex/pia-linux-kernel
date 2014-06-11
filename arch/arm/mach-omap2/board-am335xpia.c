@@ -32,6 +32,8 @@
 #include <linux/pwm/pwm.h>
 #include <linux/reboot.h>
 #include <linux/platform_data/leds-pca9633.h>
+#include <linux/opp.h>
+
 #include <video/da8xx-fb.h>
 
 #include <mach/hardware.h>
@@ -779,6 +781,7 @@ static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd:blen" },
 };
 
+#define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
 {
@@ -2419,6 +2422,115 @@ static struct tps65910_board pia335x_tps65910_info = {
 	.irq_base = TWL4030_IRQ_BASE,
 };
 
+/* taken from board-am335xevm.c */
+#define AM33XX_VDD_CORE_OPP50_UV	1100000
+#define AM33XX_OPP120_FREQ		600000000
+#define AM33XX_OPPTURBO_FREQ		720000000
+
+#define AM33XX_ES2_0_VDD_CORE_OPP50_UV	950000
+#define AM33XX_ES2_0_OPP120_FREQ	720000000
+#define AM33XX_ES2_0_OPPTURBO_FREQ	800000000
+#define AM33XX_ES2_0_OPPNITRO_FREQ	1000000000
+
+#define AM33XX_ES2_1_VDD_CORE_OPP50_UV	950000
+#define AM33XX_ES2_1_OPP120_FREQ	720000000
+#define AM33XX_ES2_1_OPPTURBO_FREQ	800000000
+#define AM33XX_ES2_1_OPPNITRO_FREQ	1000000000
+
+static void am335x_opp_update(void)
+{
+	u32 rev;
+	int voltage_uv = 0;
+	struct device *core_dev, *mpu_dev;
+	struct regulator *core_reg;
+
+	core_dev = omap_device_get_by_hwmod_name("l3_main");
+	mpu_dev = omap_device_get_by_hwmod_name("mpu");
+
+	if (!mpu_dev || !core_dev) {
+		pr_err("%s: Aiee.. no mpu/core devices? %p %p\n", __func__,
+		       mpu_dev, core_dev);
+		return;
+	}
+
+	core_reg = regulator_get(core_dev, "vdd_core");
+	if (IS_ERR(core_reg)) {
+		pr_err("%s: unable to get core regulator\n", __func__);
+		return;
+	}
+
+	/*
+	 * Ensure physical regulator is present.
+	 * (e.g. could be dummy regulator.)
+	 */
+	voltage_uv = regulator_get_voltage(core_reg);
+	if (voltage_uv < 0) {
+		pr_err("%s: physical regulator not present for core" \
+		       "(%d)\n", __func__, voltage_uv);
+		regulator_put(core_reg);
+		return;
+	}
+
+	pr_info("%s: core regulator value %d\n", __func__, voltage_uv);
+	if (voltage_uv > 0) {
+		rev = omap_rev();
+		switch (rev) {
+		case AM335X_REV_ES1_0:
+			if (voltage_uv <= AM33XX_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev, AM33XX_OPP120_FREQ);
+				opp_disable(mpu_dev, AM33XX_OPPTURBO_FREQ);
+			}
+			break;
+		case AM335X_REV_ES2_0:
+			if (voltage_uv <= AM33XX_ES2_0_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPP120_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPPTURBO_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_0_OPPNITRO_FREQ);
+			}
+			break;
+		case AM335X_REV_ES2_1:
+		/* FALLTHROUGH */
+		default:
+			if (voltage_uv <= AM33XX_ES2_1_VDD_CORE_OPP50_UV) {
+				/*
+				 * disable the higher freqs - we dont care about
+				 * the results
+				 */
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPP120_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPPTURBO_FREQ);
+				opp_disable(mpu_dev,
+					    AM33XX_ES2_1_OPPNITRO_FREQ);
+			}
+			break;
+		}
+	}
+}
+
+static char tps65910_core_vg_scale_sleep_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x1f, /* Set VDD2 to 0.95V */
+	0x0,
+};
+
+static char tps65910_core_vg_scale_wake_seq[] = {
+	0x64, 0x00,             /* i2c freq in khz */
+	0x02, 0x2d, 0x25, 0x2b, /* Set VDD2 to 1.1V */
+	0x0,
+};
+
 static void pmic_init(int boardid)
 {
 	pr_info("piA335x: %s: %d\n", __func__, boardid);
@@ -2434,6 +2546,12 @@ static void pmic_init(int boardid)
 		case PIA335_PM:
 			pia335x_tps65910_info.irq =
 					OMAP_GPIO_IRQ(PM_GPIO_PMIC_INT);
+			break;
+		case PIA335_LOKISA_EM:
+			pia335x_tps65910_info.gpio_base = OMAP_MAX_GPIO_LINES;
+			pia335x_tps65910_info.irq = 0;
+			pia335x_tps65910_info.irq_base = 0;
+
 			break;
 		default:
 			break;
@@ -2574,12 +2692,21 @@ static void em_setup(void)
 		pia335x_main_id.rev);
 
 	setup_pin_mux(pm_board_pin_mux);
+	pmic_init(pia335x_main_id.id);
 	i2c1_init(pia335x_main_id.id);
 	mmc_init(pia335x_main_id.id);
 	ethernet_init(pia335x_exp_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
+
+	pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
+		ARRAY_SIZE(pm_i2c1_boardinfo));
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
@@ -2673,6 +2800,8 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 	 * we need to make sure, not to run pm_setup() in a configuration
 	 * with an EEPROM on I2C1 @0x50 */
 	pm_setup_done = 1;
+
+	am335x_opp_update();
 
 	return;
 

@@ -27,5 +27,8 @@
 #ifndef __ASSEMBLER__
 int am335x_pia_get_id(void);
 
+void am33xx_core_vg_scale_i2c_seq_fillup(char *sleep_seq, size_t ssz,
+					 char *wake_seq, size_t wsz);
+
 #endif
 #endif
