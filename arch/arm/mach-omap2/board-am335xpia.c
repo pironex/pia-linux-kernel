@@ -1880,6 +1880,11 @@ static struct pinmux_config can0_pin_mux[] = {
 	{"uart1_rtsn.d_can0_rx", AM33XX_PIN_INPUT_PULLUP},
 	{NULL, 0},
 };
+static struct pinmux_config can1_pin_mux[] = {
+	{"uart0_ctsn.d_can1_tx", AM33XX_PULL_ENBL},
+	{"uart0_rtsn.d_can1_rx", AM33XX_PIN_INPUT_PULLUP},
+	{NULL, 0},
+};
 /* E2 CAN 1 */
 static struct pinmux_config km_e2_can1_pin_mux[] = {
 	{"uart1_rxd.d_can1_tx", AM33XX_PULL_ENBL},
@@ -1910,6 +1915,12 @@ static void can_init(int boardid )
 	case PIA335_BB_EBTFT:
 		setup_pin_mux(ebtft_can0_pin_mux);
 		am33xx_d_can_init(0);
+	case PIA335_LOKISA_EM:
+		setup_pin_mux(can0_pin_mux);
+		am33xx_d_can_init(0);
+		setup_pin_mux(can1_pin_mux);
+		am33xx_d_can_init(1);
+		break;
 	default:
 		break;
 	}
@@ -2693,6 +2704,7 @@ static void em_setup(void)
 	i2c1_init(pia335x_main_id.id);
 	mmc_init(pia335x_main_id.id);
 	ethernet_init(pia335x_exp_id.id);
+	can_init(pia335x_main_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:05", "0:00");
