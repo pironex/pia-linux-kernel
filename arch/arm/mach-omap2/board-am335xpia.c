@@ -2375,6 +2375,32 @@ static void ecap_init(int boardid)
 	}
 }
 
+#include <linux/platform_data/ti_adc.h>
+static struct adc_data em_adc_data = {
+	.adc_channels = 8,
+};
+static struct mfd_tscadc_board em_tscadc = {
+	.tsc_init = NULL,
+	.adc_init = &em_adc_data,
+};
+static void em_dac_init(int boardid)
+{
+	int err = 0;
+	pr_info("piA335x: %s\n", __func__);
+
+	switch (boardid) {
+	case PIA335_LOKISA_EM:
+		err = am33xx_register_mfd_tscadc(&em_tscadc);
+
+		break;
+	default:
+		break;
+	}
+
+	if (err)
+		pr_warn("piA3335x: failed to initialize TI-ADC\n");
+}
+
 static struct regulator_init_data pia335x_tps_dummy = {
 	.constraints.always_on	= true,
 };
@@ -2706,6 +2732,7 @@ static void em_setup(void)
 	ethernet_init(pia335x_exp_id.id);
 	can_init(pia335x_main_id.id);
 
+	em_dac_init(pia335x_main_id.id);
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:05", "0:00");
 
