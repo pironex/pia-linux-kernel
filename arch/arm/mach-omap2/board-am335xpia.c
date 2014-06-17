@@ -1097,17 +1097,19 @@ static struct pinmux_config mii1_pin_mux[] = {
 	{ "mii1_rxd0.mii1_rxd0",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mdio_data.mdio_data",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mdio_clk.mdio_clk",		AM33XX_PIN_INPUT_PULLUP },
-	{NULL, 0},
+	{ NULL, 0 },
 };
 /* optional signals used on EBTFT */
 static struct pinmux_config ebtft_mii2_opt_pin_mux[] = {
 	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_wpn.mii2_rxerr", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_ben1.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
+	{ NULL, 0 },
 };
 static struct pinmux_config em_mii2_opt_pin_mux[] = {
 	{ "gpmc_wait0.mii2_crs", AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_ben1.mii2_col", AM33XX_PIN_INPUT_PULLDOWN },
+	{ NULL, 0 },
 };
 /* E2 Ethernet MII2 + MDIO */
 static struct pinmux_config mii2_base_pin_mux[] = {
@@ -2868,15 +2870,16 @@ static void em_setup(void)
 	pmic_init(pia335x_main_id.id);
 	i2c1_init(pia335x_main_id.id);
 
-	mmc_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
 
-	ethernet_init(pia335x_exp_id.id);
+	ethernet_init(pia335x_main_id.id);
 	can_init(pia335x_main_id.id);
 
+	mmc_init(pia335x_main_id.id);
 	em_dac_init(pia335x_main_id.id);
+
 	/* connected to slave 1, slave 0 is not active */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:05", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 
 	/* setup sleep/wake sequence for core voltage scalling */
 	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
