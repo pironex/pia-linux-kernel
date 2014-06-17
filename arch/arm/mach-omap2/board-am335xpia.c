@@ -1659,7 +1659,7 @@ static void em_disp_leds_init(unsigned gpio)
 	led = &em_disp_leds[0];
 	led->gpio = gpio + i;
 	led->name = em_xra1200_names[0];
-	led->default_trigger = "heartbeat";
+	led->default_state = LEDS_GPIO_DEFSTATE_ON;
 
 	i = 1;
 	led = &em_disp_leds[1];
