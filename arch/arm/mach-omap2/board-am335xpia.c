@@ -789,6 +789,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	/* Smartcard Controller */
 	{ "lcd_vsync.gpio2_22",		AM33XX_PIN_OUTPUT },
 	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_OUTPUT },
+	/* PMIC */
+	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -1745,6 +1747,8 @@ static void i2c1_init(int boardid)
 				ARRAY_SIZE(pm_i2c1_boardinfo));
 		break;
 	case PIA335_LOKISA_EM:
+		pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
+				ARRAY_SIZE(pm_i2c1_boardinfo));
 		/* only PMIC and EEPROM on first bus */
 		pia335x_register_i2c_devices(2, em_i2c2_boardinfo,
 				ARRAY_SIZE(em_i2c2_boardinfo));
@@ -2724,8 +2728,8 @@ static void pmic_init(int boardid)
 					OMAP_GPIO_IRQ(PM_GPIO_PMIC_INT);
 			break;
 		case PIA335_LOKISA_EM:
-			pia335x_tps65910_info.gpio_base = OMAP_MAX_GPIO_LINES;
-			pia335x_tps65910_info.irq = 0;
+			pia335x_tps65910_info.irq = OMAP_GPIO_IRQ(PM_GPIO_PMIC_INT);
+			//pia335x_tps65910_info.irq_base = 0;
 			pia335x_tps65910_info.irq_base = 0;
 
 			break;
@@ -2887,9 +2891,6 @@ static void em_setup(void)
 				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
 				tps65910_core_vg_scale_wake_seq,
 				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
-
-	pia335x_register_i2c_devices(1, pm_i2c1_boardinfo,
-		ARRAY_SIZE(pm_i2c1_boardinfo));
 }
 
 static void expansion_setup(struct memory_accessor *mem_acc, void *context)
