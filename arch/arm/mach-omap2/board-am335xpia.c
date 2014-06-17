@@ -779,6 +779,7 @@ static struct gpio ebtft_gpios[] = {
 };
 
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
+#define EM_GPIO_DISP_RSTB	GPIO_TO_PIN(0, 28)
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
@@ -793,11 +794,14 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
 	/* IO Expander */
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
+	/* Display (low active) */
+	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_OUTPUT },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
 	{ EM_GPIO_SC_RESET,	GPIOF_OUT_INIT_LOW,	"sc:reset" },
 	{ EM_GPIO_SC_BOOTLDR,	GPIOF_OUT_INIT_HIGH,	"sc:bootldr" },
+	{ EM_GPIO_DISP_RSTB,	GPIOF_OUT_INIT_HIGH,	"disp:rstb" },
 };
 
 
@@ -2246,6 +2250,25 @@ static struct spi_board_info ebtft_spi_info[] = {
 	},
 };
 
+static struct pinmux_config em_spi_pin_mux[] = {
+	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
+	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
+	/*{"spi0_d1.spi0_d1",	AM33XX_PIN_INPUT_PULLUP },*/
+	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP }, /* Display */
+	{ NULL, 0 },
+};
+
+static struct spi_board_info em_st7586s_info[] __initdata = {
+	{
+		.modalias = "st7586s",
+		.mode = SPI_MODE_3,
+		.bus_num = 1,
+		.chip_select = 1,
+		.max_speed_hz = 10000000,
+		.controller_data = &spi_d0_mosi_cfg,
+	},
+};
+
 static void spi_init(int boardid)
 {
 	pr_info("piA335x: %s: %d\n", __func__, boardid);
@@ -2285,6 +2308,11 @@ static void spi_init(int boardid)
 		/* expansion header - all revisions */
 		spi_register_board_info(km_e2_spi1_1_info,
 				ARRAY_SIZE(km_e2_spi1_1_info));
+		break;
+	case PIA335_LOKISA_EM:
+		setup_pin_mux(em_spi_pin_mux);
+		spi_register_board_info(em_st7586s_info,
+				ARRAY_SIZE(em_st7586s_info));
 		break;
 	case PIA335_KM_MMI:
 	default:
@@ -2884,6 +2912,8 @@ static void em_setup(void)
 
 	mmc_init(pia335x_main_id.id);
 	em_dac_init(pia335x_main_id.id);
+
+	spi_init(pia335x_main_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
