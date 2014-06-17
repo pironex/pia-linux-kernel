@@ -162,7 +162,7 @@ void st7586s_fillrect(struct fb_info* info, const struct fb_fillrect* rect)
   /* Write the data to the framebuffer and SPI at once */
   for (y = rect->dy; y < rect->dy + rect->height; ++y)
   {
-    line = info->screen_base + y * WIDTH + rect->dx;
+    line = (unsigned int*)(info->screen_base + y * WIDTH + rect->dx);
     for (x = 0; x < rect->width >> 2; ++x) line[x] = value;
     spi_write(info->par, line, rect->width);
   }
@@ -220,7 +220,7 @@ void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 
   for (y = 0; y < image->height; ++y)
   {
-    line = info->screen_base + (y + image->dy) * WIDTH + image->dx;
+    line = (unsigned int*)(info->screen_base + (y + image->dy) * WIDTH + image->dx);
     for (x = 0; x < image->width >> 3; ++x)
     {
       byte = image->data[x + y * (image->width >> 3)];
@@ -346,13 +346,13 @@ static struct spi_driver st7586s_driver =
   .remove = st7586s_remove,
 };
 
-static int __init st7586s_init()
+static int __init st7586s_init(void)
 {
   TRACE();
   return spi_register_driver(&st7586s_driver);
 }
 
-static void __exit st7586s_exit()
+static void __exit st7586s_exit(void)
 {
   TRACE();
   spi_unregister_driver(&st7586s_driver);
