@@ -779,7 +779,11 @@ static struct gpio ebtft_gpios[] = {
 };
 
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
+#define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
 #define EM_GPIO_DISP_RSTB	GPIO_TO_PIN(0, 28)
+#define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
+#define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
+#define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
@@ -796,14 +800,22 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
 	/* Display (low active) */
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_OUTPUT },
+	/* RS485 */
+	{ "gpmc_ad10.gpio0_26",		AM33XX_PIN_OUTPUT },
+	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_OUTPUT },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
 	{ EM_GPIO_SC_RESET,	GPIOF_OUT_INIT_LOW,	"sc:reset" },
 	{ EM_GPIO_SC_BOOTLDR,	GPIOF_OUT_INIT_HIGH,	"sc:bootldr" },
 	{ EM_GPIO_DISP_RSTB,	GPIOF_OUT_INIT_HIGH,	"disp:rstb" },
+	{ EM_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
+	{ EM_GPIO_RS485_DE2,	GPIOF_OUT_INIT_LOW,	"rs485:de2" },
+	{ EM_GPIO_RS485_DE3,	GPIOF_OUT_INIT_LOW,	"rs485:de3" },
+	{ EM_GPIO_RS485_DE4,	GPIOF_OUT_INIT_LOW,	"rs485:de4" },
 };
-
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 static void pia_print_gpio_state(const char *msg, int gpio, int on)
