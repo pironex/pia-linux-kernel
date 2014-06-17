@@ -129,6 +129,40 @@ static int __init pia35x_gsm_init(void)
 	return 0;
 }
 
+/** ST7586S **/
+#if defined(CONFIG_FB_ST7586S) || \
+		defined(CONFIG_FB_ST7586S_MODULE)
+
+static struct omap2_mcspi_device_config st7586s_mcspi_config = {
+	.turbo_mode	= 0,
+	.single_channel	= 1,
+};
+
+static struct spi_board_info pia_st7586s_info[] __initdata = {
+	[0] = {
+		.modalias = "st7586s",
+		.mode = SPI_MODE_3,
+		.bus_num = 1,
+		.chip_select = 0,
+		.max_speed_hz = 100000000,
+		.controller_data = &st7586s_mcspi_config,
+	},
+};
+
+static int __init pia35x_st7586s_init(void)
+{
+	pr_info("pia35x: enabling st7586s\n");
+
+	spi_register_board_info(pia_st7586s_info,
+			ARRAY_SIZE(pia_st7586s_info));
+
+	return 0;
+}
+
+#else
+static int __init pia35x_st7586s_init(void) { return 0; }
+#endif
+
 /** piA-LCD **/
 #define GPIO_LCD_DISP		99
 #define GPIO_LCD_BACKLIGHT 101
@@ -1334,7 +1368,7 @@ static void __init pia35x_ems_io_init(int revision) {
 			ARRAY_SIZE(pia35x_ems_io_i2c_info));
 }
 #else
-static inline void __init pia35x_ems_io_init(void) {
+static inline void __init pia35x_ems_io_init(int revision) {
 	pr_err("pia35x: piA-EMS_IO driver PCA9672|MCP2515|MAX3140 missing\n");
 }
 #endif
@@ -2312,6 +2346,26 @@ static int __init lcdboard_setup(char *str)
 	return 0;
 }
 
+static int re_gpio_pin(int number, const char* desc)
+{
+  int res = gpio_request_one(number, GPIOF_IN, desc);
+  if (res) return res;
+
+  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP);
+  gpio_export(number, false);
+  return res;
+}
+
+static int re_gpio_pin_out(int number, const char* desc)
+{
+  int res = gpio_request_one(number, GPIOF_OUT_INIT_LOW, desc);
+  if (res) return res;
+
+  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+  gpio_export(number, false);
+  return res;
+}
+
 static void __init pia35x_init(void)
 {
 	int ret;
@@ -2335,6 +2389,17 @@ static void __init pia35x_init(void)
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
 
+  // TODO: Relocate somewhere
+  if (re_gpio_pin(13, "kbd.but1")
+    || re_gpio_pin(12, "kbd.but2")
+    || re_gpio_pin(18, "kbd.but3")
+    || re_gpio_pin(21, "kbd.but4")
+    || re_gpio_pin(17, "kbd.but5")
+    || re_gpio_pin_out(16, "kbd.test"))
+  {
+    pr_err("pia35x: Failed to initialize one of push buttons");
+  }
+
 	pia35x_i2c_init();
 	omap_display_init(&pia35x_dss_data);
 	pia35x_serial_init();
@@ -2342,6 +2407,7 @@ static void __init pia35x_init(void)
 	pia35x_status_led_init();
 
 	pia35x_display_init();
+	pia35x_st7586s_init();
 
 	pia35x_flash_init();
 	pia35x_musb_init();
