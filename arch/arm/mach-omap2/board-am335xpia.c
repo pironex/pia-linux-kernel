@@ -791,6 +791,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_OUTPUT },
 	/* PMIC */
 	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
+	/* IO Expander */
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -1700,8 +1702,8 @@ static int em_xra1200_teardown(struct i2c_client *client,
 }
 static struct pca953x_platform_data em_xra1200_data = {
 	/* FUTURE gpio and irq bases are not well defined on AM33xx */
-	.gpio_base	= OMAP_MAX_GPIO_LINES + 8, /* some room for TPS */
-	.irq_base	= TWL4030_IRQ_BASE + 8,
+	.gpio_base	= OMAP_MAX_GPIO_LINES + TPS65910_NUM_GPIO, /* some room for TPS */
+	.irq_base	= TWL4030_IRQ_BASE + TPS65910_NUM_IRQ,
 	.names		= em_xra1200_names,
 	.setup		= em_xra1200_setup,
 	.teardown	= em_xra1200_teardown,
