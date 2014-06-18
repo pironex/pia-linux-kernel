@@ -779,11 +779,14 @@ static struct gpio ebtft_gpios[] = {
 };
 
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
+#define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
 #define EM_GPIO_DISP_RSTB	GPIO_TO_PIN(0, 28)
 #define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
 #define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
 #define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
+#define EM_GPIO_WLAN_IRQ	GPIO_TO_PIN(2,  7)
+#define EM_GPIO_BT_EN		GPIO_TO_PIN(2,  8)
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
@@ -1196,6 +1199,13 @@ static struct pinmux_config pm_mmc1_pin_mux[] = {
 	{ NULL, 0 },
 };
 
+static struct pinmux_config em_mmc2_pin_mux[] = {
+	/* WLAN/BT GPIOs */
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
+	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
+	{ NULL, 0 },
+};
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
@@ -1300,6 +1310,7 @@ static void __init mmc_init(int boardid)
 		pia335x_mmc[1].ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34;
 		pia335x_mmc[1].nonremovable = true;
 		setup_pin_mux(pm_mmc1_pin_mux);
+		setup_pin_mux(em_mmc2_pin_mux);
 		break;
 	default:
 		return;
