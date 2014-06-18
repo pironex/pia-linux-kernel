@@ -1649,7 +1649,12 @@ static const char *em_xra1200_names[] = {
 	"disp:led",
 };
 static struct gpio_led em_disp_leds[] = {
-	[0 ... 2] = {
+	[0] = {
+		.active_low = 0,
+		.gpio = -1,
+		.name = NULL,
+	},
+	[1] = {
 		.active_low = 0,
 		.gpio = -1,
 		.name = NULL,
@@ -1669,6 +1674,11 @@ static struct platform_device em_disp_leds_device = {
 	}
 };
 
+#define EM_GPIO_DISP_LED	7
+static struct gpio em_disp_gpios[] = {
+	{ EM_GPIO_DISP_LED,	GPIOF_OUT_INIT_HIGH,	"disp:led" },
+};
+
 static void em_disp_leds_init(unsigned gpio)
 {
 	int i;
@@ -1685,11 +1695,6 @@ static void em_disp_leds_init(unsigned gpio)
 	led = &em_disp_leds[1];
 	led->gpio = gpio + i;
 	led->name = em_xra1200_names[1];
-
-	i = 2;
-	led = &em_disp_leds[2];
-	led->gpio = gpio + i;
-	led->name = em_xra1200_names[7];
 }
 
 static int em_xra1200_setup(struct i2c_client *client,
@@ -1705,6 +1710,9 @@ static int em_xra1200_setup(struct i2c_client *client,
 	if (ret) {
 		pr_warning("Error during setup of IO-Expander");
 	}
+	em_disp_gpios[0].gpio = gpio + EM_GPIO_DISP_LED;
+	pia335x_gpios_export(em_disp_gpios, 1);
+
 	/* TODO implement keys */
 	return ret;
 }
