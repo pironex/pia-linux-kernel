@@ -163,7 +163,7 @@ static int max517_probe(struct i2c_client *client,
 	}
 	/* override with provided platform data, useful for MAX5362 only */
 	if (pdata) {
-		data->vref_mv = 3300; /* mV */
+		data->vref_mv = pdata->vref_mv; /* mV */
 	}
 
 	err = iio_device_register(indio_dev);
