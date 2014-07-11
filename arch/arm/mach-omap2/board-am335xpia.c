@@ -847,8 +847,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_data11.gpio2_17",	AM33XX_PIN_INPUT_PULLUP },
 	/* GSM */
 	{ "lcd_data0.gpio2_6",		AM33XX_PIN_INPUT_PULLUP },
-	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLUP },
-	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLDOWN },
+	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* EMMC */
 	{ "gpmc_be0n_cle",		AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
@@ -864,8 +864,8 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_S0,		GPIOF_IN,		"s0" },
 	{ EM_GPIO_USB_OSC1,	GPIOF_IN,		"usb:osc1" },
 	{ EM_GPIO_USB_OSC2,	GPIOF_IN,		"usb:osc2" },
-	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_HIGH,	"gsm:emerg_off" },
-	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_HIGH,	"gsm:pwrkey" },
+	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_LOW,	"gsm:emerg_off" },
+	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
 	{ EM_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
 };
 
