@@ -817,6 +817,8 @@ static struct gpio ebtft_gpios[] = {
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
 #define EM_GPIO_FOIL_IRQ	GPIO_TO_PIN(3, 17)
 #define EM_GPIO_S0		GPIO_TO_PIN(1, 29)
+#define EM_GPIO_USB_OSC1	GPIO_TO_PIN(2, 16)
+#define EM_GPIO_USB_OSC2	GPIO_TO_PIN(2, 17)
 static struct pinmux_config em_gpios_pin_mux[] = {
 	/* MMC CD */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
@@ -836,6 +838,9 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_OUTPUT },
 	/* S0 */
 	{ "gpmc_csn0.gpiio1_29",	AM33XX_PIN_INPUT },
+	/* USB OSC */
+	{ "lcd_data10.gpio2_16",	AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data11.gpio2_17",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -847,6 +852,8 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_RS485_DE3,	GPIOF_OUT_INIT_LOW,	"rs485:de3" },
 	{ EM_GPIO_RS485_DE4,	GPIOF_OUT_INIT_HIGH,	"rs485:de4" },
 	{ EM_GPIO_S0,		GPIOF_IN,		"s0" },
+	{ EM_GPIO_USB_OSC1,	GPIOF_IN,		"usb:osc1" },
+	{ EM_GPIO_USB_OSC2,	GPIOF_IN,		"usb:osc2" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
