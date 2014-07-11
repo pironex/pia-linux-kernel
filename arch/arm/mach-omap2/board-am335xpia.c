@@ -816,6 +816,7 @@ static struct gpio ebtft_gpios[] = {
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
 #define EM_GPIO_FOIL_IRQ	GPIO_TO_PIN(3, 17)
+#define EM_GPIO_S0		GPIO_TO_PIN(1, 29)
 static struct pinmux_config em_gpios_pin_mux[] = {
 	/* MMC CD */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
@@ -833,6 +834,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_OUTPUT },
+	/* S0 */
+	{ "gpmc_csn0.gpiio1_29",	AM33XX_PIN_INPUT },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -843,6 +846,7 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_RS485_DE2,	GPIOF_OUT_INIT_LOW,	"rs485:de2" },
 	{ EM_GPIO_RS485_DE3,	GPIOF_OUT_INIT_LOW,	"rs485:de3" },
 	{ EM_GPIO_RS485_DE4,	GPIOF_OUT_INIT_HIGH,	"rs485:de4" },
+	{ EM_GPIO_S0,		GPIOF_IN,		"s0" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
