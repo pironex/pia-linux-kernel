@@ -810,6 +810,7 @@ static struct gpio ebtft_gpios[] = {
 #define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
 #define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
 #define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
+#define EM_GPIO_EMMC_RESET	GPIO_TO_PIN(2,  5)
 #define EM_GPIO_GSM_RI		GPIO_TO_PIN(2,  6)
 #define EM_GPIO_WLAN_IRQ	GPIO_TO_PIN(2,  7)
 #define EM_GPIO_BT_EN		GPIO_TO_PIN(2,  8)
@@ -848,6 +849,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_data0.gpio2_6",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLUP },
+	/* EMMC */
+	{ "gpmc_be0n_cle",		AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
