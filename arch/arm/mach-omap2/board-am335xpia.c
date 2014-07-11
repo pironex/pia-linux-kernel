@@ -810,11 +810,14 @@ static struct gpio ebtft_gpios[] = {
 #define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
 #define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
 #define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
+#define EM_GPIO_GSM_RI		GPIO_TO_PIN(2,  6)
 #define EM_GPIO_WLAN_IRQ	GPIO_TO_PIN(2,  7)
 #define EM_GPIO_BT_EN		GPIO_TO_PIN(2,  8)
 #define EM_GPIO_MMC_CD		GPIO_TO_PIN(2, 12)
 #define EM_GPIO_SC_RESET	GPIO_TO_PIN(2, 22) /* LPC11 reset */
+#define EM_GPIO_GSM_PWRKEY	GPIO_TO_PIN(2, 23)
 #define EM_GPIO_SC_BOOTLDR	GPIO_TO_PIN(2, 24) /* LPC11 boot mode */
+#define EM_GPIO_GSM_EMERG_OFF	GPIO_TO_PIN(2, 25)
 #define EM_GPIO_FOIL_IRQ	GPIO_TO_PIN(3, 17)
 #define EM_GPIO_S0		GPIO_TO_PIN(1, 29)
 #define EM_GPIO_USB_OSC1	GPIO_TO_PIN(2, 16)
@@ -841,6 +844,10 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	/* USB OSC */
 	{ "lcd_data10.gpio2_16",	AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data11.gpio2_17",	AM33XX_PIN_INPUT_PULLUP },
+	/* GSM */
+	{ "lcd_data0.gpio2_6",		AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -854,6 +861,9 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_S0,		GPIOF_IN,		"s0" },
 	{ EM_GPIO_USB_OSC1,	GPIOF_IN,		"usb:osc1" },
 	{ EM_GPIO_USB_OSC2,	GPIOF_IN,		"usb:osc2" },
+	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_HIGH,	"gsm:emerg_off" },
+	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_HIGH,	"gsm:pwrkey" },
+	{ EM_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
