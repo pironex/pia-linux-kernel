@@ -342,6 +342,31 @@ static struct pinmux_config pm_board_pin_mux[] = {
 	{NULL, 0},
 };
 
+static struct pinmux_config em_board_pin_mux[] = {
+	/* I2C1*/
+	{ "mii1_crs.i2c1_sda",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "mii1_rxerr.i2c1_scl",
+			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart0_rxd.uart0_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "uart0_txd.uart0_txd", AM33XX_PIN_OUTPUT },
+	{ "uart1_rxd.uart1_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "uart1_txd.uart1_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_txclk.uart2_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxclk.uart2_txd", AM33XX_PIN_OUTPUT },
+	{ "lcd_data8.uart2_ctsn", AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data9.uart2_rtsn", AM33XX_PIN_OUTPUT },
+	{ "mii1_rxd3.uart3_rxd",  AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_txd2.uart4_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_col.uart5_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxdv.uart5_txd", AM33XX_PIN_OUTPUT },
+	{ "lcd_data14.uart5_ctsn", AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data15.uart5_rtsn", AM33XX_PIN_OUTPUT },
+	{NULL, 0},
+};
+
 static struct pinmux_config clkout1_pin_mux[] = {
 	{"xdma_event_intr0.clkout1", AM33XX_PIN_OUTPUT},
 	{NULL, 0},
@@ -2932,7 +2957,7 @@ static void em_setup(void)
 	pr_info("Lokisa Energy Manager: em_setup rev %d\n",
 		pia335x_main_id.rev);
 
-	setup_pin_mux(pm_board_pin_mux);
+	setup_pin_mux(em_board_pin_mux);
 	pmic_init(pia335x_main_id.id);
 	i2c1_init(pia335x_main_id.id);
 
