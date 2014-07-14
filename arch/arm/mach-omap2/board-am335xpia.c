@@ -841,7 +841,7 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_OUTPUT },
 	/* S0 */
-	{ "gpmc_csn0.gpiio1_29",	AM33XX_PIN_INPUT },
+	{ "gpmc_csn0.gpio1_29",	AM33XX_PIN_INPUT },
 	/* USB OSC */
 	{ "lcd_data10.gpio2_16",	AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data11.gpio2_17",	AM33XX_PIN_INPUT_PULLUP },
@@ -850,7 +850,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* EMMC */
-	{ "gpmc_be0n_cle",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_be0n_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
+	/* TODO WLAN/BT */
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
