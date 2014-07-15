@@ -868,6 +868,10 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_LOW,	"gsm:emerg_off" },
 	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
 	{ EM_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
+	/* TODO this is ignored by the EMMC; on Rev 0.1 this is connected to
+	 * OE of the level shifter for the BT module */
+	{ EM_GPIO_EMMC_RESET,	GPIOF_OUT_INIT_LOW,	"emmc:reset" },
+	/*{ EM_GPIO_BT_EN,	GPIOF_OUT_INIT_HIGH,	"bt:en" },*/
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1358,8 +1362,9 @@ static void wl12xx_init(int boardid)
 
 	if (status < 0)
 		pr_err("Failed to request gpio for bt_enable");
+	gpio_export(wl12xx_data.bt_enable_gpio, false);
 
-	gpio_direction_output(wl12xx_data.bt_enable_gpio, 0);
+	gpio_direction_output(wl12xx_data.bt_enable_gpio, 1);
 
 
 	if (wl12xx_set_platform_data(&wl12xx_data))
