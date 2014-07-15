@@ -1250,10 +1250,17 @@ static struct pinmux_config pm_mmc1_pin_mux[] = {
 };
 
 static struct pinmux_config em_mmc2_pin_mux[] = {
-	/* WLAN/BT GPIOs */
+	/* WLAN/BT */
 	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
 	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
+	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_ad12.mmc2_dat0",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad13.mmc2_dat1",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad14.mmc2_dat2",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad15.mmc2_dat3",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_csn3.mmc2_cmd",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
@@ -1273,6 +1280,37 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	},
 	{}      /* Terminator */
 };
+
+/* WL12xx */
+#include <linux/wl12xx.h>
+static struct wl12xx_platform_data wl12xx_data = {
+	.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ),
+	.board_ref_clock = WL12XX_REFCLOCK_38_XTAL, /* 38.4Mhz */
+	.bt_enable_gpio = EM_GPIO_BT_EN,
+	.wlan_enable_gpio = EM_GPIO_WLAN_EN,
+};
+
+static void wl12xx_prepare(int boardid)
+{
+	int idx = 2; /* pia335x_mmc array index */
+
+	switch (boardid) {
+	case PIA335_LOKISA_EM:
+		idx = 2;
+		setup_pin_mux(em_mmc2_pin_mux);
+		pia335x_mmc[idx].mmc            = 3;
+		pia335x_mmc[idx].name = "wl1271";
+		break;
+	default:
+		return;
+	}
+	/* WL12xx */
+	pia335x_mmc[idx].caps = MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD;
+	pia335x_mmc[idx].gpio_cd = -EINVAL;
+	pia335x_mmc[idx].gpio_wp = -EINVAL;
+	pia335x_mmc[idx].ocr_mask = MMC_VDD_32_33 | MMC_VDD_33_34;
+	pia335x_mmc[idx].nonremovable = true;
+}
 
 static int ebtft_mmc0_cd(struct device *dev, int slot)
 {
@@ -1295,6 +1333,61 @@ static int ebtft_mmccd_init(struct device *dev)
 		pdata->slots[0].card_detect = ebtft_mmc0_cd;
 
 	return ret;
+}
+
+static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)
+{
+	if (on) {
+		gpio_direction_output(wl12xx_data.wlan_enable_gpio, 1);
+		mdelay(70);
+	} else {
+		gpio_direction_output(wl12xx_data.wlan_enable_gpio, 0);
+	}
+
+	return 0;
+}
+
+static void wl12xx_init(int boardid)
+{
+	struct device *dev;
+	struct omap_mmc_platform_data *pdata;
+	int ret;
+
+	int status = gpio_request(wl12xx_data.bt_enable_gpio, "bt_en\n");
+	pr_info("piA335x: %s\n", __func__);
+
+	if (status < 0)
+		pr_err("Failed to request gpio for bt_enable");
+
+	gpio_direction_output(wl12xx_data.bt_enable_gpio, 0);
+
+
+	if (wl12xx_set_platform_data(&wl12xx_data))
+		pr_err("error setting wl12xx data\n");
+
+	dev = pia335x_mmc[2].dev;
+	if (!dev) {
+		pr_err("wl12xx mmc device initialization failed\n");
+		goto out;
+	}
+
+	pdata = dev->platform_data;
+	if (!pdata) {
+		pr_err("Platfrom data of wl12xx device not set\n");
+		goto out;
+	}
+
+	ret = gpio_request_one(wl12xx_data.wlan_enable_gpio,
+		GPIOF_OUT_INIT_LOW, "wlan_en");
+	if (ret) {
+		pr_err("Error requesting wlan enable gpio: %d\n", ret);
+		goto out;
+	}
+
+
+	pdata->slots[0].set_power = wl12xx_set_power;
+out:
+	return;
 }
 
 static __init void mmc_extra_init(struct device *dev,
@@ -1369,7 +1462,7 @@ static void __init mmc_init(int boardid)
 	setup_pin_mux(mux);
 	omap2_hsmmc_init(pia335x_mmc);
 	for (slot = pia335x_mmc; slot->mmc; slot++)
-		mmc_extra_init(slot->dev, &pia335x_exp_id);
+		mmc_extra_init(slot->dev, boardid);
 
 	return;
 }
