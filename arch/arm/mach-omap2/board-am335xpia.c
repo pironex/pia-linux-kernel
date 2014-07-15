@@ -3097,7 +3097,7 @@ static void em_setup(void)
 	spi_init(pia335x_main_id.id);
 
 	/* connected to slave 1, slave 0 is not active */
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:1e", "0:05");
 
 	/* setup sleep/wake sequence for core voltage scalling */
 	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
