@@ -1391,20 +1391,27 @@ out:
 }
 
 static __init void mmc_extra_init(struct device *dev,
-		struct pia335x_board_id *id)
+		int id)
 {
+	/* extra init for MMC slot run after omap2_hsmmc_init */
 	struct omap_mmc_platform_data *pd;
+	struct platform_device *pdev =
+		container_of(dev, struct platform_device, dev);
 
-	if (!dev || !id)
+	if (!dev || !pdev)
 		return;
 
-	switch (id->id) {
+	switch (id) {
 	case PIA335_BB_EBTFT:
-		if (id->rev == 1) {
+		if (pia335x_exp_id.rev == 1) {
 			pd = dev->platform_data;
 			pd->init = ebtft_mmccd_init;
 		}
 		break;
+	case PIA335_LOKISA_EM:
+		/* setup WL12xx module*/
+		if (pdev->id == 2) /* 3rd slot, mmc2 */
+			wl12xx_init(id);
 	default:
 		break;
 	}
@@ -1453,7 +1460,7 @@ static void __init mmc_init(int boardid)
 		pia335x_mmc[1].ocr_mask       = MMC_VDD_32_33 | MMC_VDD_33_34;
 		pia335x_mmc[1].nonremovable = true;
 		setup_pin_mux(pm_mmc1_pin_mux);
-		setup_pin_mux(em_mmc2_pin_mux);
+		wl12xx_prepare(boardid);
 		break;
 	default:
 		return;
