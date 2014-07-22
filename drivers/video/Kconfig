@@ -2238,6 +2238,13 @@ config FB_DA8XX
 	  found on DA8xx/OMAP-L1xx SoCs.
 	  If unsure, say N.
 
+config FB_ST7586S
+	tristate "ST7586S Framebuffer support"
+	depends on FB
+	select FB_DEFERRED_IO
+	---help---
+	  This is the frame buffer device driver for the ST7586S LCD controller
+
 config FB_VIRTUAL
 	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
 	depends on FB
