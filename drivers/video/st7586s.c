@@ -81,7 +81,7 @@ static int st7586s_configure(struct spi_device* spi)
 		/* Sleep out mode         */
 		0b000010001,
 		/* Set VOP                */
-		0b011000000, 0b100001100, 0b100000001,
+		0b011000000, 0b111111111, 0b100000000,
 		/* BIAS system            */
 		0b011000011, 0b100000011,
 		/* Display mode gray      */
