@@ -221,7 +221,7 @@ static void pia335x_parse_eeprom(struct pia335x_board_id *id)
 
 	for (; i < ARRAY_SIZE(pia335x_boards); ++i) {
 		it = &pia335x_boards[i];
-		if (0 != strncmp(eeprom->name, it->name, 8))
+		if (0 != strncmp(it->name, eeprom->name, 8))
 			continue;
 		id->id = it->id;
 		id->rev = pia335x_parse_rev(eeprom->version, it->rev);
