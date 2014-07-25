@@ -804,6 +804,20 @@ static struct gpio ebtft_gpios[] = {
 	{ EBTFT_GPIO_LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd:blen" },
 };
 
+/* SK */
+#define SK_GPIO_LED2		GPIO_TO_PIN(3, 17)
+#define SK_GPIO_LED3		GPIO_TO_PIN(3, 18)
+#define SK_GPIO_MMC_CD		GPIO_TO_PIN(3, 20)
+static struct pinmux_config sk_gpios_pin_mux[] = {
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_aclkr.gpio3_18",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
+static struct gpio sk_gpios[] = {
+
+};
+
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
@@ -950,6 +964,11 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = ebtft_gpios_pin_mux;
 		gpiocfg = ebtft_gpios;
 		sz = ARRAY_SIZE(ebtft_gpios);
+		break;
+	case PIA335_BB_SK:
+		muxcfg = sk_gpios_pin_mux;
+		gpiocfg = sk_gpios;
+		sz = ARRAY_SIZE(sk_gpios);
 		break;
 	case PIA335_LOKISA_EM:
 		muxcfg = em_gpios_pin_mux;
@@ -1653,7 +1672,30 @@ static struct gpio_led_platform_data ebtft_led_info = {
 	.num_leds	= ARRAY_SIZE(ebtft_gpio_leds),
 };
 
-static struct platform_device ebtft_leds = {
+static struct gpio_led sk_gpio_leds[] = {
+	{
+		.name			= "led:PM:usr1",
+		.gpio			= PM_GPIO_LED1,	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "led:SK:usr1",
+		.gpio			= SK_GPIO_LED2,
+		.default_trigger	= "mmc0",
+	},
+	{
+		.name			= "led:SK:usr2",
+		.gpio			= SK_GPIO_LED3,
+		.default_trigger	= "default-on",
+	},
+};
+
+static struct gpio_led_platform_data sk_led_info = {
+	.leds		= sk_gpio_leds,
+	.num_leds	= ARRAY_SIZE(ebtft_gpio_leds),
+};
+
+static struct platform_device pia335x_leds = {
 	.name	= "leds-gpio",
 	.id	= -1,
 	.dev	= {
@@ -1674,7 +1716,11 @@ static void leds_init(int boardid)
 		case PIA335_KM_E2:
 			break;
 		case PIA335_BB_EBTFT:
-			err = platform_device_register(&ebtft_leds);
+			err = platform_device_register(&pia335x_leds);
+			break;
+		case PIA335_BB_SK:
+			pia335x_leds.dev.platform_data = &sk_led_info;
+			err = platform_device_register(&pia335x_leds);
 			break;
 		default:
 			break;
@@ -2259,6 +2305,10 @@ static void can_init(int boardid )
 	case PIA335_BB_EBTFT:
 		setup_pin_mux(ebtft_can0_pin_mux);
 		am33xx_d_can_init(0);
+		break;
+	case PIA335_BB_SK:
+		setup_pin_mux(can1_pin_mux);
+		am33xx_d_can_init(1);
 		break;
 	case PIA335_LOKISA_EM:
 		setup_pin_mux(can0_pin_mux);
@@ -3092,9 +3142,16 @@ static void ebtft_setup(void)
 static void sk_setup(void)
 {
 	pr_info("piA-AM335x-StarterKit: sk_setup rev %d\n", pia335x_exp_id.rev);
+	pia335x_gpios_init(pia335x_exp_id.id); /* TODO */
+	leds_init(pia335x_exp_id.id);
+
 	mmc_init(pia335x_exp_id.id);
 	ethernet_init(pia335x_exp_id.id);
+	can_init(pia335x_exp_id.id);
+
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	usb_init(pia335x_exp_id.id);
+
 	spi_init(pia335x_main_id.id);
 	spi_init(pia335x_exp_id.id);
 }
