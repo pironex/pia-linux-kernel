@@ -124,6 +124,7 @@ static struct pia335x_board_id pia335x_boards[] = {
 	{ "PIA335PM", PIA335_PM,	0, 0},
 	{ "PIA335EM", PIA335_LOKISA_EM, 0, 0},
 	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
+	{ "P335BSK",  PIA335_BB_SK,	0, 1},
 	{ "LCDKMMMI", PIA335_LCD_KM_MMI,0, 2},
 };
 
@@ -1142,6 +1143,7 @@ static void usb_init(int boardid)
 	pr_info("piA335x: %s\n", __func__);
 	switch (boardid) {
 	case PIA335_BB_EBTFT:
+	case PIA335_BB_SK:
 		setup_pin_mux(usb1_pin_mux);
 		/* fall-trough for USB0 */
 	case PIA335_KM_E2:
@@ -1212,6 +1214,7 @@ static void ethernet_init(int boardid)
 	pr_info("piA335x: %s\n", __func__);
 	switch (boardid) {
 	case PIA335_BB_EBTFT:
+	case PIA335_BB_SK:
 		setup_pin_mux(mii2_base_pin_mux);
 		setup_pin_mux(ebtft_mii2_opt_pin_mux);
 		break;
@@ -1408,6 +1411,7 @@ static __init void mmc_extra_init(struct device *dev,
 
 	switch (id) {
 	case PIA335_BB_EBTFT:
+	case PIA335_BB_SK:
 		if (pia335x_exp_id.rev == 1) {
 			pd = dev->platform_data;
 			pd->init = ebtft_mmccd_init;
@@ -1455,6 +1459,9 @@ static void __init mmc_init(int boardid)
 		/* don't do anything here, wait for the expansion board setup */
 		/* fall trough to return */
 		return;
+	case PIA335_BB_SK:
+		pia335x_mmc[0].gpio_cd = SK_GPIO_MMC_CD;
+		break;
 	case PIA335_LOKISA_EM:
 		pia335x_mmc[0].gpio_cd = EM_GPIO_MMC_CD;
 		// identical to PM
@@ -3077,7 +3084,17 @@ static void ebtft_setup(void)
 	/* connected to slave 1, slave 0 is not active */
 	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 	usb_init(pia335x_exp_id.id);
-	// REVISIT there is some strange deadlock when called before mmc_init
+
+	spi_init(pia335x_main_id.id);
+	spi_init(pia335x_exp_id.id);
+}
+
+static void sk_setup(void)
+{
+	pr_info("piA-AM335x-StarterKit: sk_setup rev %d\n", pia335x_exp_id.rev);
+	mmc_init(pia335x_exp_id.id);
+	ethernet_init(pia335x_exp_id.id);
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
 	spi_init(pia335x_main_id.id);
 	spi_init(pia335x_exp_id.id);
 }
@@ -3146,6 +3163,9 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 	switch (pia335x_exp_id.id) {
 		case PIA335_BB_EBTFT:
 			ebtft_setup();
+			break;
+		case PIA335_BB_SK:
+			sk_setup();
 			break;
 		default:
 			pr_err("PIA335x: Expansion board identification "
