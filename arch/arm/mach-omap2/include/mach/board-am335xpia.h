@@ -23,6 +23,7 @@
 #define PIA335_LOKISA_EM	23
 #define PIA335_BB_EBTFT		30
 #define PIA335_BB_SK		31
+#define PIA335_BB_APC		32
 #define PIA335_LCD_EBTFT	40
 
 #ifndef __ASSEMBLER__

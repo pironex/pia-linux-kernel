@@ -128,6 +128,7 @@ static struct pia335x_board_id pia335x_boards[] = {
 	{ "PIA335EM", PIA335_LOKISA_EM, 0, 0},
 	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
 	{ "P335BSK",  PIA335_BB_SK,	0, 1},
+	{ "P335BAPC", PIA335_BB_APC,	0, 1},
 	{ "LCDKMMMI", PIA335_LCD_KM_MMI,0, 2},
 };
 
@@ -821,6 +822,59 @@ static struct gpio sk_gpios[] = {
 
 };
 
+/* APC */
+#define APC_GPIO_BT_EN		GPIO_TO_PIN(0, 7)
+#define APC_GPIO_WLAN_IRQ	GPIO_TO_PIN(0, 22)
+#define APC_GPIO_IN_FAULT	GPIO_TO_PIN(0, 23)
+#define APC_GPIO_WLAN_EN	GPIO_TO_PIN(0, 27)
+#define APC_GPIO_BAT_PWR	GPIO_TO_PIN(2,  3)
+#define APC_GPIO_GSM_STATUS	GPIO_TO_PIN(3,  3)
+#define APC_GPIO_LED2		GPIO_TO_PIN(3,  4)
+#define APC_GPIO_CAN_TERM1	GPIO_TO_PIN(3, 14)
+#define APC_GPIO_CAN_TERM0	GPIO_TO_PIN(3, 15)
+#define APC_GPIO_RS485_DE1	GPIO_TO_PIN(3, 16)
+#define APC_GPIO_GSM_RI		GPIO_TO_PIN(3, 17)
+#define APC_GPIO_GSM_PWRKEY	GPIO_TO_PIN(3, 18)
+#define APC_GPIO_GSM_DTR	GPIO_TO_PIN(3, 19)
+#define APC_GPIO_GPS_WAKEUP	GPIO_TO_PIN(3, 20)
+static struct pinmux_config apc_gpios_pin_mux[] = {
+	/* IO */
+	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* WLAN/BT */
+	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
+	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* LED */
+	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
+	/* CAN */
+	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_fsx.gpio3_15",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* RS485 */
+	{ "mcasp0_aclkx.gpio3_16",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* GSM */
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_aclkr.gpio3_18",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_fsr.gpio3_19",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_txen.gpio3_3",		AM33XX_PIN_INPUT_PULLDOWN },
+
+	{ NULL, 0 },
+};
+static struct gpio apc_gpios[] = {
+	{ APC_GPIO_IN_FAULT,	GPIOF_IN,		"in_fault" },
+	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_LOW,	"bat_pwr" },
+	{ APC_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
+	{ APC_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
+	{ APC_GPIO_GSM_DTR,	GPIOF_OUT_INIT_HIGH,	"gsm:dtr" },
+	{ APC_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
+	{ APC_GPIO_GSM_STATUS,	GPIOF_IN,		"gsm:status" },
+	{ APC_GPIO_GPS_WAKEUP,	GPIOF_OUT_INIT_LOW,	"gps:wake" },
+	{ APC_GPIO_CAN_TERM0,	GPIOF_OUT_INIT_LOW,	"can:term0" },
+	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
+};
+
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
@@ -972,6 +1026,11 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = sk_gpios_pin_mux;
 		gpiocfg = sk_gpios;
 		sz = ARRAY_SIZE(sk_gpios);
+		break;
+	case PIA335_BB_APC:
+		muxcfg = apc_gpios_pin_mux;
+		gpiocfg = apc_gpios;
+		sz = ARRAY_SIZE(apc_gpios);
 		break;
 	case PIA335_LOKISA_EM:
 		muxcfg = em_gpios_pin_mux;
@@ -3158,6 +3217,23 @@ static void sk_setup(void)
 	spi_init(pia335x_exp_id.id);
 }
 
+static void apc_setup(void)
+{
+	pr_info("piA-AM335x-APC: apc_setup rev %d\n", pia335x_exp_id.rev);
+	pia335x_gpios_init(pia335x_exp_id.id);
+	leds_init(pia335x_exp_id.id);
+
+	mmc_init(pia335x_exp_id.id);
+	ethernet_init(pia335x_exp_id.id);
+	can_init(pia335x_exp_id.id);
+
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	usb_init(pia335x_exp_id.id);
+
+	spi_init(pia335x_main_id.id);
+	spi_init(pia335x_exp_id.id);
+}
+
 static void em_setup(void)
 {
 	pr_info("Lokisa Energy Manager: em_setup rev %d\n",
@@ -3219,12 +3295,17 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 		pm_setup();
 	}
 
+	/* TODO merge the single expansion setup functions here and use
+	 * the optional setup for special case handling */
 	switch (pia335x_exp_id.id) {
 		case PIA335_BB_EBTFT:
 			ebtft_setup();
 			break;
 		case PIA335_BB_SK:
 			sk_setup();
+			break;
+		case PIA335_BB_APC:
+			apc_setup();
 			break;
 		default:
 			pr_err("PIA335x: Expansion board identification "
