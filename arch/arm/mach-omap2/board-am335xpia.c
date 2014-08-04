@@ -1321,6 +1321,7 @@ static void ethernet_init(int boardid)
 		setup_pin_mux(mii2_base_pin_mux);
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		setup_pin_mux(mii2_base_pin_mux);
 		setup_pin_mux(em_mii2_opt_pin_mux);
 		break;
