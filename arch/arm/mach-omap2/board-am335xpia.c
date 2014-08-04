@@ -1310,22 +1310,22 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 /* WL12xx */
 #include <linux/wl12xx.h>
 static struct wl12xx_platform_data wl12xx_data = {
-	.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38_XTAL, /* 38.4Mhz */
-	.bt_enable_gpio = EM_GPIO_BT_EN,
-	.wlan_enable_gpio = EM_GPIO_WLAN_EN,
 };
 
 static void wl12xx_prepare(int boardid)
 {
 	int idx = 2; /* pia335x_mmc array index */
+	pia335x_mmc[idx].mmc = 3;
+	pia335x_mmc[idx].name = "wl1271";
 
 	switch (boardid) {
 	case PIA335_LOKISA_EM:
-		idx = 2;
 		setup_pin_mux(em_mmc2_pin_mux);
-		pia335x_mmc[idx].mmc            = 3;
-		pia335x_mmc[idx].name = "wl1271";
+		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
+		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
+		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
+
 		break;
 	default:
 		return;
@@ -1373,7 +1373,7 @@ static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)
 	return 0;
 }
 
-static void wl12xx_init(int boardid)
+static void wl12xx_init(int devid)
 {
 	struct device *dev;
 	struct omap_mmc_platform_data *pdata;
@@ -1392,7 +1392,7 @@ static void wl12xx_init(int boardid)
 	if (wl12xx_set_platform_data(&wl12xx_data))
 		pr_err("error setting wl12xx data\n");
 
-	dev = pia335x_mmc[2].dev;
+	dev = pia335x_mmc[devid].dev;
 	if (!dev) {
 		pr_err("wl12xx mmc device initialization failed\n");
 		goto out;
@@ -1439,8 +1439,7 @@ static __init void mmc_extra_init(struct device *dev,
 	case PIA335_LOKISA_EM:
 		/* setup WL12xx module*/
 		if (pdev->id == 2) /* 3rd slot, mmc2 */
-			wl12xx_init(id);
-	default:
+			wl12xx_init(pdev->id);
 		break;
 	}
 }
