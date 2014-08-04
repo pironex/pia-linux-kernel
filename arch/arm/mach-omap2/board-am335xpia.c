@@ -1766,10 +1766,26 @@ static struct gpio_led ebtft_gpio_leds[] = {
 		.default_trigger	= "default-on",
 	},
 };
-
 static struct gpio_led_platform_data ebtft_led_info = {
 	.leds		= ebtft_gpio_leds,
 	.num_leds	= ARRAY_SIZE(ebtft_gpio_leds),
+};
+
+static struct gpio_led apc_gpio_leds[] = {
+	{
+		.name			= "led:PM:usr1",
+		.gpio			= PM_GPIO_LED1,	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "led:APC:usr1",
+		.gpio			= APC_GPIO_LED2,
+		.default_trigger	= "default-on",
+	},
+};
+static struct gpio_led_platform_data apc_led_info = {
+	.leds		= apc_gpio_leds,
+	.num_leds	= ARRAY_SIZE(apc_gpio_leds),
 };
 
 static struct gpio_led sk_gpio_leds[] = {
@@ -1822,6 +1838,9 @@ static void leds_init(int boardid)
 			pia335x_leds.dev.platform_data = &sk_led_info;
 			err = platform_device_register(&pia335x_leds);
 			break;
+		case PIA335_BB_APC:
+			pia335x_leds.dev.platform_data = &apc_led_info;
+			err = platform_device_register(&pia335x_leds);
 		default:
 			break;
 	}
