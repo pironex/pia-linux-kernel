@@ -1251,6 +1251,7 @@ static void usb_init(int boardid)
 #endif
 			setup_pin_mux(usb1_pin_mux);
 		}
+	case PIA335_BB_APC:
 	case PIA335_KM_MMI:
 		setup_pin_mux(usb0_pin_mux);
 		break;
