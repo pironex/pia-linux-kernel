@@ -2594,6 +2594,22 @@ static struct spi_board_info ebtft_spi_info[] = {
 	},
 };
 
+static struct pinmux_config apc_spi_pin_mux[] = {
+	/* SPI0 - other signals defined on PM */
+	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+static struct spi_board_info apc_spi_info[] = {
+	{
+		.modalias      = "spidev",
+		.controller_data = &spi_d0_mosi_cfg,
+		.max_speed_hz  = 25000000,
+		.bus_num       = 1,
+		.chip_select   = 1,
+		.irq           = -1, /* spidev doesn't support interrupts */
+	},
+};
+
 static struct pinmux_config em_spi_pin_mux[] = {
 	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
 	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
@@ -2627,6 +2643,11 @@ static void spi_init(int boardid)
 		setup_pin_mux(ebtft_spi_pin_mux);
 		spi_register_board_info(ebtft_spi_info,
 				ARRAY_SIZE(ebtft_spi_info));
+		break;
+	case PIA335_BB_APC:
+		setup_pin_mux(apc_spi_pin_mux);
+		spi_register_board_info(apc_spi_info,
+			ARRAY_SIZE(ebtft_spi_info));
 		break;
 	case PIA335_KM_E2:
 		setup_pin_mux(km_e2_spi_pin_mux);
