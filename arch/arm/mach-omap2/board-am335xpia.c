@@ -1354,12 +1354,7 @@ static struct pinmux_config pm_mmc1_pin_mux[] = {
 	{ NULL, 0 },
 };
 
-static struct pinmux_config em_mmc2_pin_mux[] = {
-	/* WLAN/BT */
-	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
-	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
-	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
-	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+static struct pinmux_config mmc2_base_pin_mux[] = {
 	{ "gpmc_ad12.mmc2_dat0",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_ad13.mmc2_dat1",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_ad14.mmc2_dat2",	AM33XX_PIN_INPUT_PULLUP },
@@ -1368,16 +1363,18 @@ static struct pinmux_config em_mmc2_pin_mux[] = {
 	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
-static struct pinmux_config apc_mmc2_pin_mux[] = {
+static struct pinmux_config em_mmc2_extra_pin_mux[] = {
+	/* WLAN/BT */
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
+	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
+	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+	{ NULL, 0 },
+};
+static struct pinmux_config apc_mmc2_extra_pin_mux[] = {
 	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
 	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_ad12.mmc2_dat0",	AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_ad13.mmc2_dat1",	AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_ad14.mmc2_dat2",	AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_ad15.mmc2_dat3",	AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_csn3.mmc2_cmd",	AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
@@ -1412,14 +1409,16 @@ static void wl12xx_prepare(int boardid)
 
 	switch (boardid) {
 	case PIA335_LOKISA_EM:
-		setup_pin_mux(em_mmc2_pin_mux);
+		setup_pin_mux(mmc2_base_pin_mux);
+		setup_pin_mux(em_mmc2_extra_pin_mux);
 		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
 
 		break;
 	case PIA335_BB_APC:
-		setup_pin_mux(apc_mmc2_pin_mux);
+		setup_pin_mux(mmc2_base_pin_mux);
+		setup_pin_mux(apc_mmc2_extra_pin_mux);
 		wl12xx_data.irq = OMAP_GPIO_IRQ(APC_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = APC_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = APC_GPIO_WLAN_EN;
