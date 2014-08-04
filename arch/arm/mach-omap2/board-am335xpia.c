@@ -95,6 +95,8 @@ static char am335x_mac_addr[2][ETH_ALEN];
 *				   only relevant for MMI
 *				1: 'N' board has NAND
 *				2: 'R' resitive Touch, 'C' capacitive touch
+*				3: RAM: 'K' Kingston, 'H' Hynix, empty Micron
+*				4: EMMC: 'K' Kingston, empty default
 *
 *  Available		60	Available space for other non-volatile data.
 */
@@ -116,6 +118,7 @@ struct pia335x_board_id {
 	int rev;  /* 0: "a.bc" or continuous, 1: reserved */
 	const int type; /* 0: main board/PM, 1: base board/expansion, 2 LCD */
 	struct pia335x_eeprom_config *config;
+	void (*setup)(void); /* TODO implement generic setup + extra setup */
 };
 
 static struct pia335x_board_id pia335x_boards[] = {
@@ -3108,7 +3111,7 @@ static void pm_setup(void)
 
 	pia335x_gpios_init(pia335x_main_id.id);
 
-	// FIXME pia335x_rtc_init();
+	// OMAP RTC should be setup with expansion if needed
 	pm_setup_done = 1;
 }
 
