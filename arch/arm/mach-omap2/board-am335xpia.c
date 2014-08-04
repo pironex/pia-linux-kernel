@@ -840,11 +840,6 @@ static struct gpio sk_gpios[] = {
 static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* IO */
 	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
-	/* WLAN/BT */
-	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
-	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* LED */
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
@@ -1351,6 +1346,18 @@ static struct pinmux_config em_mmc2_pin_mux[] = {
 	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
+static struct pinmux_config apc_mmc2_pin_mux[] = {
+	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
+	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad12.mmc2_dat0",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad13.mmc2_dat1",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad14.mmc2_dat2",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad15.mmc2_dat3",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_csn3.mmc2_cmd",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 	{
 		.mmc            = 1,
@@ -1387,6 +1394,13 @@ static void wl12xx_prepare(int boardid)
 		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
+
+		break;
+	case PIA335_BB_APC:
+		setup_pin_mux(apc_mmc2_pin_mux);
+		wl12xx_data.irq = OMAP_GPIO_IRQ(APC_GPIO_WLAN_IRQ);
+		wl12xx_data.bt_enable_gpio = APC_GPIO_BT_EN;
+		wl12xx_data.wlan_enable_gpio = APC_GPIO_WLAN_EN;
 
 		break;
 	default:
@@ -1479,8 +1493,7 @@ out:
 	return;
 }
 
-static __init void mmc_extra_init(struct device *dev,
-		int id)
+static __init void mmc_extra_init(struct device *dev, int id)
 {
 	/* extra init for MMC slot run after omap2_hsmmc_init */
 	struct omap_mmc_platform_data *pd;
@@ -1499,6 +1512,7 @@ static __init void mmc_extra_init(struct device *dev,
 		}
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		/* setup WL12xx module*/
 		if (pdev->id == 2) /* 3rd slot, mmc2 */
 			wl12xx_init(pdev->id);
@@ -1541,6 +1555,10 @@ static void __init mmc_init(int boardid)
 		return;
 	case PIA335_BB_SK:
 		pia335x_mmc[0].gpio_cd = SK_GPIO_MMC_CD;
+		break;
+	case PIA335_BB_APC:
+		/* uSD and eMMC from PM */
+		wl12xx_prepare(boardid);
 		break;
 	case PIA335_LOKISA_EM:
 		pia335x_mmc[0].gpio_cd = EM_GPIO_MMC_CD;
