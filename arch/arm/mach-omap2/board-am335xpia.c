@@ -2432,6 +2432,7 @@ static void can_init(int boardid )
 		am33xx_d_can_init(1);
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		setup_pin_mux(can0_pin_mux);
 		am33xx_d_can_init(0);
 		setup_pin_mux(can1_pin_mux);
