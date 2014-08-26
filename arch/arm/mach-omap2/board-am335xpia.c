@@ -1477,7 +1477,7 @@ static void wl12xx_init(int devid)
 	struct omap_mmc_platform_data *pdata;
 	int ret;
 
-	int status = gpio_request(wl12xx_data.bt_enable_gpio, "bt_en\n");
+	int status = gpio_request(wl12xx_data.bt_enable_gpio, "bt_en");
 	pr_info("piA335x: %s\n", __func__);
 
 	if (status < 0)
