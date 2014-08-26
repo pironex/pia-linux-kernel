@@ -861,7 +861,7 @@ static struct gpio sk_gpios[] = {
 static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* IO */
 	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLUP },
 	/* LED */
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
 	/* CAN */
@@ -880,7 +880,7 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 };
 static struct gpio apc_gpios[] = {
 	{ APC_GPIO_IN_FAULT,	GPIOF_IN,		"in_fault" },
-	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_LOW,	"bat_pwr" },
+	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_HIGH,	"bat_pwr" },
 	{ APC_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
 	{ APC_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
 	{ APC_GPIO_GSM_DTR,	GPIOF_OUT_INIT_HIGH,	"gsm:dtr" },
