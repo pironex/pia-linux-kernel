@@ -370,7 +370,6 @@ static struct pinmux_config em_board_pin_mux[] = {
 };
 
 static struct pinmux_config apc_board_pin_mux[] = {
-	/* I2C1*/
 	{ "mii1_crs.i2c1_sda",
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
 	{ "mii1_rxerr.i2c1_scl",
@@ -869,7 +868,7 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mcasp0_fsx.gpio3_15",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* RS485 */
-	{ "mcasp0_aclkx.gpio3_16",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_axr0.gpio3_16",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* GSM */
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mcasp0_aclkr.gpio3_18",	AM33XX_PIN_INPUT_PULLDOWN },
