@@ -1780,8 +1780,8 @@ static struct gpio_led apc_gpio_leds[] = {
 	},
 	{
 		.name			= "led:APC:usr1",
-		.gpio			= APC_GPIO_LED2,
-		.default_trigger	= "default-on",
+		.gpio			= APC_GPIO_LED2, /* LED2 */
+		.default_trigger	= "mmc0",
 	},
 };
 static struct gpio_led_platform_data apc_led_info = {
