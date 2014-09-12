@@ -2104,6 +2104,13 @@ struct da8xx_lcdc_platform_data  ebtft_lcd_pdata = {
 	.type                   = "DLC_DLC0430LZG",
 };
 
+struct da8xx_lcdc_platform_data  ebtft_lcd_ptc_pdata = {
+	/* display is a Powertip PH480272T-006-I17Q */
+	.manu_name              = "PTC",
+	.controller_data        = &lcd_cfg,
+	.type                   = "PTC_PH480272T",
+};
+
 static int __init conf_disp_pll(int rate)
 {
 	struct clk *disp_pll;
@@ -2168,6 +2175,12 @@ static void pia335x_lcd_init(int boardid)
 			/* special demo version with KM display */
 			lcdc_pdata = &km_mmi_lcd_pdata;
 			km_mmi_lcd_pdata.panel_power_ctrl =
+					pia335x_lcd_power_ctrl;
+		} else if (exp_config.opt[2] == 'P') {
+			pr_info("piA335x: EBTFT with PTC LCD\n");
+			/* special version with Powertip display */
+			lcdc_pdata = &ebtft_lcd_ptc_pdata;
+			ebtft_lcd_ptc_pdata.panel_power_ctrl =
 					pia335x_lcd_power_ctrl;
 		} else {
 			pr_info("piA335x: EBTFT with normal LCD\n");

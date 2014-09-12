@@ -304,6 +304,20 @@ static struct da8xx_panel known_lcd_panels[] = {
 		.pxl_clk = 9000000,
 		.invert_pxl_clk = 0,
 	},
+	/* Powertip PH480272T-006-I17Q */
+	[5] = {
+		.name = "PTC_PH480272T",
+		.width = 480,
+		.height = 272,
+		.hfp = 11,
+		.hbp = 40,
+		.hsw = 1, /* hcycle 531 */
+		.vfp = 6,
+		.vbp = 10,
+		.vsw = 1, /* vcycle 288 */
+		.pxl_clk = 9000000,
+		.invert_pxl_clk = 0,
+	},
 
 };
 
