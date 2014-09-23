@@ -387,7 +387,7 @@ static struct pinmux_config apc_board_pin_mux[] = {
 	{ "mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_txd2.uart4_txd", AM33XX_PIN_OUTPUT },
 	{ "mii1_col.uart5_rxd", AM33XX_PIN_INPUT_PULLUP },
-	{ "mii1_rxdv.uart5_txd", AM33XX_PIN_OUTPUT },
+	{ "rmii1_refclk.uart5_txd", AM33XX_PIN_OUTPUT },
 	{ "lcd_data14.uart5_ctsn", AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data15.uart5_rtsn", AM33XX_PIN_OUTPUT },
 	{NULL, 0},
