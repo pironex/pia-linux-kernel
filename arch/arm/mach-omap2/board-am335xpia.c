@@ -1527,6 +1527,9 @@ static __init void mmc_extra_init(struct device *dev, int id)
 
 	switch (id) {
 	case PIA335_BB_EBTFT:
+		pd = dev->platform_data;
+		pd->init = ebtft_mmccd_init;
+		break;
 	case PIA335_BB_SK:
 		if (pia335x_exp_id.rev == 1) {
 			pd = dev->platform_data;
