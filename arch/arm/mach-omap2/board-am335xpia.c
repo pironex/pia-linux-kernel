@@ -95,6 +95,8 @@ static char am335x_mac_addr[2][ETH_ALEN];
 *				   only relevant for MMI
 *				1: 'N' board has NAND
 *				2: 'R' resitive Touch, 'C' capacitive touch
+*				3: RAM: 'K' Kingston, 'H' Hynix, empty Micron
+*				4: EMMC: 'K' Kingston, empty default
 *
 *  Available		60	Available space for other non-volatile data.
 */
@@ -116,6 +118,7 @@ struct pia335x_board_id {
 	int rev;  /* 0: "a.bc" or continuous, 1: reserved */
 	const int type; /* 0: main board/PM, 1: base board/expansion, 2 LCD */
 	struct pia335x_eeprom_config *config;
+	void (*setup)(void); /* TODO implement generic setup + extra setup */
 };
 
 static struct pia335x_board_id pia335x_boards[] = {
@@ -125,6 +128,7 @@ static struct pia335x_board_id pia335x_boards[] = {
 	{ "PIA335EM", PIA335_LOKISA_EM, 0, 0},
 	{ "P335BEBT", PIA335_BB_EBTFT,	0, 1},
 	{ "P335BSK",  PIA335_BB_SK,	0, 1},
+	{ "P335BAPC", PIA335_BB_APC,	0, 1},
 	{ "LCDKMMMI", PIA335_LCD_KM_MMI,0, 2},
 };
 
@@ -340,11 +344,32 @@ static struct pinmux_config pm_board_pin_mux[] = {
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
 	{ "mii1_rxerr.i2c1_scl",
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart0_rxd.uart0_rxd",
+		AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
+	{ "uart0_txd.uart0_txd",
+		AM33XX_PIN_OUTPUT | AM33XX_SLEWCTRL_SLOW },
 	{NULL, 0},
 };
 
 static struct pinmux_config em_board_pin_mux[] = {
-	/* I2C1*/
+	{ "uart1_rxd.uart1_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "uart1_txd.uart1_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_txclk.uart2_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxclk.uart2_txd", AM33XX_PIN_OUTPUT },
+	{ "lcd_data8.uart2_ctsn", AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data9.uart2_rtsn", AM33XX_PIN_OUTPUT },
+	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT },
+	{ "lcd_data10.uart3_ctsn", AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data11.uart3_rtsn", AM33XX_PIN_OUTPUT },
+	{ "mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "mii1_rxd3.uart4_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_col.uart5_rxd", AM33XX_PIN_INPUT_PULLUP },
+	{ "rmii1_refclk.uart5_txd", AM33XX_PIN_OUTPUT },
+	{NULL, 0},
+};
+
+static struct pinmux_config apc_board_pin_mux[] = {
 	{ "mii1_crs.i2c1_sda",
 			AM33XX_PIN_INPUT_PULLUP | AM33XX_SLEWCTRL_SLOW },
 	{ "mii1_rxerr.i2c1_scl",
@@ -362,7 +387,7 @@ static struct pinmux_config em_board_pin_mux[] = {
 	{ "mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_txd2.uart4_txd", AM33XX_PIN_OUTPUT },
 	{ "mii1_col.uart5_rxd", AM33XX_PIN_INPUT_PULLUP },
-	{ "mii1_rxdv.uart5_txd", AM33XX_PIN_OUTPUT },
+	{ "rmii1_refclk.uart5_txd", AM33XX_PIN_OUTPUT },
 	{ "lcd_data14.uart5_ctsn", AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data15.uart5_rtsn", AM33XX_PIN_OUTPUT },
 	{NULL, 0},
@@ -818,6 +843,54 @@ static struct gpio sk_gpios[] = {
 
 };
 
+/* APC */
+#define APC_GPIO_BT_EN		GPIO_TO_PIN(0, 7)
+#define APC_GPIO_WLAN_IRQ	GPIO_TO_PIN(0, 22)
+#define APC_GPIO_IN_FAULT	GPIO_TO_PIN(0, 23)
+#define APC_GPIO_WLAN_EN	GPIO_TO_PIN(0, 27)
+#define APC_GPIO_BAT_PWR	GPIO_TO_PIN(2,  3)
+#define APC_GPIO_GSM_STATUS	GPIO_TO_PIN(3,  3)
+#define APC_GPIO_LED2		GPIO_TO_PIN(3,  4)
+#define APC_GPIO_CAN_TERM1	GPIO_TO_PIN(3, 14)
+#define APC_GPIO_CAN_TERM0	GPIO_TO_PIN(3, 15)
+#define APC_GPIO_RS485_DE1	GPIO_TO_PIN(3, 16)
+#define APC_GPIO_GSM_RI		GPIO_TO_PIN(3, 17)
+#define APC_GPIO_GSM_PWRKEY	GPIO_TO_PIN(3, 18)
+#define APC_GPIO_GSM_DTR	GPIO_TO_PIN(3, 19)
+#define APC_GPIO_GPS_WAKEUP	GPIO_TO_PIN(3, 20)
+static struct pinmux_config apc_gpios_pin_mux[] = {
+	/* IO */
+	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLUP },
+	/* LED */
+	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
+	/* CAN */
+	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_fsx.gpio3_15",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* RS485 */
+	{ "mcasp0_axr0.gpio3_16",	AM33XX_PIN_INPUT_PULLDOWN },
+	/* GSM */
+	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_aclkr.gpio3_18",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_fsr.gpio3_19",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_txen.gpio3_3",		AM33XX_PIN_INPUT_PULLDOWN },
+
+	{ NULL, 0 },
+};
+static struct gpio apc_gpios[] = {
+	{ APC_GPIO_IN_FAULT,	GPIOF_IN,		"in_fault" },
+	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_HIGH,	"bat_pwr" },
+	{ APC_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
+	{ APC_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
+	{ APC_GPIO_GSM_DTR,	GPIOF_OUT_INIT_HIGH,	"gsm:dtr" },
+	{ APC_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
+	{ APC_GPIO_GSM_STATUS,	GPIOF_IN,		"gsm:status" },
+	{ APC_GPIO_GPS_WAKEUP,	GPIOF_OUT_INIT_LOW,	"gps:wake" },
+	{ APC_GPIO_CAN_TERM0,	GPIOF_OUT_INIT_LOW,	"can:term0" },
+	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
+};
+
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
@@ -969,6 +1042,11 @@ static void pia335x_gpios_init(int boardid)
 		muxcfg = sk_gpios_pin_mux;
 		gpiocfg = sk_gpios;
 		sz = ARRAY_SIZE(sk_gpios);
+		break;
+	case PIA335_BB_APC:
+		muxcfg = apc_gpios_pin_mux;
+		gpiocfg = apc_gpios;
+		sz = ARRAY_SIZE(apc_gpios);
 		break;
 	case PIA335_LOKISA_EM:
 		muxcfg = em_gpios_pin_mux;
@@ -1172,6 +1250,7 @@ static void usb_init(int boardid)
 #endif
 			setup_pin_mux(usb1_pin_mux);
 		}
+	case PIA335_BB_APC:
 	case PIA335_KM_MMI:
 		setup_pin_mux(usb0_pin_mux);
 		break;
@@ -1241,6 +1320,7 @@ static void ethernet_init(int boardid)
 		setup_pin_mux(mii2_base_pin_mux);
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		setup_pin_mux(mii2_base_pin_mux);
 		setup_pin_mux(em_mii2_opt_pin_mux);
 		break;
@@ -1275,18 +1355,27 @@ static struct pinmux_config pm_mmc1_pin_mux[] = {
 	{ NULL, 0 },
 };
 
-static struct pinmux_config em_mmc2_pin_mux[] = {
-	/* WLAN/BT */
-	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
-	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
-	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
-	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+static struct pinmux_config mmc2_base_pin_mux[] = {
 	{ "gpmc_ad12.mmc2_dat0",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_ad13.mmc2_dat1",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_ad14.mmc2_dat2",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_ad15.mmc2_dat3",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_csn3.mmc2_cmd",	AM33XX_PIN_INPUT_PULLUP },
 	{ "gpmc_clk.mmc2_clk",	AM33XX_PIN_INPUT_PULLUP },
+	{ NULL, 0 },
+};
+static struct pinmux_config em_mmc2_extra_pin_mux[] = {
+	/* WLAN/BT */
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
+	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
+	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+	{ NULL, 0 },
+};
+static struct pinmux_config apc_mmc2_extra_pin_mux[] = {
+	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
+	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
@@ -1310,22 +1399,31 @@ static struct omap2_hsmmc_info pia335x_mmc[] __initdata = {
 /* WL12xx */
 #include <linux/wl12xx.h>
 static struct wl12xx_platform_data wl12xx_data = {
-	.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38_XTAL, /* 38.4Mhz */
-	.bt_enable_gpio = EM_GPIO_BT_EN,
-	.wlan_enable_gpio = EM_GPIO_WLAN_EN,
 };
 
 static void wl12xx_prepare(int boardid)
 {
 	int idx = 2; /* pia335x_mmc array index */
+	pia335x_mmc[idx].mmc = 3;
+	pia335x_mmc[idx].name = "wl1271";
 
 	switch (boardid) {
 	case PIA335_LOKISA_EM:
-		idx = 2;
-		setup_pin_mux(em_mmc2_pin_mux);
-		pia335x_mmc[idx].mmc            = 3;
-		pia335x_mmc[idx].name = "wl1271";
+		setup_pin_mux(mmc2_base_pin_mux);
+		setup_pin_mux(em_mmc2_extra_pin_mux);
+		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
+		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
+		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
+
+		break;
+	case PIA335_BB_APC:
+		setup_pin_mux(mmc2_base_pin_mux);
+		setup_pin_mux(apc_mmc2_extra_pin_mux);
+		wl12xx_data.irq = OMAP_GPIO_IRQ(APC_GPIO_WLAN_IRQ);
+		wl12xx_data.bt_enable_gpio = APC_GPIO_BT_EN;
+		wl12xx_data.wlan_enable_gpio = APC_GPIO_WLAN_EN;
+
 		break;
 	default:
 		return;
@@ -1373,13 +1471,13 @@ static int wl12xx_set_power(struct device *dev, int slot, int on, int vdd)
 	return 0;
 }
 
-static void wl12xx_init(int boardid)
+static void wl12xx_init(int devid)
 {
 	struct device *dev;
 	struct omap_mmc_platform_data *pdata;
 	int ret;
 
-	int status = gpio_request(wl12xx_data.bt_enable_gpio, "bt_en\n");
+	int status = gpio_request(wl12xx_data.bt_enable_gpio, "bt_en");
 	pr_info("piA335x: %s\n", __func__);
 
 	if (status < 0)
@@ -1392,7 +1490,7 @@ static void wl12xx_init(int boardid)
 	if (wl12xx_set_platform_data(&wl12xx_data))
 		pr_err("error setting wl12xx data\n");
 
-	dev = pia335x_mmc[2].dev;
+	dev = pia335x_mmc[devid].dev;
 	if (!dev) {
 		pr_err("wl12xx mmc device initialization failed\n");
 		goto out;
@@ -1417,8 +1515,7 @@ out:
 	return;
 }
 
-static __init void mmc_extra_init(struct device *dev,
-		int id)
+static __init void mmc_extra_init(struct device *dev, int id)
 {
 	/* extra init for MMC slot run after omap2_hsmmc_init */
 	struct omap_mmc_platform_data *pd;
@@ -1437,10 +1534,10 @@ static __init void mmc_extra_init(struct device *dev,
 		}
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		/* setup WL12xx module*/
 		if (pdev->id == 2) /* 3rd slot, mmc2 */
-			wl12xx_init(id);
-	default:
+			wl12xx_init(pdev->id);
 		break;
 	}
 }
@@ -1480,6 +1577,10 @@ static void __init mmc_init(int boardid)
 		return;
 	case PIA335_BB_SK:
 		pia335x_mmc[0].gpio_cd = SK_GPIO_MMC_CD;
+		break;
+	case PIA335_BB_APC:
+		/* uSD and eMMC from PM */
+		wl12xx_prepare(boardid);
 		break;
 	case PIA335_LOKISA_EM:
 		pia335x_mmc[0].gpio_cd = EM_GPIO_MMC_CD;
@@ -1666,10 +1767,26 @@ static struct gpio_led ebtft_gpio_leds[] = {
 		.default_trigger	= "default-on",
 	},
 };
-
 static struct gpio_led_platform_data ebtft_led_info = {
 	.leds		= ebtft_gpio_leds,
 	.num_leds	= ARRAY_SIZE(ebtft_gpio_leds),
+};
+
+static struct gpio_led apc_gpio_leds[] = {
+	{
+		.name			= "led:PM:usr1",
+		.gpio			= PM_GPIO_LED1,	/* LED1 */
+		.default_trigger	= "heartbeat",
+	},
+	{
+		.name			= "led:APC:usr1",
+		.gpio			= APC_GPIO_LED2, /* LED2 */
+		.default_trigger	= "mmc0",
+	},
+};
+static struct gpio_led_platform_data apc_led_info = {
+	.leds		= apc_gpio_leds,
+	.num_leds	= ARRAY_SIZE(apc_gpio_leds),
 };
 
 static struct gpio_led sk_gpio_leds[] = {
@@ -1722,6 +1839,9 @@ static void leds_init(int boardid)
 			pia335x_leds.dev.platform_data = &sk_led_info;
 			err = platform_device_register(&pia335x_leds);
 			break;
+		case PIA335_BB_APC:
+			pia335x_leds.dev.platform_data = &apc_led_info;
+			err = platform_device_register(&pia335x_leds);
 		default:
 			break;
 	}
@@ -2311,6 +2431,7 @@ static void can_init(int boardid )
 		am33xx_d_can_init(1);
 		break;
 	case PIA335_LOKISA_EM:
+	case PIA335_BB_APC:
 		setup_pin_mux(can0_pin_mux);
 		am33xx_d_can_init(0);
 		setup_pin_mux(can1_pin_mux);
@@ -2493,6 +2614,22 @@ static struct spi_board_info ebtft_spi_info[] = {
 	},
 };
 
+static struct pinmux_config apc_spi_pin_mux[] = {
+	/* SPI0 - other signals defined on PM */
+	{"spi0_cs1.spi0_cs1",	AM33XX_PIN_INPUT_PULLUP },
+	{NULL, 0},
+};
+static struct spi_board_info apc_spi_info[] = {
+	{
+		.modalias      = "spidev",
+		.controller_data = &spi_d0_mosi_cfg,
+		.max_speed_hz  = 25000000,
+		.bus_num       = 1,
+		.chip_select   = 1,
+		.irq           = -1, /* spidev doesn't support interrupts */
+	},
+};
+
 static struct pinmux_config em_spi_pin_mux[] = {
 	{"spi0_sclk.spi0_sclk",	AM33XX_PIN_INPUT_PULLUP },
 	{"spi0_d0.spi0_d0",	AM33XX_PIN_INPUT_PULLUP },
@@ -2526,6 +2663,11 @@ static void spi_init(int boardid)
 		setup_pin_mux(ebtft_spi_pin_mux);
 		spi_register_board_info(ebtft_spi_info,
 				ARRAY_SIZE(ebtft_spi_info));
+		break;
+	case PIA335_BB_APC:
+		setup_pin_mux(apc_spi_pin_mux);
+		spi_register_board_info(apc_spi_info,
+			ARRAY_SIZE(ebtft_spi_info));
 		break;
 	case PIA335_KM_E2:
 		setup_pin_mux(km_e2_spi_pin_mux);
@@ -3109,7 +3251,7 @@ static void pm_setup(void)
 
 	pia335x_gpios_init(pia335x_main_id.id);
 
-	// FIXME pia335x_rtc_init();
+	// OMAP RTC should be setup with expansion if needed
 	pm_setup_done = 1;
 }
 
@@ -3143,6 +3285,24 @@ static void sk_setup(void)
 {
 	pr_info("piA-AM335x-StarterKit: sk_setup rev %d\n", pia335x_exp_id.rev);
 	pia335x_gpios_init(pia335x_exp_id.id); /* TODO */
+	leds_init(pia335x_exp_id.id);
+
+	mmc_init(pia335x_exp_id.id);
+	ethernet_init(pia335x_exp_id.id);
+	can_init(pia335x_exp_id.id);
+
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:0f", "0:00");
+	usb_init(pia335x_exp_id.id);
+
+	spi_init(pia335x_main_id.id);
+	spi_init(pia335x_exp_id.id);
+}
+
+static void apc_setup(void)
+{
+	pr_info("piA-AM335x-APC: apc_setup rev %d\n", pia335x_exp_id.rev);
+	setup_pin_mux(apc_board_pin_mux);
+	pia335x_gpios_init(pia335x_exp_id.id);
 	leds_init(pia335x_exp_id.id);
 
 	mmc_init(pia335x_exp_id.id);
@@ -3217,12 +3377,17 @@ static void expansion_setup(struct memory_accessor *mem_acc, void *context)
 		pm_setup();
 	}
 
+	/* TODO merge the single expansion setup functions here and use
+	 * the optional setup for special case handling */
 	switch (pia335x_exp_id.id) {
 		case PIA335_BB_EBTFT:
 			ebtft_setup();
 			break;
 		case PIA335_BB_SK:
 			sk_setup();
+			break;
+		case PIA335_BB_APC:
+			apc_setup();
 			break;
 		default:
 			pr_err("PIA335x: Expansion board identification "
