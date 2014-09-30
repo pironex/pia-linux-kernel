@@ -1981,23 +1981,26 @@ static const char *em_xra1200_names[] = {
 	"disp:green",
 	"disp:red",
 	"disp:up",
-	"disp:left",
-	"disp:enter",
-	"disp:right",
 	"disp:down",
+	"disp:enter",
+	"disp:left",
+	"disp:right",
 	"disp:led",
 };
+
 static struct gpio_led em_disp_leds[] = {
 	[0] = {
-		.active_low = 0,
-		.gpio = -1,
-		.name = NULL,
+		.gpio = 0,
+		.default_state = LEDS_GPIO_DEFSTATE_ON,
 	},
 	[1] = {
-		.active_low = 0,
-		.gpio = -1,
-		.name = NULL,
+		.gpio = 1,
+		.default_state = LEDS_GPIO_DEFSTATE_OFF,
 	},
+	[2] = {
+		.gpio = 7,
+		.default_state = LEDS_GPIO_DEFSTATE_ON,
+	}
 };
 
 static struct gpio_led_platform_data em_disp_leds_pdata = {
@@ -2013,27 +2016,30 @@ static struct platform_device em_disp_leds_device = {
 	}
 };
 
-#define EM_GPIO_DISP_LED	7
 static struct gpio em_disp_gpios[] = {
-	{ EM_GPIO_DISP_LED,	GPIOF_OUT_INIT_HIGH,	"disp:led" },
+	{ 2, GPIOF_IN },
+	{ 3, GPIOF_IN },
+	{ 4, GPIOF_IN },
+	{ 5, GPIOF_IN },
+	{ 6, GPIOF_IN },
 };
 
 static void em_disp_leds_init(unsigned gpio)
 {
-	int i;
-	struct gpio_led *led;
+	struct gpio_led* it;
+	for (it = em_disp_leds; it < em_disp_leds + ARRAY_SIZE(em_disp_leds); ++it) {
+		it->name = em_xra1200_names[it->gpio];
+		it->gpio += gpio;
+	}
+}
 
-	/* 3 LEDs @ P0, P1, P7 */
-	i = 0;
-	led = &em_disp_leds[0];
-	led->gpio = gpio + i;
-	led->name = em_xra1200_names[0];
-	led->default_state = LEDS_GPIO_DEFSTATE_ON;
-
-	i = 1;
-	led = &em_disp_leds[1];
-	led->gpio = gpio + i;
-	led->name = em_xra1200_names[1];
+static void em_disp_gpios_init(unsigned gpio)
+{
+	struct gpio* it;
+	for (it = em_disp_gpios; it < em_disp_gpios + ARRAY_SIZE(em_disp_gpios); ++it) {
+		it->label = em_xra1200_names[it->gpio];
+		it->gpio += gpio;
+	}
 }
 
 static int em_xra1200_setup(struct i2c_client *client,
@@ -2049,10 +2055,11 @@ static int em_xra1200_setup(struct i2c_client *client,
 	if (ret) {
 		pr_warning("Error during setup of IO-Expander");
 	}
-	em_disp_gpios[0].gpio = gpio + EM_GPIO_DISP_LED;
-	pia335x_gpios_export(em_disp_gpios, 1);
 
-	/* TODO implement keys */
+	/* prepare GPIO data */
+	em_disp_gpios_init(gpio);
+	pia335x_gpios_export(em_disp_gpios, ARRAY_SIZE(em_disp_gpios));
+
 	return ret;
 }
 static int em_xra1200_teardown(struct i2c_client *client,

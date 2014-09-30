@@ -19,9 +19,8 @@
 #include <linux/module.h>
 #include <linux/spi/spi.h>
 
-
 /* Define DEBUG if you want traces of all the basic functions */
-/* Defube CORRECTION if you want to verify the data received from userspace */
+/* Define CORRECTION if you want to verify the data received from userspace */
 
 #ifdef DEBUG
 #define TRACE() \
@@ -30,16 +29,21 @@
 #define TRACE()
 #endif
 
-/* Line length here represents length of the line in words, not bytes */
+/*
+ * Line length here represents length of the line in bytes in accordance with memory layout:
+ * the first byte is data flag - always 0x01,
+ * the second byte contains values for three pixels - aaabbbcc
+ */
 #define DRVNAME "st7586s"
 #define HEIGHT 160
+#define LINE_LENGTH 160
 #define WIDTH 240
 
 static struct fb_fix_screeninfo st7586s_fix __devinitdata = {
 	.id = "ST7586S",
 	.type = FB_TYPE_PACKED_PIXELS,
 	.visual = FB_VISUAL_PSEUDOCOLOR,
-	.line_length = WIDTH,
+	.line_length = LINE_LENGTH,
 	.accel = FB_ACCEL_NONE,
 };
 
@@ -57,15 +61,13 @@ static struct fb_var_screeninfo st7586s_var __devinitdata = {
 #define SPI_FLUSH(spi, buf) spi_write(spi, buf, sizeof(buf))
 
 static int st7586s_prepare_transmission(struct spi_device* spi,
-	int x, int y, int w, int h)
+	int x1, int y1, int x2, int y2)
 {
-	int x_end = x + w - 1;
-	int y_end = y + h - 1;
 	unsigned short buf[] = {
 		/* Horizontal window */
-		0b000101010, DATA(x >> 8), DATA(x), DATA(x_end >> 8), DATA(x_end),
+		0b000101010, DATA(x1 >> 8), DATA(x1), DATA(x2 >> 8), DATA(x2),
 		/* Vertical window   */
-		0b000101011, DATA(y >> 8), DATA(y), DATA(y_end >> 8), DATA(y_end),
+		0b000101011, DATA(y1 >> 8), DATA(y1), DATA(y2 >> 8), DATA(y2),
 		/* Data transmission */
 		0b000101100,
 	};
@@ -79,11 +81,13 @@ static int st7586s_configure(struct spi_device* spi)
 		/* Sleep out mode         */
 		0b000010001,
 		/* Set VOP                */
-		0b011000000, 0b100001100, 0b100000001,
+		0b011000000, 0b111111111, 0b100000000,
 		/* BIAS system            */
 		0b011000011, 0b100000011,
 		/* Display mode gray      */
 		0b000111000,
+		/* Inverse pixels         */
+		0b000100001,
 		/* Enable DDRAM interface */
 		0b000111010, 0b100000010,
 		/* Display ON             */
@@ -103,7 +107,7 @@ void st7586s_deferred_io(struct fb_info* info, struct list_head* pagelist)
 	int retval;
 	TRACE();
 
-	retval = st7586s_prepare_transmission(info->par, 0, 0, WIDTH >> 1, HEIGHT);
+	retval = st7586s_prepare_transmission(info->par, 0, 0, (WIDTH / 3) - 1, HEIGHT - 1);
 	if (retval) {
 		pr_err(DRVNAME ": Failed to prepare display update (%i)\n",
 			retval);
@@ -111,19 +115,19 @@ void st7586s_deferred_io(struct fb_info* info, struct list_head* pagelist)
 	}
 
 #ifdef CORRECTION
-	int i;
+	unsigned int* fb = info->screen_base, i;
 	/* Make sure that everything in buffer have valid SPI data type */
-	for (i = 1; i < WIDTH * HEIGHT; i += 2) info->screen_base[i] = 1;
+	for (i = 0; i < LINE_LENGTH * HEIGHT >> 2; ++i) fb[i] |= 0x01000100;
 #endif
 
-	spi_write(info->par, info->screen_base, WIDTH * HEIGHT);
+	spi_write(info->par, info->screen_base, LINE_LENGTH * HEIGHT);
 }
 
 void st7586s_fillrect(struct fb_info* info, const struct fb_fillrect* rect)
 {
-	int x, y, retval;
-	unsigned int value;
-	unsigned int* line;
+	int start_x, end_x, x, y, retval;
+	int fill_value, start_mask, end_mask;
+	unsigned short* dst_line;
 	TRACE();
 
 	/* Discard all writes not fitting to the display */
@@ -131,41 +135,41 @@ void st7586s_fillrect(struct fb_info* info, const struct fb_fillrect* rect)
 			rect->width, rect->height))
 		return;
 
-	/* Refuse to fill unaligned area */
-	if (rect->dx & 1) {
-		pr_info(DRVNAME ": Refusing to fill unaligned area\n");
-		return;
-	}
-
-	/* Refuse to fill areas with size not aligned to 4 pix */
-	if (rect->width & 0x3) {
-		pr_info(DRVNAME ": Refusing to fill unproperly sized area\n");
-		return;
-	}
+	x = rect->dx + rect->width;
+	start_x = rect->dx / 3;
+	end_x = x / 3 + !(x % 3);
 
 	/* Prepare for data transmission */
 	retval = st7586s_prepare_transmission(info->par,
-		rect->dx >> 1, rect->dy, rect->width >> 1, rect->height);
+		start_x, rect->dy, end_x, rect->dy + rect->height - 1);
 	if (retval) {
 		pr_err(DRVNAME ": Failed to prepare for data transmission (%i)\n",
 			retval);
 		return;
 	}
 
-	/* Prepare fill value in advance */
-	value = ((rect->color & 0b111) <<  5) |
-		((rect->color & 0b111) <<  2) |
-		((rect->color & 0b111) << 21) |
-		((rect->color & 0b111) << 18) |
-		0b00000001000000000000000100000000;
+	/* Prepare filling pattern */
+	fill_value = ((rect->color & rect->color >> 1 & 1) | rect->color << 1) & 0b111;
+	fill_value = fill_value << 5 | fill_value << 2 | fill_value >> 1;
 
-	/* Write the data to the framebuffer and SPI at once */
-	for (y = rect->dy; y < rect->dy + rect->height; ++y) {
-		line = (unsigned int*)(info->screen_base + y * WIDTH + rect->dx);
-		for (x = 0; x < rect->width >> 2; ++x)
-			line[x] = value;
+	/* Masks for the first and last bytes in filled line area */
+	start_mask = 0b111 << (2 - rect->dx % 3) * 3 >> 1;
+	end_mask = 0b111 << (2 - x % 3) * 3 >> 1;
 
-		spi_write(info->par, line, rect->width);
+	for (y = 0; y < rect->height; ++y) {
+		/* Target line in framebuffer */
+		dst_line = (unsigned short*)(info->screen_base) + (rect->dy + y) * 80;
+
+		/* Set first and last bytes of filled line area */
+		dst_line[start_x] = (dst_line[start_x] & ~start_mask) | (fill_value & start_mask) | 0x100;
+		dst_line[end_x] = (dst_line[end_x] & ~end_mask) | (fill_value & end_mask) | 0x100;
+
+		/* Fill everything between with prepared pattern */
+		for (x = start_x + 1; x < end_x; ++x)
+			dst_line[x] = fill_value | 0x100;
+
+		/* Flush line, twice the number of bytes to include data flag bytes */
+		spi_write(info->par, dst_line + start_x, (end_x - start_x + 1) << 1);
 	}
 }
 
@@ -183,9 +187,11 @@ void st7586s_copyarea(struct fb_info* info, const struct fb_copyarea* area)
 
 void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 {
-	int x, y, retval;
-	unsigned int* line;
-	unsigned char byte;
+	int start_x, end_x, x, y, retval;
+	int source_shift, target_shift;
+	int source, target, color, mask;
+	unsigned char* src_line;
+	unsigned short* dst_line;
 	TRACE();
 
 	/* Discard all writes not fitting to the display */
@@ -199,21 +205,13 @@ void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 		return;
 	}
 
-	/* Refuse to blit unaligned images */
-	if (image->dx & 1) {
-		pr_info(DRVNAME ": Refusing to blit unaligned image\n");
-		return;
-	}
-
-	/* Refuse to blit images with size not aligned to 8 pix */
-	if (image->width & 0x7) {
-		pr_info(DRVNAME ": Refusing to blit unproperly sized image\n");
-		return;
-	}
+	x = image->dx + image->width;
+	start_x = image->dx / 3;
+	end_x = x / 3 + !(x % 3);
 
 	/* Prepare for data transmission */
 	retval = st7586s_prepare_transmission(info->par,
-		image->dx >> 1, image->dy, image->width >> 1, image->height);
+		start_x, image->dy, end_x, image->dy + image->height - 1);
 	if (retval) {
 		pr_err(DRVNAME ": Failed to prepare for data transmission (%i)\n",
 			retval);
@@ -221,25 +219,20 @@ void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 	}
 
 	for (y = 0; y < image->height; ++y) {
-		line = (unsigned int*)(info->screen_base +
-			(y + image->dy) * WIDTH + image->dx);
-		for (x = 0; x < image->width >> 3; ++x) {
-			byte = image->data[x + y * (image->width >> 3)];
-			line[(x << 1) | 0] =
-				((0b111 * (byte >> 7 & 1)) <<  5) |
-				((0b111 * (byte >> 6 & 1)) <<  2) |
-				((0b111 * (byte >> 5 & 1)) << 21) |
-				((0b111 * (byte >> 4 & 1)) << 18) |
-				0b00000001000000000000000100000000;
-			line[(x << 1) | 1] =
-				((0b111 * (byte >> 3 & 1)) <<  5) |
-				((0b111 * (byte >> 2 & 1)) <<  2) |
-				((0b111 * (byte >> 1 & 1)) << 21) |
-				((0b111 * (byte >> 0 & 1)) << 18) |
-				0b00000001000000000000000100000000;
-		}
+		/* Source line from image and destination line in framebuffer */
+		dst_line = (unsigned short*)(info->screen_base) + (image->dy + y) * 80;
+		src_line = (unsigned char*)(image->data) + y * (image->width >> 3);
 
-		spi_write(info->par, line, image->width);
+		for (x = 0; x < image->width; ++x) {
+			source_shift = 7 - (x & 7);
+			source = x >> 3;
+			target_shift = (2 - (image->dx + x) % 3) * 3;
+			target = (image->dx + x) / 3;
+			color = src_line[source] >> source_shift & 1;
+			mask = 0b111 << target_shift >> 1;
+			dst_line[target] = (dst_line[target] & ~mask) | (color * mask) | 0x100;
+		}
+		spi_write(info->par, dst_line + start_x, (end_x - start_x + 1) << 1);
 	}
 }
 
