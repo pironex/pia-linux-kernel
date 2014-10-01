@@ -3470,9 +3470,9 @@ out:
  * I2C devices
  */
 static struct at24_platform_data pia335x_eeprom_info = {
-	.byte_len       = 128,
+	.byte_len       = 256,
 	.page_size      = 8,
-	.flags          = 0,
+	.flags          = AT24_FLAG_READONLY,
 	/* Setup gets called, even if there is no eeprom on the board.
 	 * Make sure to handle this case! */
 	.setup          = pia335x_setup,
