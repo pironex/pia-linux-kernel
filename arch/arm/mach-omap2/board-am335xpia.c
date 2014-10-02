@@ -889,6 +889,7 @@ static struct gpio apc_gpios[] = {
 	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
 };
 
+#define EM_GPIO_GSM_STATUS	GPIO_TO_PIN(0,  5)
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
@@ -935,6 +936,7 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_data0.gpio2_6",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "spi0_cs0.gpio0_5",		AM33XX_PIN_INPUT },
 	/* EMMC */
 	{ "gpmc_be0n_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
 	/* TODO WLAN/BT */
@@ -954,6 +956,8 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_LOW,	"gsm:emerg_off" },
 	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
 	{ EM_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
+	/* since rev 0.02, nc in 0.01 */
+	{ EM_GPIO_GSM_STATUS,	GPIOF_IN,		"gsm:status" },
 	/* TODO this is ignored by the EMMC; on Rev 0.1 this is connected to
 	 * OE of the level shifter for the BT module */
 	{ EM_GPIO_EMMC_RESET,	GPIOF_OUT_INIT_LOW,	"emmc:reset" },
