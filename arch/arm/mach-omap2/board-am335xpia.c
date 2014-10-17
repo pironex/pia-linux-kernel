@@ -894,6 +894,7 @@ static struct gpio apc_gpios[] = {
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
 #define EM_GPIO_DISP_RSTB	GPIO_TO_PIN(0, 28)
+#define EM_GPIO_BT_UART_OE	GPIO_TO_PIN(0, 31)
 #define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
 #define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
 #define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
@@ -939,7 +940,8 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "spi0_cs0.gpio0_5",		AM33XX_PIN_INPUT },
 	/* EMMC */
 	{ "gpmc_ben0_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
-	/* TODO WLAN/BT */
+	/* WLAN/BT */
+	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_OUTPUT },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -962,6 +964,7 @@ static struct gpio em_gpios[] = {
 	 * OE of the level shifter for the BT module */
 	{ EM_GPIO_EMMC_RESET,	GPIOF_OUT_INIT_LOW,	"emmc:reset" },
 	/*{ EM_GPIO_BT_EN,	GPIOF_OUT_INIT_HIGH,	"bt:en" },*/
+	{ EM_GPIO_BT_UART_OE,	GPIOF_OUT_INIT_HIGH,	"bt:uart_oe" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
