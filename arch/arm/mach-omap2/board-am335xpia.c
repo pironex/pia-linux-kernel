@@ -3230,7 +3230,7 @@ static void km_mmi_setup(int variant)
 	km_mmi_tlv320aic3x_init();
 
 	pr_info("piA335x: cpsw_init\n");
-	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, NULL, "0:0f");
+	am33xx_cpsw_init(AM33XX_CPSW_MODE_MII, "0:05", "0:1e");
 
 	mmc_init(pia335x_main_id.id);
 	pia335x_gpios_init(pia335x_main_id.id);
@@ -3242,6 +3242,13 @@ static void km_mmi_setup(int variant)
 		/* special 24V GPIOs */
 		pia335x_gpios_export(km_mmi_24v_gpios, ARRAY_SIZE(km_mmi_24v_gpios));
 	}
+
+
+	/* setup sleep/wake sequence for core voltage scalling */
+	am33xx_core_vg_scale_i2c_seq_fillup(tps65910_core_vg_scale_sleep_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_sleep_seq),
+				tps65910_core_vg_scale_wake_seq,
+				ARRAY_SIZE(tps65910_core_vg_scale_wake_seq));
 }
 
 /* only procesor module related parts, see expansion_setup() for the rest */
