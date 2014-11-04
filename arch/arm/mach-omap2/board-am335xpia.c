@@ -1418,9 +1418,9 @@ static void wl12xx_prepare(int boardid)
 		setup_pin_mux(mmc2_base_pin_mux);
 		setup_pin_mux(em_mmc2_extra_pin_mux);
 		if (pia335x_main_id.rev > 1) {
-			pia335x_mmc[idx].name = "wl18xx";
-			wl12xx_data.board_ref_clock = WL12XX_REFCLOCK_26;
-		} else
+			pia335x_mmc[idx].name = "wl1873";
+			wl12xx_data.board_ref_clock = WL12XX_REFCLOCK_26_XTAL;
+		}
 		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
