@@ -360,10 +360,8 @@ static struct pinmux_config em_board_pin_mux[] = {
 	{ "lcd_data9.uart2_rtsn", AM33XX_PIN_OUTPUT },
 	{ "mii1_rxd3.uart3_rxd", AM33XX_PIN_INPUT_PULLUP },
 	{ "mii1_rxd2.uart3_txd", AM33XX_PIN_OUTPUT },
-	{ "lcd_data10.uart3_ctsn", AM33XX_PIN_INPUT_PULLUP },
-	{ "lcd_data11.uart3_rtsn", AM33XX_PIN_OUTPUT },
 	{ "mii1_txd3.uart4_rxd", AM33XX_PIN_INPUT_PULLUP },
-	{ "mii1_rxd3.uart4_txd", AM33XX_PIN_OUTPUT },
+	{ "mii1_txd2.uart4_txd", AM33XX_PIN_OUTPUT },
 	{ "mii1_col.uart5_rxd", AM33XX_PIN_INPUT_PULLUP },
 	{ "rmii1_refclk.uart5_txd", AM33XX_PIN_OUTPUT },
 	{NULL, 0},
@@ -891,10 +889,12 @@ static struct gpio apc_gpios[] = {
 	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
 };
 
+#define EM_GPIO_GSM_STATUS	GPIO_TO_PIN(0,  5)
 #define EM_GPIO_PMIC_INT	GPIO_TO_PIN(0, 21)
 #define EM_GPIO_WLAN_EN		GPIO_TO_PIN(0, 22)
 #define EM_GPIO_RS485_DE4	GPIO_TO_PIN(0, 26)
 #define EM_GPIO_DISP_RSTB	GPIO_TO_PIN(0, 28)
+#define EM_GPIO_BT_UART_OE	GPIO_TO_PIN(0, 31)
 #define EM_GPIO_RS485_DE3	GPIO_TO_PIN(2,  2)
 #define EM_GPIO_RS485_DE2	GPIO_TO_PIN(2,  3)
 #define EM_GPIO_RS485_DE1	GPIO_TO_PIN(2,  4)
@@ -937,9 +937,11 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_data0.gpio2_6",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_hsync.gpio2_23",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "spi0_cs0.gpio0_5",		AM33XX_PIN_INPUT },
 	/* EMMC */
-	{ "gpmc_be0n_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
-	/* TODO WLAN/BT */
+	{ "gpmc_ben0_cle.gpio2_5",	AM33XX_PIN_INPUT_PULLUP },
+	/* WLAN/BT */
+	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_OUTPUT },
 	{ NULL, 0 },
 };
 static struct gpio em_gpios[] = {
@@ -956,10 +958,13 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_LOW,	"gsm:emerg_off" },
 	{ EM_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
 	{ EM_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
+	/* since rev 0.02, nc in 0.01 */
+	{ EM_GPIO_GSM_STATUS,	GPIOF_IN,		"gsm:status" },
 	/* TODO this is ignored by the EMMC; on Rev 0.1 this is connected to
 	 * OE of the level shifter for the BT module */
 	{ EM_GPIO_EMMC_RESET,	GPIOF_OUT_INIT_LOW,	"emmc:reset" },
 	/*{ EM_GPIO_BT_EN,	GPIOF_OUT_INIT_HIGH,	"bt:en" },*/
+	{ EM_GPIO_BT_UART_OE,	GPIOF_OUT_INIT_HIGH,	"bt:uart_oe" },
 };
 
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
@@ -1369,7 +1374,7 @@ static struct pinmux_config em_mmc2_extra_pin_mux[] = {
 	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_OUTPUT },
 	{ "lcd_data1.gpio2_7",		AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data2.gpio2_8",		AM33XX_PIN_OUTPUT },
-	{ "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },
+	/* { "xdma_event_intr1.clkout2",	AM33XX_PIN_OUTPUT },*/
 	{ NULL, 0 },
 };
 static struct pinmux_config apc_mmc2_extra_pin_mux[] = {
@@ -1412,6 +1417,10 @@ static void wl12xx_prepare(int boardid)
 	case PIA335_LOKISA_EM:
 		setup_pin_mux(mmc2_base_pin_mux);
 		setup_pin_mux(em_mmc2_extra_pin_mux);
+		if (pia335x_main_id.rev > 1) {
+			pia335x_mmc[idx].name = "wl18xx";
+			wl12xx_data.board_ref_clock = WL12XX_REFCLOCK_26;
+		} else
 		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
