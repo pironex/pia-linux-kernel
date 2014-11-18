@@ -1868,10 +1868,6 @@ static struct at24_platform_data km_e2_fram_info = {
 static struct tps65910_board pia335x_tps65910_info;
 static struct i2c_board_info km_e2_i2c1_boardinfo[] = {
 	{
-		I2C_BOARD_INFO("tps65910", TPS65910_I2C_ID1),
-		.platform_data  = &pia335x_tps65910_info,
-	},
-	{
 		I2C_BOARD_INFO("pca9634", 0x22),
 		.platform_data = &km_e2_leds1_data,
 	},
@@ -2110,7 +2106,7 @@ static void i2c1_init(int boardid)
 
 	switch (boardid) {
 	case PIA335_KM_E2:
-		pia335x_register_i2c_devices(1, km_e2_i2c1_boardinfo,
+		pia335x_register_i2c_devices(2, km_e2_i2c1_boardinfo,
 				ARRAY_SIZE(km_e2_i2c1_boardinfo));
 		break;
 	case PIA335_KM_MMI:
