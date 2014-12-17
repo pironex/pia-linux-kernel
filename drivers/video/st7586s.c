@@ -14,7 +14,9 @@
  * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <linux/delay.h>
 #include <linux/fb.h>
+#include <linux/gpio.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/spi/spi.h>
@@ -37,7 +39,12 @@
 #define DRVNAME "st7586s"
 #define HEIGHT 160
 #define LINE_LENGTH 160
+#define RESET_DELAY 20
+#define RESET_GPIO 28
+#define RESET_WAKE 240
 #define WIDTH 240
+
+#define FBIO_ST7586S_RESET 0
 
 static struct fb_fix_screeninfo st7586s_fix __devinitdata = {
 	.id = "ST7586S",
@@ -73,6 +80,15 @@ static int st7586s_prepare_transmission(struct spi_device* spi,
 	};
 
 	return SPI_FLUSH(spi, buf);
+}
+
+static int st7586s_reset(unsigned reset_gpio)
+{
+	gpio_set_value(reset_gpio, 0);
+	msleep(RESET_DELAY);
+	gpio_set_value(reset_gpio, 1);
+	msleep(RESET_WAKE);
+	return 0;
 }
 
 static int st7586s_configure(struct spi_device* spi)
@@ -236,11 +252,23 @@ void st7586s_imageblit(struct fb_info* info, const struct fb_image* image)
 	}
 }
 
+int st7586s_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg) {
+	switch (cmd) {
+		case FBIO_ST7586S_RESET:
+			return st7586s_reset(RESET_GPIO) ||
+				st7586s_configure(info->par);
+			return 0;
+		default:
+			return -ENOSYS;
+	}
+}
+
 static struct fb_ops st7586s_ops = {
 	.owner = THIS_MODULE,
 	.fb_fillrect = st7586s_fillrect,
 	.fb_copyarea = st7586s_copyarea,
 	.fb_imageblit = st7586s_imageblit,
+	.fb_ioctl = st7586s_ioctl,
 };
 
 static struct fb_deferred_io st7586s_defio = {
@@ -265,7 +293,8 @@ static int st7586s_probe(struct spi_device* spi)
 		goto failure;
 	}
 
-	retval = st7586s_configure(spi);
+	retval = st7586s_reset(RESET_GPIO) ||
+		st7586s_configure(spi);
 	if (retval) {
 		pr_err(DRVNAME ": Initial chip configuration failed\n");
 		goto failure;
