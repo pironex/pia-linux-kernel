@@ -2660,7 +2660,7 @@ static struct spi_board_info em_st7586s_info[] __initdata = {
 		.mode = SPI_MODE_3,
 		.bus_num = 1,
 		.chip_select = 1,
-		.max_speed_hz = 10000000,
+		.max_speed_hz = 5000000, /* 5 according to ST7586 manual */
 		.controller_data = &spi_d0_mosi_cfg,
 	},
 };
