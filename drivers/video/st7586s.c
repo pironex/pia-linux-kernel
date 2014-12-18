@@ -93,9 +93,14 @@ static int st7586s_reset(unsigned reset_gpio)
 
 static int st7586s_configure(struct spi_device* spi)
 {
-	unsigned short buf[] = {
+	int res = 0;
+	unsigned short buf_wake[] = {
 		/* Sleep out mode         */
 		0b000010001,
+		/* Display off            */
+		0b000101000,
+	};
+	unsigned short buf_conf[] = {
 		/* Set VOP                */
 		0b011000000, 0b111111111, 0b100000000,
 		/* BIAS system            */
@@ -106,11 +111,15 @@ static int st7586s_configure(struct spi_device* spi)
 		0b000100001,
 		/* Enable DDRAM interface */
 		0b000111010, 0b100000010,
-		/* Display ON             */
-		0b000101001,
+		/* Display on             */
+		0b000101001
 	};
 
-	return SPI_FLUSH(spi, buf);
+	res |= SPI_FLUSH(spi, buf_wake);
+	msleep(50);
+	res |= SPI_FLUSH(spi, buf_conf);
+
+	return res;
 }
 
 static int st7586s_violates_boundaries(int x, int y, int w, int h)
@@ -284,17 +293,24 @@ static int st7586s_probe(struct spi_device* spi)
 	int vmem_size = WIDTH * HEIGHT;
 	struct fb_info* info = NULL;
 	u8* vmem = NULL;
+	struct fb_fillrect rect = { // use to clear the fb after reset
+		.dx = 0,
+		.dy = 0,
+		.width = WIDTH,
+		.height = HEIGHT,
+		.color = 0,
+	};
+
 	TRACE();
 
 	spi->bits_per_word = 9;
+	spi->mode = SPI_MODE_3;
 	retval = spi_setup(spi);
 	if (retval) {
 		pr_err(DRVNAME ": Failed to switch to 9-bit words\n");
 		goto failure;
 	}
 
-	retval = st7586s_reset(RESET_GPIO) ||
-		st7586s_configure(spi);
 	if (retval) {
 		pr_err(DRVNAME ": Initial chip configuration failed\n");
 		goto failure;
@@ -329,6 +345,11 @@ static int st7586s_probe(struct spi_device* spi)
 		pr_err(DRVNAME ": Failed to register framebuffer\n");
 		goto failure;
 	}
+
+	retval = st7586s_reset(RESET_GPIO) ||
+		st7586s_configure(spi);
+
+	st7586s_fillrect(info, &rect);
 
 	spi_set_drvdata(spi, info);
 	return 0;
