@@ -334,6 +334,32 @@ static struct panel_config generic_dpi_panels[] = {
 				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
 		.name = "dem_480272d",
 	},
+	/* FS-J043 */
+	{
+		{
+			.x_res = 480,
+			.y_res = 272,
+
+			.pixel_clock	= 9000,
+
+			.hsw		= 4,
+			.hfp		= 8,
+			.hbp		= 43,
+
+			.vsw		= 10,
+			.vfp		= 4,
+			.vbp		= 12,
+		},
+		.acbi			= 0x0,
+		.acb			= 0x0,
+		.power_on_delay		= 100,
+		.power_off_delay	= 100,
+
+		.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
+				OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IEO |
+				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
+		.name = "fs_j043",
+	},
 	{
 		{
 			.x_res = 240,
