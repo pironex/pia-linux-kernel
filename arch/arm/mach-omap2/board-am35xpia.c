@@ -201,6 +201,12 @@ static struct panel_generic_dpi_data pia35x_lcd_panel_sharp = {
 	.platform_disable   = pia35x_lcd_disable,
 };
 
+static struct panel_generic_dpi_data pia35x_lcd_panel_j043 = {
+	.name               = "fs_j043",
+	.platform_enable    = pia35x_lcd_enable,
+	.platform_disable   = pia35x_lcd_disable,
+};
+
 static struct omap_dss_device pia35x_lcd_device = {
 	.type               = OMAP_DISPLAY_TYPE_DPI,
 	.name               = "lcd",
@@ -385,6 +391,8 @@ static void __init pia35x_display_init(void)
 		//pia35x_lcd_device.data = &pia35x_lcd_panel_dt028;
 		//pia35x_lcd_device.phy.dpi.data_lines = 18;
 #endif
+	} else if (0 == strncmp(lcdboard_name, "pia_lcd_j043", 12)) {
+		pia35x_lcd_device.data = &pia35x_lcd_panel_j043;
 	}
 
 	/* the tsc device address changed for revision 1 display expansions */
