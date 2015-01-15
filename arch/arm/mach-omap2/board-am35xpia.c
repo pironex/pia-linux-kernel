@@ -365,10 +365,11 @@ static struct i2c_board_info __initdata pia35x_i2c3_tsc2007[] = {};
 	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 #include <linux/input/ft5x06_ts.h>
 
+#define GPIO_TOUCH_FT5X06_INT	103
 static struct ft5x06_ts_platform_data ft5x06_touch_data = {
 	.x_max    = 480,
 	.y_max    = 272,
-	.irq_gpio = GPIO_LCD_PENDOWN,
+	.irq_gpio = GPIO_TOUCH_FT5X06_INT,
 	.irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 	.touch_threshold = 0x2B * 4,
 };
@@ -376,7 +377,7 @@ static struct i2c_board_info pia35x_i2c3_ft5x06[] = {
 	{
 		/* j043wqcn */
 		I2C_BOARD_INFO("ft5x06_ts", 0x38),
-		.irq = OMAP_GPIO_IRQ(GPIO_LCD_PENDOWN),
+		.irq = OMAP_GPIO_IRQ(GPIO_TOUCH_FT5X06_INT),
 		.platform_data = &ft5x06_touch_data,
 	},
 };
@@ -385,17 +386,21 @@ static struct i2c_board_info pia35x_i2c3_ft5x06[] = {
 static void __init pia35x_touch_init(void)
 {
 	if (0 == strncmp(lcdboard_name, "pia_lcd_j043", 12)) {
+		if (ARRAY_SIZE(pia35x_i2c3_tsc2007) > 0)
+			pia35x_i2c3_tsc2007[0].addr = 0x48;
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) || \
 	defined(CONFIG_TOUCHSCREEN_EDT_FT5X06_MODULE)
 		pr_info("pia35x_init: init touchscreen FT5x06\n");
+		omap_mux_init_gpio(GPIO_TOUCH_FT5X06_INT,
+				OMAP_PIN_INPUT_PULLUP);
 		i2c_register_board_info(3, pia35x_i2c3_ft5x06,
 				ARRAY_SIZE(pia35x_i2c3_ft5x06));
 #endif
-	} else {
-		pr_info("pia35x_init: init touchscreen TSC2007\n");
-		i2c_register_board_info(3, pia35x_i2c3_tsc2007,
-				ARRAY_SIZE(pia35x_i2c3_tsc2007));
 	}
+	pr_info("pia35x_init: init touchscreen TSC2007\n");
+	i2c_register_board_info(3, pia35x_i2c3_tsc2007,
+			ARRAY_SIZE(pia35x_i2c3_tsc2007));
+
 }
 
 #define GPIO_DISP_RESET 102
