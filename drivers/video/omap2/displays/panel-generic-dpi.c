@@ -340,15 +340,15 @@ static struct panel_config generic_dpi_panels[] = {
 			.x_res = 480,
 			.y_res = 272,
 
-			.pixel_clock	= 9000,
+			.pixel_clock	= 8540,
 
 			.hsw		= 4,
-			.hfp		= 8,
-			.hbp		= 43,
+			.hfp		= 16,
+			.hbp		= 16,
 
-			.vsw		= 10,
-			.vfp		= 4,
-			.vbp		= 12,
+			.vsw		= 1,
+			.vfp		= 2,
+			.vbp		= 4,
 		},
 		.acbi			= 0x0,
 		.acb			= 0x0,
@@ -356,8 +356,9 @@ static struct panel_config generic_dpi_panels[] = {
 		.power_off_delay	= 100,
 
 		.config = OMAP_DSS_LCD_TFT | OMAP_DSS_LCD_IVS |
-				OMAP_DSS_LCD_IHS | OMAP_DSS_LCD_IEO |
-				OMAP_DSS_LCD_ONOFF | OMAP_DSS_LCD_RF,
+				OMAP_DSS_LCD_IHS |
+				/* HS/VS driven on falling PCK */
+				OMAP_DSS_LCD_ONOFF,
 		.name = "fs_j043",
 	},
 	{
