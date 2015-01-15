@@ -65,6 +65,7 @@
 enum {
 	PIA_AM3505,
 	PIA_X_AM3517,
+	PIA_X_LOKISA,
 	PIA_UNKNOWN = 0xff,
 };
 static u8 pia35x_version = PIA_UNKNOWN;
@@ -2386,22 +2387,38 @@ static int __init lcdboard_setup(char *str)
 
 static int re_gpio_pin(int number, const char* desc)
 {
-  int res = gpio_request_one(number, GPIOF_IN, desc);
-  if (res) return res;
+	int res = gpio_request_one(number, GPIOF_IN, desc);
+	if (res) return res;
 
-  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP);
-  gpio_export(number, false);
-  return res;
+	omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_INPUT_PULLUP);
+	gpio_export(number, false);
+	return res;
 }
 
 static int re_gpio_pin_out(int number, const char* desc)
 {
-  int res = gpio_request_one(number, GPIOF_OUT_INIT_LOW, desc);
-  if (res) return res;
+	int res = gpio_request_one(number, GPIOF_OUT_INIT_LOW, desc);
+	if (res) return res;
 
-  omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
-  gpio_export(number, false);
-  return res;
+	omap_mux_init_gpio(number, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT);
+	gpio_export(number, false);
+	return res;
+}
+
+static void __init pia35x_lokisa_init(void)
+{
+	// TODO: Relocate somewhere
+	if (re_gpio_pin(13, "kbd.but1")
+			|| re_gpio_pin(12, "kbd.but2")
+			|| re_gpio_pin(18, "kbd.but3")
+			|| re_gpio_pin(21, "kbd.but4")
+			|| re_gpio_pin(17, "kbd.but5")
+			|| re_gpio_pin_out(16, "kbd.test"))
+	{
+		pr_err("pia35x: Failed to initialize one of push buttons");
+	}
+
+	pia35x_st7586s_init();
 }
 
 static void __init pia35x_init(void)
@@ -2427,17 +2444,6 @@ static void __init pia35x_init(void)
 		gpio_export(GPIO_EN_VCC_5V_PER, false);
 	}
 
-  // TODO: Relocate somewhere
-  if (re_gpio_pin(13, "kbd.but1")
-    || re_gpio_pin(12, "kbd.but2")
-    || re_gpio_pin(18, "kbd.but3")
-    || re_gpio_pin(21, "kbd.but4")
-    || re_gpio_pin(17, "kbd.but5")
-    || re_gpio_pin_out(16, "kbd.test"))
-  {
-    pr_err("pia35x: Failed to initialize one of push buttons");
-  }
-
 	pia35x_i2c_init();
 	omap_display_init(&pia35x_dss_data);
 	pia35x_serial_init();
@@ -2445,7 +2451,6 @@ static void __init pia35x_init(void)
 	pia35x_status_led_init();
 
 	pia35x_display_init();
-	pia35x_st7586s_init();
 
 	pia35x_flash_init();
 	pia35x_musb_init();
@@ -2457,6 +2462,11 @@ static void __init pia35x_init(void)
 		 * no baseboard CAN, no audio */
 		pia35x_can_init(&pia35x_hecc_pdata);
 		pia35x_audio_init();
+	}
+
+	if (pia35x_version == PIA_X_LOKISA) {
+		pia35x_lokisa_init();
+
 	}
 
 	pia35x_expansion_init();
