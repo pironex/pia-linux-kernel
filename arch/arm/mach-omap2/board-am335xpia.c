@@ -911,6 +911,7 @@ static struct gpio apc_gpios[] = {
 #define EM_GPIO_S0		GPIO_TO_PIN(1, 29)
 #define EM_GPIO_USB_OSC1	GPIO_TO_PIN(2, 16)
 #define EM_GPIO_USB_OSC2	GPIO_TO_PIN(2, 17)
+#define EM_GPIO_DIN_IRQ		GPIO_TO_PIN(3, 14)
 static struct pinmux_config em_gpios_pin_mux[] = {
 	/* MMC CD */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT_PULLUP },
@@ -919,8 +920,10 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_OUTPUT },
 	/* PMIC */
 	{ "mii1_txd1.gpio0_21",		AM33XX_PIN_INPUT_PULLUP },
-	/* IO Expander */
+	/* IO Expander Display IOs*/
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
+	/* Rev 0.03: IO-Expander DIN */
+	{ "mcasp0_ahclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLUP },
 	/* Display (low active) */
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT_PULLUP },
 	/* RS485 */
@@ -1997,6 +2000,17 @@ static const char *em_xra1200_names[] = {
 	"disp:led",
 };
 
+static const char *em_xra1200_din_names[] = {
+	"d1",
+	"d2",
+	"d3",
+	"d4",
+	"d5",
+	"d6",
+	"nc1",
+	"nc2",
+};
+
 static struct gpio_led em_disp_leds[] = {
 	[0] = {
 		.gpio = 0,
@@ -2032,6 +2046,14 @@ static struct gpio em_disp_gpios[] = {
 	{ 5, GPIOF_IN },
 	{ 6, GPIOF_IN },
 };
+static struct gpio em_din_gpios[] = {
+	{ 0, GPIOF_IN },
+	{ 1, GPIOF_IN },
+	{ 2, GPIOF_IN },
+	{ 3, GPIOF_IN },
+	{ 4, GPIOF_IN },
+	{ 5, GPIOF_IN },
+};
 
 static void em_disp_leds_init(unsigned gpio)
 {
@@ -2047,6 +2069,15 @@ static void em_disp_gpios_init(unsigned gpio)
 	struct gpio* it;
 	for (it = em_disp_gpios; it < em_disp_gpios + ARRAY_SIZE(em_disp_gpios); ++it) {
 		it->label = em_xra1200_names[it->gpio];
+		it->gpio += gpio;
+	}
+}
+
+static void em_din_gpios_init(unsigned gpio)
+{
+	struct gpio* it;
+	for (it = em_din_gpios; it < em_din_gpios + ARRAY_SIZE(em_din_gpios); ++it) {
+		it->label = em_xra1200_din_names[it->gpio];
 		it->gpio += gpio;
 	}
 }
@@ -2079,6 +2110,15 @@ static int em_xra1200_teardown(struct i2c_client *client,
 
 	return 0;
 }
+static int em_xra1200_din_setup(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio,
+		void *c)
+{
+	em_din_gpios_init(gpio);
+	pia335x_gpios_export(em_din_gpios, ARRAY_SIZE(em_din_gpios));
+
+	return 0;
+}
 static struct pca953x_platform_data em_xra1200_data = {
 	/* FUTURE gpio and irq bases are not well defined on AM33xx */
 	.gpio_base	= OMAP_MAX_GPIO_LINES + TPS65910_NUM_GPIO, /* some room for TPS */
@@ -2086,6 +2126,15 @@ static struct pca953x_platform_data em_xra1200_data = {
 	.names		= em_xra1200_names,
 	.setup		= em_xra1200_setup,
 	.teardown	= em_xra1200_teardown,
+};
+
+static struct pca953x_platform_data em_xra1200_din_data = {
+	/* FUTURE gpio and irq bases are not well defined on AM33xx */
+	.gpio_base	= OMAP_MAX_GPIO_LINES + TPS65910_NUM_GPIO + 8, /* after display GPIOs */
+	.irq_base	= TWL4030_IRQ_BASE + TPS65910_NUM_IRQ,
+	.names		= em_xra1200_din_names,
+	.setup		= em_xra1200_din_setup,
+	//.teardown	= em_xra1200_teardown,
 };
 
 static struct i2c_board_info em_i2c2_boardinfo[] = {
@@ -2101,6 +2150,12 @@ static struct i2c_board_info em_i2c2_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("max5362", 0x31),
 		.platform_data = &em_dac_data,
+	},
+};
+static struct i2c_board_info em_i2c2_din_boardinfo[] = {
+	{ /* new in rev 3 */
+		I2C_BOARD_INFO("pca9553", 0x26),
+		.platform_data = &em_xra1200_din_data,
 	},
 };
 
@@ -2133,6 +2188,11 @@ static void i2c1_init(int boardid)
 		/* only PMIC and EEPROM on first bus */
 		pia335x_register_i2c_devices(2, em_i2c2_boardinfo,
 				ARRAY_SIZE(em_i2c2_boardinfo));
+		if (pia335x_main_id.rev > 2) {
+			// second IO expander
+			pia335x_register_i2c_devices(2, em_i2c2_din_boardinfo,
+				ARRAY_SIZE(em_i2c2_din_boardinfo));
+		}
 		break;
 	default:
 		break;
