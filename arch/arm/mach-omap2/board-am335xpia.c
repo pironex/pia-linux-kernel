@@ -923,7 +923,7 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	/* IO Expander Display IOs*/
 	{ "mcasp0_ahclkr.gpio3_17",	AM33XX_PIN_INPUT_PULLUP },
 	/* Rev 0.03: IO-Expander DIN */
-	{ "mcasp0_ahclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLUP },
 	/* Display (low active) */
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT_PULLUP },
 	/* RS485 */
