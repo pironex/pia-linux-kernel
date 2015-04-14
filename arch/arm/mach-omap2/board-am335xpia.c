@@ -2154,7 +2154,7 @@ static struct i2c_board_info em_i2c2_boardinfo[] = {
 };
 static struct i2c_board_info em_i2c2_din_boardinfo[] = {
 	{ /* new in rev 3 */
-		I2C_BOARD_INFO("pca9553", 0x26),
+		I2C_BOARD_INFO("pca9554", 0x26),
 		.platform_data = &em_xra1200_din_data,
 	},
 };
