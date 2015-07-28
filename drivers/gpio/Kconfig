@@ -490,4 +490,9 @@ config GPIO_TPS65910
 	help
 	  Select this option to enable GPIO driver for the TPS65910
 	  chip family.
+config GPIO_AM335X_INTR
+	tristate "GPIO interrupt driver for counting pulses based on AM335X"
+        depends on m
+	help
+	  Select this to enable the GPIO interrupt on GPIO-61 for AM335X
 endif
