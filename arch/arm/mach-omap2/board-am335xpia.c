@@ -931,8 +931,6 @@ static struct pinmux_config em_gpios_pin_mux[] = {
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_OUTPUT },
-	/* S0 */
-	{ "gpmc_csn0.gpio1_29",	AM33XX_PIN_INPUT },
 	/* USB OSC */
 	{ "lcd_data10.gpio2_16",	AM33XX_PIN_INPUT_PULLUP },
 	{ "lcd_data11.gpio2_17",	AM33XX_PIN_INPUT_PULLUP },
@@ -955,7 +953,6 @@ static struct gpio em_gpios[] = {
 	{ EM_GPIO_RS485_DE2,	GPIOF_OUT_INIT_LOW,	"rs485:de2" },
 	{ EM_GPIO_RS485_DE3,	GPIOF_OUT_INIT_LOW,	"rs485:de3" },
 	{ EM_GPIO_RS485_DE4,	GPIOF_OUT_INIT_HIGH,	"rs485:de4" },
-	{ EM_GPIO_S0,		GPIOF_IN,		"s0" },
 	{ EM_GPIO_USB_OSC1,	GPIOF_IN,		"usb:osc1" },
 	{ EM_GPIO_USB_OSC2,	GPIOF_IN,		"usb:osc2" },
 	{ EM_GPIO_GSM_EMERG_OFF, GPIOF_OUT_INIT_LOW,	"gsm:emerg_off" },
