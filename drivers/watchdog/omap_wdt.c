@@ -200,7 +200,7 @@ static long omap_wdt_ioctl(struct file *file, unsigned int cmd,
 						unsigned long arg)
 {
 	struct omap_wdt_dev *wdev;
-	int new_margin;
+	int new_margin, result = 0;
 	static const struct watchdog_info ident = {
 		.identity = "OMAP Watchdog",
 		.options = WDIOF_SETTIMEOUT,
@@ -227,6 +227,19 @@ static long omap_wdt_ioctl(struct file *file, unsigned int cmd,
 		omap_wdt_ping(wdev);
 		spin_unlock(&wdt_lock);
 		return 0;
+	case WDIOC_SETOPTIONS:
+		if (get_user(new_margin, (int __user *)arg))
+			return -EFAULT;
+		spin_lock(&wdt_lock);
+		if (new_margin & WDIOS_ENABLECARD)
+			omap_wdt_enable(wdev);
+		else if (new_margin & WDIOS_DISABLECARD)
+			omap_wdt_disable(wdev);
+		else
+			result -EINVAL;
+		spin_unlock(&wdt_lock);
+
+		return result;
 	case WDIOC_SETTIMEOUT:
 		if (get_user(new_margin, (int __user *)arg))
 			return -EFAULT;
