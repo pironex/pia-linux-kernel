@@ -856,10 +856,18 @@ static struct gpio sk_gpios[] = {
 #define APC_GPIO_GSM_PWRKEY	GPIO_TO_PIN(3, 18)
 #define APC_GPIO_GSM_DTR	GPIO_TO_PIN(3, 19)
 #define APC_GPIO_GPS_WAKEUP	GPIO_TO_PIN(3, 20)
+/* Rev 00.02 */
+#define APC_GPIO_CHRG_ACT	GPIO_TO_PIN(0, 28)
+#define APC_GPIO_CHRG_FIN	GPIO_TO_PIN(0, 31)
+#define APC_GPIO_CHRG_EN	GPIO_TO_PIN(2, 24)
+#define APC_GPIO_GSM_PWR_EN	GPIO_TO_PIN(2,  2)
+#define APC_GPIO_GSM_PWR_OK	GPIO_TO_PIN(2,  4)
+#define APC_GPIO_GSM_RESET	GPIO_TO_PIN(2, 25)
+#define APC_GPIO_ODOMETER	GPIO_TO_PIN(2, 12)
 static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* IO */
 	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
-	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* LED */
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
 	/* CAN */
@@ -873,7 +881,17 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 	{ "mcasp0_fsr.gpio3_19",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mii1_txen.gpio3_3",		AM33XX_PIN_INPUT_PULLDOWN },
-
+	/* Rev 00.02 */
+	/* Charger */
+	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
+	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT },
+	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_INPUT_PULLDOWN }, // special OS
+	/* Odometer */
+	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT },
+	/* GSM additional power control */
+	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
+	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_INPUT_PULLDOWN },
+	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
 };
 static struct gpio apc_gpios[] = {
@@ -887,6 +905,14 @@ static struct gpio apc_gpios[] = {
 	{ APC_GPIO_GPS_WAKEUP,	GPIOF_OUT_INIT_LOW,	"gps:wake" },
 	{ APC_GPIO_CAN_TERM0,	GPIOF_OUT_INIT_LOW,	"can:term0" },
 	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
+	/* Rev 00.02 */
+	{ APC_GPIO_CHRG_ACT,	GPIOF_IN,		"chrg:active" },
+	{ APC_GPIO_CHRG_FIN,	GPIOF_IN,		"chrg:finish" },
+	{ APC_GPIO_CHRG_EN,	GPIOF_OUT_INIT_LOW,	"chrg:en" },
+	{ APC_GPIO_ODOMETER,	GPIOF_IN,		"odometer" },
+	{ APC_GPIO_GSM_RESET,	GPIOF_OUT_INIT_HIGH,	"gsm:reset" },
+	{ APC_GPIO_GSM_PWR_EN,	GPIOF_OUT_INIT_HIGH,	"gsm:power_en" },
+	{ APC_GPIO_GSM_PWR_OK,	GPIOF_IN,		"gsm:power_ok" },
 };
 
 #define EM_GPIO_GSM_STATUS	GPIO_TO_PIN(0,  5)
@@ -993,7 +1019,7 @@ static void pia335x_gpios_export(struct gpio *gpiocfg, int count)
 			return;
 		}
 		pr_info("piA335x: GPIO init %s\n", gpiocfg[i].label);
-		gpio_export(gpiocfg[i].gpio, 0);
+		gpio_export(gpiocfg[i].gpio, 1);
 #ifdef CONFIG_PIAAM335X_PROTOTYPE
 		pia_print_gpio_state(gpiocfg[i].label, gpiocfg[i].gpio, 1);
 #endif
@@ -1420,7 +1446,7 @@ static void wl12xx_prepare(int boardid)
 		if (pia335x_main_id.rev > 1) {
 			pia335x_mmc[idx].name = "wl18xx";
 			wl12xx_data.board_ref_clock = WL12XX_REFCLOCK_26;
-		} else
+		}
 		wl12xx_data.irq = OMAP_GPIO_IRQ(EM_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = EM_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = EM_GPIO_WLAN_EN;
@@ -1429,6 +1455,10 @@ static void wl12xx_prepare(int boardid)
 	case PIA335_BB_APC:
 		setup_pin_mux(mmc2_base_pin_mux);
 		setup_pin_mux(apc_mmc2_extra_pin_mux);
+		if (pia335x_main_id.rev > 1) {
+			pia335x_mmc[idx].name = "wl18xx";
+			wl12xx_data.board_ref_clock = WL12XX_REFCLOCK_26;
+		}
 		wl12xx_data.irq = OMAP_GPIO_IRQ(APC_GPIO_WLAN_IRQ);
 		wl12xx_data.bt_enable_gpio = APC_GPIO_BT_EN;
 		wl12xx_data.wlan_enable_gpio = APC_GPIO_WLAN_EN;
@@ -1546,8 +1576,13 @@ static __init void mmc_extra_init(struct device *dev, int id)
 		}
 		break;
 	case PIA335_LOKISA_EM:
+		/* setup WL12xx module*/
+		if (pdev->id == 2) /* 3rd slot, mmc2 */
+			wl12xx_init(pdev->id);
+		break;
 	case PIA335_BB_APC:
 		/* setup WL12xx module*/
+		// TODO update for WL18 module on rev 2
 		if (pdev->id == 2) /* 3rd slot, mmc2 */
 			wl12xx_init(pdev->id);
 		break;
