@@ -867,6 +867,7 @@ static struct gpio sk_gpios[] = {
 static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* IO */
 	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
+
 	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* LED */
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
@@ -880,7 +881,7 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 	{ "mcasp0_aclkr.gpio3_18",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "mcasp0_fsr.gpio3_19",	AM33XX_PIN_INPUT_PULLUP },
 	{ "mcasp0_axr1.gpio3_20",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mii1_txen.gpio3_3",		AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mii1_txen.gpio3_3",		AM33XX_PIN_INPUT },
 	/* Rev 00.02 */
 	/* Charger */
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
@@ -891,11 +892,13 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* GSM additional power control */
 	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
 	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_INPUT_PULLDOWN },
-	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT_PULLUP },
+	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT },
 	{ NULL, 0 },
 };
 static struct gpio apc_gpios[] = {
 	{ APC_GPIO_IN_FAULT,	GPIOF_IN,		"in_fault" },
+	/* turn battery power on here, it is turned off in bootloader
+	 * to make sure the board doesn't boot, with battery only */
 	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_HIGH,	"bat_pwr" },
 	{ APC_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
 	{ APC_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
@@ -910,7 +913,8 @@ static struct gpio apc_gpios[] = {
 	{ APC_GPIO_CHRG_FIN,	GPIOF_IN,		"chrg:finish" },
 	{ APC_GPIO_CHRG_EN,	GPIOF_OUT_INIT_LOW,	"chrg:en" },
 	{ APC_GPIO_ODOMETER,	GPIOF_IN,		"odometer" },
-	{ APC_GPIO_GSM_RESET,	GPIOF_OUT_INIT_HIGH,	"gsm:reset" },
+	/* RESET is 1.8V in rev 00.02
+	 { APC_GPIO_GSM_RESET,	GPIOF_OUT_INIT_HIGH,	"gsm:reset" },*/
 	{ APC_GPIO_GSM_PWR_EN,	GPIOF_OUT_INIT_HIGH,	"gsm:power_en" },
 	{ APC_GPIO_GSM_PWR_OK,	GPIOF_IN,		"gsm:power_ok" },
 };
