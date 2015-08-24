@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/usb.h>
+#include <linux/signal.h>
 #include <linux/uaccess.h>
 #include <linux/usb/serial.h>
 
@@ -55,6 +56,8 @@ static void cp210x_release(struct usb_serial *);
 static void cp210x_dtr_rts(struct usb_serial_port *p, int on);
 
 static int debug;
+static int std_port_pid = -1;
+static int ext_port_pid = -1;
 
 static const struct usb_device_id id_table[] = {
 	{ USB_DEVICE(0x045B, 0x0053) }, /* Renesas RX610 RX-Stick */
@@ -195,11 +198,40 @@ struct cp210x_port_private {
 	__u8			bInterfaceNumber;
 	__u8      		bPartNumber;
 };
+static void send_sig_to_pid(void)
+{
+	struct siginfo info;
 
+	info.si_signo = SIGKILL;
+	info.si_errno = 0;
+	info.si_code = SI_USER; // sent by kill, sigsend, raise
+	info.si_pid = get_current()->pid; // sender's pid
+	info.si_uid = current_uid(); // sender's uid
+	if (std_port_pid != -1) {
+        	printk(KERN_INFO "Kill daemon[%d] registerd on the port\n", std_port_pid);
+		kill_proc_info(SIGKILL, &info, std_port_pid);
+	}
+	if (ext_port_pid != -1) {
+		printk(KERN_INFO "Kill daemon[%d] registerd on the port\n", ext_port_pid);
+		kill_proc_info(SIGKILL, &info, ext_port_pid);
+	}
+	return;
+}
+
+// Wrapper function for getting the disconnect control to signal the user application which are using the ports
+static void cp210_usb_serial_disconnect(struct usb_interface *interface)
+{
+	// Send signal to the processes 
+	if (std_port_pid != -1 || ext_port_pid != -1) {
+		send_sig_to_pid();	
+	}
+	// DO the normal serial disconnection procedure
+	usb_serial_disconnect(interface);
+}
 static struct usb_driver cp210x_driver = {
 	.name		= "cp210x",
 	.probe		= usb_serial_probe,
-	.disconnect	= usb_serial_disconnect,
+	.disconnect	= cp210_usb_serial_disconnect,
 	.id_table	= id_table,
 	.no_dynamic_id	= 	1,
 };
@@ -236,6 +268,9 @@ static struct usb_serial_driver cp210x_device = {
 /* IOCTLs */
 #define IOCTL_GPIOGET   0x8000
 #define IOCTL_GPIOSET   0x8001
+// IOCTL for setting the pid of the process using standard port 
+#define IOCTL_SET_STD_PORT_PID  0x8002
+#define IOCTL_SET_EXTD_PORT_PID 0x8003
 
 /* Config request types */
 //#define REQTYPE_HOST_TO_DEVICE	0x41
@@ -575,7 +610,20 @@ static int cp210x_ioctl(struct tty_struct *tty,
 				return -ENOTSUPP;
 			}
 			break;
-
+		case IOCTL_SET_STD_PORT_PID:
+			if (copy_from_user(&std_port_pid, (unsigned int*)arg, 4))
+			{
+				printk(KERN_ERR "Setting pid[%d] for std port Failed\n", std_port_pid);
+				return -EFAULT;
+			}
+			break;
+		case IOCTL_SET_EXTD_PORT_PID:
+			if (copy_from_user(&ext_port_pid, (unsigned int*)arg, 4))
+			{
+				printk(KERN_ERR "Setting pid[%d] for extd port Failed\n", ext_port_pid);
+				return -EFAULT;
+			}
+			break;
 		default:
 			break;
 	}
