@@ -855,7 +855,7 @@ static struct gpio sk_gpios[] = {
 #define APC_GPIO_GSM_RI		GPIO_TO_PIN(3, 17)
 #define APC_GPIO_GSM_PWRKEY	GPIO_TO_PIN(3, 18)
 #define APC_GPIO_GSM_DTR	GPIO_TO_PIN(3, 19)
-#define APC_GPIO_GPS_WAKEUP	GPIO_TO_PIN(3, 20)
+#define APC_GPIO_GSM_FLIGHT	GPIO_TO_PIN(3, 20)
 /* Rev 00.02 */
 #define APC_GPIO_CHRG_ACT	GPIO_TO_PIN(0, 28)
 #define APC_GPIO_CHRG_FIN	GPIO_TO_PIN(0, 31)
@@ -867,13 +867,12 @@ static struct gpio sk_gpios[] = {
 static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* IO */
 	{ "gpmc_ad9.gpio0_23",		AM33XX_PIN_INPUT_PULLUP },
-
-	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_oen_ren.gpio2_3",	AM33XX_PIN_OUTPUT },
 	/* LED */
 	{ "mii1_rxdv.gpio3_4",		AM33XX_PIN_INPUT_PULLUP },
 	/* CAN */
-	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLDOWN },
-	{ "mcasp0_fsx.gpio3_15",	AM33XX_PIN_INPUT_PULLDOWN },
+	{ "mcasp0_aclkx.gpio3_14",	AM33XX_PIN_INPUT_PULLUP },
+	{ "mcasp0_fsx.gpio3_15",	AM33XX_PIN_INPUT_PULLUP },
 	/* RS485 */
 	{ "mcasp0_axr0.gpio3_16",	AM33XX_PIN_INPUT_PULLDOWN },
 	/* GSM */
@@ -886,12 +885,12 @@ static struct pinmux_config apc_gpios_pin_mux[] = {
 	/* Charger */
 	{ "mii1_txd0.gpio0_28",		AM33XX_PIN_INPUT },
 	{ "gpmc_wpn.gpio0_31",		AM33XX_PIN_INPUT },
-	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_INPUT_PULLDOWN }, // special OS
+	{ "lcd_pclk.gpio2_24",		AM33XX_PIN_INPUT }, // special OS
 	/* Odometer */
 	{ "lcd_data6.gpio2_12",		AM33XX_PIN_INPUT },
 	/* GSM additional power control */
-	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_OUTPUT },
-	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_INPUT_PULLDOWN },
+	{ "gpmc_advn_ale.gpio2_2",	AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_wen.gpio2_4",		AM33XX_PIN_INPUT },
 	{ "lcd_ac_bias_en.gpio2_25",	AM33XX_PIN_INPUT },
 	{ NULL, 0 },
 };
@@ -902,19 +901,20 @@ static struct gpio apc_gpios[] = {
 	{ APC_GPIO_BAT_PWR,	GPIOF_OUT_INIT_HIGH,	"bat_pwr" },
 	{ APC_GPIO_RS485_DE1,	GPIOF_OUT_INIT_LOW,	"rs485:de1" },
 	{ APC_GPIO_GSM_PWRKEY,	GPIOF_OUT_INIT_LOW,	"gsm:pwrkey" },
-	{ APC_GPIO_GSM_DTR,	GPIOF_OUT_INIT_HIGH,	"gsm:dtr" },
+	{ APC_GPIO_GSM_DTR,	GPIOF_OUT_INIT_LOW,	"gsm:dtr" },
 	{ APC_GPIO_GSM_RI,	GPIOF_IN,		"gsm:ri" },
 	{ APC_GPIO_GSM_STATUS,	GPIOF_IN,		"gsm:status" },
-	{ APC_GPIO_GPS_WAKEUP,	GPIOF_OUT_INIT_LOW,	"gps:wake" },
-	{ APC_GPIO_CAN_TERM0,	GPIOF_OUT_INIT_LOW,	"can:term0" },
-	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_LOW,	"can:term1" },
+	/* on SIM5360 disable flight mode, when HIGH */
+	{ APC_GPIO_GSM_FLIGHT,	GPIOF_OUT_INIT_HIGH,	"gsm:flight_disable" },
+	{ APC_GPIO_CAN_TERM0,	GPIOF_OUT_INIT_HIGH,	"can:term0" },
+	{ APC_GPIO_CAN_TERM1,	GPIOF_OUT_INIT_HIGH,	"can:term1" },
 	/* Rev 00.02 */
 	{ APC_GPIO_CHRG_ACT,	GPIOF_IN,		"chrg:active" },
 	{ APC_GPIO_CHRG_FIN,	GPIOF_IN,		"chrg:finish" },
 	{ APC_GPIO_CHRG_EN,	GPIOF_OUT_INIT_LOW,	"chrg:en" },
 	{ APC_GPIO_ODOMETER,	GPIOF_IN,		"odometer" },
-	/* RESET is 1.8V in rev 00.02
-	 { APC_GPIO_GSM_RESET,	GPIOF_OUT_INIT_HIGH,	"gsm:reset" },*/
+	/* RESET is 1.8V in rev 00.02, don't output HIGH */
+	{ APC_GPIO_GSM_RESET,	GPIOF_IN,		"gsm:reset" },
 	{ APC_GPIO_GSM_PWR_EN,	GPIOF_OUT_INIT_HIGH,	"gsm:power_en" },
 	{ APC_GPIO_GSM_PWR_OK,	GPIOF_IN,		"gsm:power_ok" },
 };
@@ -1408,7 +1408,7 @@ static struct pinmux_config em_mmc2_extra_pin_mux[] = {
 	{ NULL, 0 },
 };
 static struct pinmux_config apc_mmc2_extra_pin_mux[] = {
-	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLUP },
+	{ "gpmc_ad11.gpio0_27",		AM33XX_PIN_INPUT_PULLDOWN },
 	{ "ecap0_in_pwm0_out.gpio0_7",	AM33XX_PIN_INPUT_PULLDOWN },
 	{ "gpmc_ad8.gpio0_22",		AM33XX_PIN_INPUT_PULLUP },
 	{ NULL, 0 },
