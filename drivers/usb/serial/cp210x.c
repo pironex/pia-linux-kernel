@@ -21,6 +21,8 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/usb.h>
+#include <linux/rcupdate.h>
+#include <linux/sched.h>
 #include <linux/signal.h>
 #include <linux/uaccess.h>
 #include <linux/usb/serial.h>
@@ -30,7 +32,8 @@
  */
 #define DRIVER_VERSION "v0.09"
 #define DRIVER_DESC "Silicon Labs CP210x RS232 serial adaptor driver"
-
+#define SIG_STD_PORT_APP_TERM 44
+#define SIG_EXT_PORT_APP_TERM 45
 /*
  * Function Prototypes
  */
@@ -201,19 +204,38 @@ struct cp210x_port_private {
 static void send_sig_to_pid(void)
 {
 	struct siginfo info;
-
-	info.si_signo = SIGKILL;
+	struct task_struct *task;
 	info.si_errno = 0;
-	info.si_code = SI_USER; // sent by kill, sigsend, raise
+	info.si_code = SI_USER; // sent by Terminate, sigsend, raise
 	info.si_pid = get_current()->pid; // sender's pid
 	info.si_uid = current_uid(); // sender's uid
 	if (std_port_pid != -1) {
-        	printk(KERN_INFO "Kill daemon[%d] registerd on the port\n", std_port_pid);
-		kill_proc_info(SIGKILL, &info, std_port_pid);
+	        info.si_signo = SIG_STD_PORT_APP_TERM;
+		printk(KERN_INFO "Terminate daemon[%d] registerd on the standard port\n", std_port_pid);
+		rcu_read_lock();
+		task = find_task_by_pid_ns(std_port_pid, &init_pid_ns);//find the task_struct associated with this pid
+		if(task == NULL){
+			printk(KERN_ERR "no such std port pid[%d]\n", std_port_pid);
+			rcu_read_unlock();
+			return -ENODEV;
+		}
+		rcu_read_unlock();
+		send_sig_info(SIG_STD_PORT_APP_TERM, &info, task);//send signal to user land
+	        std_port_pid = -1;	
 	}
 	if (ext_port_pid != -1) {
-		printk(KERN_INFO "Kill daemon[%d] registerd on the port\n", ext_port_pid);
-		kill_proc_info(SIGKILL, &info, ext_port_pid);
+		info.si_signo = SIG_EXT_PORT_APP_TERM;
+		printk(KERN_INFO "Terminate daemon[%d] registerd on the extended port\n", ext_port_pid);
+		rcu_read_lock();
+		task = find_task_by_pid_ns(ext_port_pid, &init_pid_ns);//find the task_struct associated with this pid
+		if(task == NULL){
+			printk(KERN_ERR "no such ext port pid[%d]\n", ext_port_pid);
+			rcu_read_unlock();
+			return -ENODEV;
+		}
+		rcu_read_unlock();
+		send_sig_info(SIG_EXT_PORT_APP_TERM, &info, task);//send signal to user land 
+		ext_port_pid = -1;
 	}
 	return;
 }
