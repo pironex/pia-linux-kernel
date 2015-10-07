@@ -1,0 +1,234 @@
+/*
+ * Copyright (C) 2015 pironex GmbH (http://www.pironex.de)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "am33xx.dtsi"
+
+/ {
+	model = "pironex piA-AM335x-PM";
+	compatible = "pironex,am335x-pia-pm", "ti,am33xx";
+
+	cpus {
+		cpu@0 {
+			/* CPU supply "vdd_mpu" */
+			cpu0-supply = <&vdd1_reg>;
+		};
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x80000000 0x10000000>; /* 256 MB */
+	};
+
+	vcc_5v0_in: fixedregulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_5v0_in";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+	};
+
+	vcc_3v3: fixedregulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_reg";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+	};
+
+	leds {
+		pinctrl-names = "default";
+		pinctrl-0 = <&user_leds_s0>;
+
+		compatible = "gpio-leds";
+
+		led@1 {
+			label = "pm-led:green:heartbeat";
+			gpios = <&gpio1 29 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "on";
+		};
+	};
+};
+
+&am33xx_pinmux {
+	pinctrl-names = "default";
+
+	user_leds_s0: user_leds_s0 {
+		pinctrl-single,pins = <
+			0x7c (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0.gpio1_29 */
+		>;
+	};
+
+	/* I2C Bus 0 */
+	i2c0_pins: pinmux_i2c0_pins {
+		pinctrl-single,pins = <
+			0x188 (PIN_INPUT_PULLUP | MUX_MODE0)	/* i2c0_sda.i2c0_sda */
+			0x18c (PIN_INPUT_PULLUP | MUX_MODE0)	/* i2c0_scl.i2c0_scl */
+		>;
+	};
+
+	/* eMMC on 2nd MMC bus */
+	mmc2_pins: pinmux_mmc2_pins {
+		pinctrl-single,pins = <
+			0x80 (PIN_INPUT_PULLUP | MUX_MODE2) /* gpmc_csn1.mmc1_clk */
+			0x84 (PIN_INPUT_PULLUP | MUX_MODE2) /* gpmc_csn2.mmc1_cmd */
+			0x00 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad0.mmc1_dat0 */
+			0x04 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad1.mmc1_dat1 */
+			0x08 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad2.mmc1_dat2 */
+			0x0c (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad3.mmc1_dat3 */
+			0x10 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad4.mmc1_dat4 */
+			0x14 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad5.mmc1_dat5 */
+			0x18 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad6.mmc1_dat6 */
+			0x1c (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad7.mmc1_dat7 */
+			/* reset GPIO */
+			0x9c (PIN_INPUT_PULLUP | MUX_MODE7) /* gpmc_be0n_cle.gpio2_5 */
+		>;
+	};
+
+	/* Debug UART - not on PM but fixed as UART on baseboard */
+	uart0_pins: pinmux_uart0_pins {
+		pinctrl-single,pins = <
+			0x170 (PIN_INPUT_PULLUP | MUX_MODE0)	/* uart0_rxd.uart0_rxd */
+			0x174 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* uart0_txd.uart0_txd */
+		>;
+	};
+
+};
+
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	clock-frequency = <400000>; /* 400 kHz */
+
+	status = "okay";
+
+	/* TPS65910 PMIC */
+	tps: tps@2d {
+		reg = <0x2d>;
+	};
+
+	/* 24AA02E48 EEPROM with UID */
+	eeprom@50 {
+		compatible = "atmel,24c01";
+		reg = <0x50>;
+		pagesize = <8>;
+	};
+
+	/* TODO add missing devices */
+};
+
+/* Debug UART */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pins>;
+
+	status = "okay";
+};
+
+/* TPS65910 base configuration in tps65910.dtsi */
+#include "tps65910.dtsi"
+
+/* TPS65910 board specific configuration */ 
+&tps {
+	vcc1-supply = <&vcc_5v0_in>;
+	vcc2-supply = <&vcc_5v0_in>;
+	vcc3-supply = <&vcc_5v0_in>;
+	vcc4-supply = <&vcc_5v0_in>;
+	vcc5-supply = <&vcc_5v0_in>;
+	vcc6-supply = <&vcc_5v0_in>;
+	vcc7-supply = <&vcc_5v0_in>;
+	vccio-supply = <&vcc_5v0_in>;
+
+	regulators {
+		vrtc_reg: regulator@0 {
+			regulator-always-on;
+		};
+
+		/* DDR3 IO voltage */
+		vio_reg: regulator@1 {
+			regulator-always-on;
+		};
+
+		vdd1_reg: regulator@2 {
+			/* VDD_MPU voltage limits 0.95V - 1.26V with +/-4% tolerance 
+			 * controlled by cpufreq */
+			regulator-name = "vdd_mpu";
+			regulator-min-microvolt = <912500>;
+			regulator-max-microvolt = <1312500>;
+			regulator-boot-on;
+			regulator-always-on;
+		};
+
+		vdd2_reg: regulator@3 {
+			/* VDD_CORE voltage limits 0.95V - 1.1V with +/-4% tolerance */
+			regulator-name = "vdd_core";
+			regulator-min-microvolt = <912500>;
+			regulator-max-microvolt = <1150000>;
+			regulator-boot-on;
+			regulator-always-on;
+		};
+
+		vdd3_reg: regulator@4 {
+			regulator-always-on;
+		};
+
+		vdig1_reg: regulator@5 {
+			/* VDIG1 is not used on PM
+			 * not setting always-on should disable the regulator after init */
+			/* regulator-always-on; */
+		};
+
+		vdig2_reg: regulator@6 {
+			regulator-always-on;
+		};
+
+		vpll_reg: regulator@7 {
+			regulator-always-on;
+		};
+
+		vdac_reg: regulator@8 {
+			regulator-always-on;
+		};
+
+		vaux1_reg: regulator@9 {
+			regulator-always-on;
+		};
+
+		vaux2_reg: regulator@10 {
+			regulator-always-on;
+		};
+
+		vaux33_reg: regulator@11 {
+			regulator-always-on;
+		};
+
+		vmmc_reg: regulator@12 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		vbb_reg: regulator@13 {
+			regulator-min-microvolt = <3150000>;
+			regulator-max-microvolt = <3150000>;
+			regulator-always-on;
+		};
+	};
+};
+
+/* eMMC */
+&mmc2 {
+	vmmc-supply = <&vmmc_reg>;
+	bus-width = <8>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_pins>;
+	ti,non-removable;
+
+	status = "okay"; /* present on PM module */
+};
