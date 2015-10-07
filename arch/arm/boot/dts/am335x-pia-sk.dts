@@ -1,0 +1,16 @@
+/*
+ * Copyright (C) 2015 pironex GmbH (http://www.pironex.de)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+/dts-v1/;
+
+#include "am335x-pia-pm.dtsi"
+
+/ {
+	model = "pironex piA-AM335x-SK";
+	compatible = "pironex,am335x-pia-sk", "pironex,am335x-pia-pm", "ti,am33xx";
+
+};
