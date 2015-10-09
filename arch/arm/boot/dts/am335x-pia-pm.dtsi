@@ -32,6 +32,15 @@
 		regulator-boot-on;
 	};
 
+	vcc_3v3: fixedregulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_reg";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+	};
+
 	leds {
 		pinctrl-names = "default";
 		pinctrl-0 = <&user_leds_s0>;
@@ -64,6 +73,24 @@
 		>;
 	};
 
+	/* eMMC on 2nd MMC bus */
+	mmc2_pins: pinmux_mmc2_pins {
+		pinctrl-single,pins = <
+			0x80 (PIN_INPUT_PULLUP | MUX_MODE2) /* gpmc_csn1.mmc1_clk */
+			0x84 (PIN_INPUT_PULLUP | MUX_MODE2) /* gpmc_csn2.mmc1_cmd */
+			0x00 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad0.mmc1_dat0 */
+			0x04 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad1.mmc1_dat1 */
+			0x08 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad2.mmc1_dat2 */
+			0x0c (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad3.mmc1_dat3 */
+			0x10 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad4.mmc1_dat4 */
+			0x14 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad5.mmc1_dat5 */
+			0x18 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad6.mmc1_dat6 */
+			0x1c (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad7.mmc1_dat7 */
+			/* reset GPIO */
+			0x9c (PIN_INPUT_PULLUP | MUX_MODE7) /* gpmc_be0n_cle.gpio2_5 */
+		>;
+	};
+
 	/* Debug UART - not on PM but fixed as UART on baseboard */
 	uart0_pins: pinmux_uart0_pins {
 		pinctrl-single,pins = <
@@ -77,15 +104,22 @@
 &i2c0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
-	
-	status = "okay";
 	clock-frequency = <400000>; /* 400 kHz */
-	
+
+	status = "okay";
+
 	/* TPS65910 PMIC */
 	tps: tps@2d {
 		reg = <0x2d>;
 	};
-	
+
+	/* 24AA02E48 EEPROM with UID */
+	eeprom@50 {
+		compatible = "atmel,24c01";
+		reg = <0x50>;
+		pagesize = <8>;
+	};
+
 	/* TODO add missing devices */
 };
 
@@ -180,4 +214,15 @@
 			regulator-always-on;
 		};
 	};
+};
+
+/* eMMC */
+&mmc2 {
+	vmmc-supply = <&vmmc_reg>;
+	bus-width = <8>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc2_pins>;
+	ti,non-removable;
+
+	status = "okay"; /* present on PM module */
 };
