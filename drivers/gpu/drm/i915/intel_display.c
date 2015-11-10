@@ -7252,6 +7252,20 @@ static int intel_gen7_queue_flip(struct drm_device *dev,
 		goto err_unpin;
 	}
 
+	/*
+	 * BSpec MI_DISPLAY_FLIP for IVB:
+	 * "The full packet must be contained within the same cache line."
+	 *
+	 * Currently the LRI+SRM+MI_DISPLAY_FLIP all fit within the same
+	 * cacheline, if we ever start emitting more commands before
+	 * the MI_DISPLAY_FLIP we may need to first emit everything else,
+	 * then do the cacheline alignment, and finally emit the
+	 * MI_DISPLAY_FLIP.
+	 */
+	ret = intel_ring_cacheline_align(ring);
+	if (ret)
+		goto err_unpin;
+
 	ret = intel_ring_begin(ring, 4);
 	if (ret)
 		goto err_unpin;
@@ -9141,14 +9155,15 @@ void intel_connector_attach_encoder(struct intel_connector *connector,
 int intel_modeset_vga_set_state(struct drm_device *dev, bool state)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
+	unsigned reg = INTEL_INFO(dev)->gen >= 6 ? SNB_GMCH_CTRL : INTEL_GMCH_CTRL;
 	u16 gmch_ctrl;
 
-	pci_read_config_word(dev_priv->bridge_dev, INTEL_GMCH_CTRL, &gmch_ctrl);
+	pci_read_config_word(dev_priv->bridge_dev, reg, &gmch_ctrl);
 	if (state)
 		gmch_ctrl &= ~INTEL_GMCH_VGA_DISABLE;
 	else
 		gmch_ctrl |= INTEL_GMCH_VGA_DISABLE;
-	pci_write_config_word(dev_priv->bridge_dev, INTEL_GMCH_CTRL, gmch_ctrl);
+	pci_write_config_word(dev_priv->bridge_dev, reg, gmch_ctrl);
 	return 0;
 }
 
