@@ -89,6 +89,7 @@ static struct usbhs_omap_board_data usbhs_pdata __initdata = {
  * GSM: Telit GE864 Quad-V2
  */
 #define GPIO_EN_GSM_POWER   29    /* GSM power supply voltage */
+#define GPIO_GSM_PWRMON    119    /* monitor GSM power state */
 #define GPIO_GSM_NRESET    126    /* GSM reset low active */
 #define GPIO_GSM_ONOFF     127    /* GSM on/off low active*/
 static int __init pia35x_gsm_init(void)
@@ -108,6 +109,14 @@ static int __init pia35x_gsm_init(void)
 		// GPIO 126 is available on 2 pins
 		omap_mux_init_signal("sdmmc1_dat4.gpio_126", OMAP_PIN_OUTPUT);
 		gpio_export(GPIO_GSM_NRESET, false);
+	}
+
+	if ((ret = gpio_request_one(GPIO_GSM_PWRMON,
+			GPIOF_DIR_IN, "gsm-pwrmon")) != 0) {
+		pr_warning("%s: GPIO 119 request failed: %d\n", __func__, ret);
+	} else {
+		omap_mux_init_gpio(GPIO_GSM_PWRMON, OMAP_PIN_INPUT);
+		gpio_export(GPIO_GSM_PWRMON, false);
 	}
 
 	if ((ret = gpio_request_one(GPIO_GSM_ONOFF,
