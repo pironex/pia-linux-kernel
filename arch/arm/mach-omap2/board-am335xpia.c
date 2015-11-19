@@ -2188,7 +2188,6 @@ static void i2c1_init(int boardid)
 		// second IO expander
 		pia335x_register_i2c_devices(2, em_i2c2_din_boardinfo,
 				ARRAY_SIZE(em_i2c2_din_boardinfo));
-		}
 		break;
 	default:
 		break;
