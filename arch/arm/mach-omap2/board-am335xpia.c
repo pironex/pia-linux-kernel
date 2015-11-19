@@ -2185,9 +2185,8 @@ static void i2c1_init(int boardid)
 		/* only PMIC and EEPROM on first bus */
 		pia335x_register_i2c_devices(2, em_i2c2_boardinfo,
 				ARRAY_SIZE(em_i2c2_boardinfo));
-		if (pia335x_main_id.rev > 2) {
-			// second IO expander
-			pia335x_register_i2c_devices(2, em_i2c2_din_boardinfo,
+		// second IO expander
+		pia335x_register_i2c_devices(2, em_i2c2_din_boardinfo,
 				ARRAY_SIZE(em_i2c2_din_boardinfo));
 		}
 		break;
