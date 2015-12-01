@@ -57,6 +57,7 @@
 
 #include "board-flash.h"
 #include "common.h"
+#include "control.h"
 #include "cpuidle33xx.h"
 #include "devices.h"
 #include "mux.h"
@@ -3489,6 +3490,9 @@ static void pia335x_setup(struct memory_accessor *mem_acc, void *context)
 
 	if (res != 0)
 		goto out;
+
+	pr_info("piA335x: Control status register is %08x\n",
+			omap_ctrl_readl(AM33XX_CONTROL_STATUS_OFF));
 
 	/* EEPROM found, branch into specific board setups */
 	pia335x_parse_eeprom(&pia335x_main_id);
