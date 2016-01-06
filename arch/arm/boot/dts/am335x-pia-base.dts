@@ -15,7 +15,20 @@
 
 	/* cpus: defined in PM */
 	/* memory: defined in PM, TODO different memory configurations */
-	
+
+	vcc_3v3_reg: fixedregulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_reg";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-max-microamp = <1000000>;
+		regulator-boot-on;
+		regulator-always-on;
+		enable-active-high;
+		gpio = <&gpio2 23 GPIO_ACTIVE_HIGH>; /* LDO_EN */
+		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+	};
+
 	led2 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&led2_pins>;
