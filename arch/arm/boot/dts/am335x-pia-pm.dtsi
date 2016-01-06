@@ -32,15 +32,6 @@
 		regulator-boot-on;
 	};
 
-	vcc_3v3: fixedregulator@1 {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_3v3_reg";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-boot-on;
-		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
-	};
-
 	leds {
 		pinctrl-names = "default";
 		pinctrl-0 = <&user_leds_s0>;
