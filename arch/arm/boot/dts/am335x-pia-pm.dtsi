@@ -32,14 +32,14 @@
 		regulator-boot-on;
 	};
 
-	leds {
+	leds: leds {
 		pinctrl-names = "default";
-		pinctrl-0 = <&user_leds_s0>;
+		pinctrl-0 = <&led_pins>;
 
 		compatible = "gpio-leds";
 
 		led@1 {
-			label = "pm-led:green:heartbeat";
+			label = "led:green";
 			gpios = <&gpio1 29 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "on";
@@ -50,7 +50,7 @@
 &am33xx_pinmux {
 	pinctrl-names = "default";
 
-	user_leds_s0: user_leds_s0 {
+	led_pins: pinmux_led {
 		pinctrl-single,pins = <
 			0x7c (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0.gpio1_29 */
 		>;
