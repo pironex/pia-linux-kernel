@@ -82,6 +82,12 @@
 		>;
 	};
 
+	tps_pins: pinmux_tps {
+		pinctrl-single,pins = <
+			0x124 (PIN_INPUT_PULLUP | MUX_MODE7)	/* mii1_txd1.gpio0_21 */
+		>;
+	};
+
 	/* Debug UART - not on PM but fixed as UART on baseboard */
 	uart0_pins: pinmux_uart0_pins {
 		pinctrl-single,pins = <
@@ -127,6 +133,16 @@
 
 /* TPS65910 board specific configuration */ 
 &tps {
+	pinctrl-names = "default";
+	pinctrl-0 = <&tps_pins>;
+
+	interrupt-parent = <&gpio0>;
+	interrupts = <21 2>; /* low flank */
+
+	ti,en-ck32k-xtal;
+	/* would do a reset on powerdown
+	 * ti,system-power-controller; */
+
 	vcc1-supply = <&vcc_5v0_in>;
 	vcc2-supply = <&vcc_5v0_in>;
 	vcc3-supply = <&vcc_5v0_in>;
