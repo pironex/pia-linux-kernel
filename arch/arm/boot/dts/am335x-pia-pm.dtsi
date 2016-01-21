@@ -120,6 +120,11 @@
 	/* TODO add missing devices */
 };
 
+&rtc {
+	/* RTC is used from TPS, make sure it is rtc0 */
+	status = "disabled";
+};
+
 /* Debug UART */
 &uart0 {
 	pinctrl-names = "default";
