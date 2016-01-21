@@ -72,6 +72,38 @@
 	};
 };
 
+&gpio0 {
+	gpio_wd_set2 {
+		gpio-hog;
+		gpios = <13 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "watchdog-enable";
+	};
+
+	gpio_can0_stb {
+		gpio-hog;
+		gpios = <22 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "can0-stb";
+	};
+
+	gpio_gsm_fligthmode {
+		gpio-hog;
+		gpios = <28 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "gsm-flightmode";
+	};
+};
+
+&gpio3 {
+	gpio_oc1 {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_LOW>;
+		input;
+		line-name = "usb0-vbus-oc";
+	};
+};
+
 &am33xx_pinmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&board_pins>;
@@ -199,7 +231,7 @@
 			0x12C (PIN_INPUT_PULLUP | MUX_MODE1)	/* mii1_txclk.uart2_rxd */
 			0x130 (PIN_OUTPUT_PULLDOWN | MUX_MODE1)	/* mii1_rxclk.uart2_txd */
 			0x19C (PIN_INPUT_PULLUP | MUX_MODE7)	/* UART2.RI: mcasp0_ahclkr.gpio3_17 */
-			0x1A4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* UART2.DTR: mcasp0_fsr.gpio3_19 */
+			0x1A4 (PIN_INPUT | MUX_MODE7)	/* UART2.DTR: mcasp0_fsr.gpio3_19 */
 		>;
 	};
 
@@ -293,6 +325,8 @@
 	mma8452@1C {
 		compatible = "fsl,mma8452";
 		reg = <0x1C>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <20 2>; /* low flank */
 	};
 
 	/* 24AA02E48 EEPROM with UID */
