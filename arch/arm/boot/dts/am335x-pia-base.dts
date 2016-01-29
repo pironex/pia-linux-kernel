@@ -205,13 +205,6 @@
 		>;
 	};
 
-	i2c1_pins: pinmux_i2c1_pins {
-		pinctrl-single,pins = <
-			0x10c (PIN_INPUT_PULLUP | MUX_MODE3)	/* i2c0_sda.i2c0_sda */
-			0x110 (PIN_INPUT_PULLUP | MUX_MODE3)	/* i2c0_scl.i2c0_scl */
-		>;
-	};
-
 	mmc1_pins: pinmux_mmc1_pins {
 		pinctrl-single,pins = <
 			0x0f0 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mmc0_dat0.mmc0_dat0 */
@@ -316,24 +309,11 @@
 };
 
 &i2c1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c1_pins>;
-	clock-frequency = <400000>; /* 400 kHz */
-
-	status = "okay";
-
 	mma8452@1C {
 		compatible = "fsl,mma8452";
 		reg = <0x1C>;
 		interrupt-parent = <&gpio0>;
 		interrupts = <20 2>; /* low flank */
-	};
-
-	/* 24AA02E48 EEPROM with UID */
-	expeeprom@50 {
-		compatible = "atmel,24c01";
-		reg = <0x50>;
-		pagesize = <8>;
 	};
 };
 

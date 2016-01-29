@@ -64,6 +64,13 @@
 		>;
 	};
 
+	i2c1_pins: pinmux_i2c1_pins {
+		pinctrl-single,pins = <
+			0x10c (PIN_INPUT_PULLUP | MUX_MODE3)	/* i2c0_sda.i2c0_sda */
+			0x110 (PIN_INPUT_PULLUP | MUX_MODE3)	/* i2c0_scl.i2c0_scl */
+		>;
+	};
+
 	/* eMMC on 2nd MMC bus */
 	mmc2_pins: pinmux_mmc2_pins {
 		pinctrl-single,pins = <
@@ -118,6 +125,21 @@
 	};
 
 	/* TODO add missing devices */
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	clock-frequency = <400000>; /* 400 kHz */
+
+	status = "okay";
+
+	/* 24AA02E48 EEPROM with UID */
+	expeeprom@50 {
+		compatible = "atmel,24c01";
+		reg = <0x50>;
+		pagesize = <8>;
+	};
 };
 
 &rtc {
