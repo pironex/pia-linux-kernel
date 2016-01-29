@@ -996,6 +996,13 @@ config GPIO_74X164
 	  shift registers. This driver can be used to provide access
 	  to more gpio outputs.
 
+config GPIO_MAX3191X
+	tristate "MAX3191X input expander / serializer"
+	depends on SPI_MASTER && OF
+	help
+	  Driver for MAX3191X compatible parallel-in/serial-out 8-input
+	  serializer / GP input expander.
+
 config GPIO_MAX7301
 	tristate "Maxim MAX7301 GPIO expander"
 	select GPIO_MAX730X
