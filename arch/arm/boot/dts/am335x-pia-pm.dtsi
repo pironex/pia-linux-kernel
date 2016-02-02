@@ -247,6 +247,12 @@
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
 		};
+
+		vbb_reg: regulator@13 {
+			regulator-min-microvolt = <3150000>;
+			regulator-max-microvolt = <3150000>;
+			regulator-always-on;
+		};
 	};
 };
 
