@@ -13,6 +13,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/of_platform.h>
+#include <linux/ti_wilink_st.h>
 #include <linux/wl12xx.h>
 
 #include <linux/platform_data/pinctrl-single.h>
@@ -291,6 +292,35 @@ static void __init am335x_evmsk_legacy_init(void)
 {
 	legacy_init_wl12xx(WL12XX_REFCLOCK_38, 0, 31);
 }
+
+struct ti_st_plat_data pia_wilink_pdata = {
+	.nshutdown_gpio = 7,
+	.dev_name = "/dev/ttyO3",
+	.flow_cntrl = 1,
+	.baud_rate = 300000,
+};
+
+static struct platform_device pia_wl18xx_device = {
+	.name	= "kim",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &pia_wilink_pdata,
+	}
+};
+
+static struct platform_device pia_btwilink_device = {
+	.name	= "btwilink",
+	.id	= -1,
+};
+
+static void __init am335x_pia_dr_legacy_init(void)
+{
+	/* ref clock isn't relevant for WL18xx, setup the INT GPIO */
+	legacy_init_wl12xx(WL12XX_REFCLOCK_26_XTAL, 0, 22);
+	platform_device_register(&pia_wl18xx_device);
+	platform_device_register(&pia_btwilink_device);
+	pr_info("PIA-AM335X: Initialized legacy quirks\n");
+}
 #endif
 
 #ifdef CONFIG_SOC_OMAP5
@@ -404,6 +434,7 @@ static struct pdata_init pdata_quirks[] __initdata = {
 #endif
 #ifdef CONFIG_SOC_AM33XX
 	{ "ti,am335x-evmsk", am335x_evmsk_legacy_init, },
+	{ "pironex,am335x-pia-dr", am335x_pia_dr_legacy_init, },
 #endif
 #ifdef CONFIG_SOC_OMAP5
 	{ "ti,omap5-uevm", omap5_uevm_legacy_init, },
