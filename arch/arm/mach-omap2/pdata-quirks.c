@@ -398,6 +398,35 @@ static struct wkup_m3_platform_data wkup_m3_data = {
 };
 #endif
 
+#if defined(CONFIG_SOC_AM33XX)
+struct ti_st_plat_data pia_wilink_pdata = {
+	.nshutdown_gpio = 7,
+	.dev_name = "/dev/ttyO3",
+	.flow_cntrl = 1,
+	.baud_rate = 300000,
+};
+
+static struct platform_device pia_wl18xx_device = {
+	.name	= "kim",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &pia_wilink_pdata,
+	}
+};
+
+static struct platform_device pia_btwilink_device = {
+	.name	= "btwilink",
+	.id	= -1,
+};
+
+static void __init am335x_pia_dr_legacy_init(void)
+{
+	platform_device_register(&pia_wl18xx_device);
+	platform_device_register(&pia_btwilink_device);
+	pr_info("PIA-AM335X: Initialized legacy quirks for btwilink\n");
+}
+#endif
+
 #ifdef CONFIG_SOC_OMAP5
 static void __init omap5_uevm_legacy_init(void)
 {
@@ -509,6 +538,9 @@ static struct pdata_init pdata_quirks[] __initdata = {
 	{ "technexion,omap3-tao3530", omap3_tao3530_legacy_init, },
 	{ "openpandora,omap3-pandora-600mhz", omap3_pandora_legacy_init, },
 	{ "openpandora,omap3-pandora-1ghz", omap3_pandora_legacy_init, },
+#endif
+#ifdef CONFIG_SOC_AM33XX
+	{ "pironex,am335x-pia-dr", am335x_pia_dr_legacy_init, },
 #endif
 #ifdef CONFIG_SOC_OMAP5
 	{ "ti,omap5-uevm", omap5_uevm_legacy_init, },
