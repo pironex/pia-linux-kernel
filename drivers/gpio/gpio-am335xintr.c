@@ -13,6 +13,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/cdev.h>
+#include <linux/jiffies.h>
 // All the GPIO BANK and registers mapping 
 // Defines the GPIO bank 
 #define GPIO0_BANK_START_ADDR 0x44E07000
@@ -38,6 +39,9 @@
 #define GPIO_LEVEL_DETECT_1   0x144
 #define GPIO_RISING_DETECT    0x148
 #define GPIO_FALLING_DETECT   0x14C
+#define GPIO_DEBOUNCENABLE    0x150
+#define GPIO_DEBOUNCINGTIME   0x154
+
 // Clock control for the peripherals
 #define CM_PER_START_ADDR     0x44E00000
 #define CM_PER_END_ADDR     0x44E03FFF
@@ -54,20 +58,45 @@
 #define INTR_GPIO_PIN_LABEL "GPIO_61"
 
 #define MAX_PINS 1
+#define SFT_DEBOUNCINGTIME 30  // milliseconds
+
 MODULE_AUTHOR("psoman");
 MODULE_DESCRIPTION("GPIO driver using interrupts");
 MODULE_LICENSE("GPL");
-static unsigned long pulse_count = 0;
-// Lock for synchronization between timer and interrupt 
+
 static DEFINE_SPINLOCK(event_lock);
+static unsigned long pulse_count = 0;
 static int major = 0;
+extern unsigned long volatile jiffies;
+
 static irqreturn_t gpio_interrupt_handler(int gpio_irq, void *dev_id)
 {
-	unsigned long flags;
-	spin_lock_irqsave(&event_lock, flags);
-	// Increase the detected edge counter
-	pulse_count++;
-	spin_unlock_irqrestore(&event_lock, flags);
+	static unsigned long last_jiffies;
+	static int last_value;
+
+	unsigned long cur_jiffies = jiffies;
+	int value = gpio_get_value(INTR_GPIO_PIN);
+
+	// Invert the value
+	value = ~value & 1;
+
+	if (value == last_value)
+		return IRQ_HANDLED;
+
+	if ((last_value == 1) && (value == 0) &&
+		((cur_jiffies - last_jiffies) > msecs_to_jiffies(SFT_DEBOUNCINGTIME)))
+	{
+		last_value = value;
+		unsigned long flags;
+		spin_lock_irqsave(&event_lock, flags);
+		// Increment pulse counter
+		pulse_count++;
+		spin_unlock_irqrestore(&event_lock, flags);
+	}
+
+	last_jiffies = cur_jiffies;
+	last_value = value;
+
 	return IRQ_HANDLED;
 }
 
@@ -172,6 +201,7 @@ static int __init gpio_interrupt_init(void)
 				INTR_GPIO_PIN, gpio_irq);
 		return -1;
 	}
+
 	// request the interrupt for the GPIO pin request_irq, TRIGER RISING/FALLING
 	retval = request_irq(gpio_irq, gpio_interrupt_handler, 0, 
 			INTR_GPIO_PIN_LABEL, (void*)NULL);
@@ -181,17 +211,26 @@ static int __init gpio_interrupt_init(void)
 				INTR_GPIO_PIN, retval);
 		goto request_irq_fail;
 	}
-	// Set the interupt for both rising and falling edges
-	irq_set_irq_type(gpio_irq, IRQ_TYPE_EDGE_FALLING);
-	// Get the device in to the memor
+
+	// Trigget on both edges
+	retval = irq_set_irq_type(gpio_irq, IRQ_TYPE_EDGE_BOTH);
+	if (retval)
+	{
+		printk (KERN_ERR "Failed to set IRQ type for GPIO pin#%i (error %i)\n", 
+				INTR_GPIO_PIN, retval);
+		goto request_irq_fail;
+	}
+
+	// Get the device in to the memory
 	clk_reg_mem = ioremap(CM_PER_START_ADDR, CMP_PER_SIZE);
 	if (!clk_reg_mem) {
 		printk(KERN_ERR "ioremp failed for Clock register for peripherals\n"); 
 		goto request_irq_fail;
 	}
 
-	// Enable the clock for the GPIO
-	iowrite32(GPIO_BIT_POSITION, clk_reg_mem + CM_PER_GPIO1_CLKCTRL);
+	// Enable the clock for the GPIO and debouncing
+	iowrite32((0x2 | (0x1 << 18)), clk_reg_mem + CM_PER_GPIO1_CLKCTRL);
+
 	iounmap(clk_reg_mem);
 	// Setup the IRQ registers
 	gpio_reg_mem = ioremap(GPIO1_BANK_START_ADDR, GPIO1_BANK_SIZE);
@@ -202,21 +241,22 @@ static int __init gpio_interrupt_init(void)
 	// Access the IRQ status registers for GPIO1
 	// interrupt0
 	reg = ioread32(gpio_reg_mem + GPIO_IRQSTATUS_SET_0);
-	// GPIO 61(GPIO BANK 1, 29)
-	reg |=  1<<GPIO_BIT_POSITION;
+	reg |= 1 << GPIO_BIT_POSITION;
 	iowrite32(reg, gpio_reg_mem + GPIO_IRQSTATUS_SET_0);
-	//intrrupt1
+
+	// intrrupt1
 	reg = ioread32(gpio_reg_mem + GPIO_IRQSTATUS_SET_1);
-	// GPIO 61(GPIO BANK 1, 29)
-	reg |=  1<<GPIO_BIT_POSITION;
+	reg |= 1 << GPIO_BIT_POSITION;
 	iowrite32(reg, gpio_reg_mem + GPIO_IRQSTATUS_SET_1);
-	// set the rising and falling edge detection for the GPIO1_29
-	reg = ioread32(gpio_reg_mem + GPIO_FALLING_DETECT);
-	// GPIO 61(GPIO BANK 1, 29)
-	reg |=  1<<GPIO_BIT_POSITION;
-	iowrite32(reg, gpio_reg_mem + GPIO_FALLING_DETECT);
+
+	// Set hw debouncimg time to maximum (255 * 31 mcs)
+        iowrite32(0xFF, gpio_reg_mem + GPIO_DEBOUNCINGTIME);
+
+        reg = ioread32(gpio_reg_mem + GPIO_DEBOUNCENABLE);
+	reg |=  1 << GPIO_BIT_POSITION;
+	iowrite32(reg, gpio_reg_mem + GPIO_DEBOUNCENABLE);
+
 	iounmap(gpio_reg_mem);
-	iounmap(clk_reg_mem);
 
 	retval = register_gpio_char_dev();
 	if (retval != -1)
