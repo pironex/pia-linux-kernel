@@ -298,12 +298,6 @@
 	status = "okay";
 };
 
-&cpsw_emac0 {
-	/* TODO not connected, do we need to add an illegal PHY address? */
-	phy_id = <&davinci_mdio>, <1>;
-	phy-mode = "mii";
-};
-
 &cpsw_emac1 {
 	phy_id = <&davinci_mdio>, <0>;
 	phy-mode = "mii";
