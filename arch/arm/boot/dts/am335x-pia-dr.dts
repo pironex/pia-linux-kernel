@@ -442,12 +442,6 @@
 	status = "okay";
 };
 
-&edma {
-	/* Map eDMA MMC2 Events from Crossbar */
-	ti,edma-xbar-event-map = /bits/ 16 <1 12
-	                                    2 13>;
-};
-
 &mmc3 {
 	vmmc-supply = <&wl18_en_reg>;
 	bus-width = <4>;
@@ -459,8 +453,8 @@
 	cap-power-off-card;
 	keep-power-in-suspend;
 
-	dmas = <&edma 12
-		&edma 13>;
+	dmas = <&edma_xbar 12 0 1
+		&edma_xbar 13 0 2>;
 	dma-names = "tx", "rx";
 
 	#address-cells = <1>;
