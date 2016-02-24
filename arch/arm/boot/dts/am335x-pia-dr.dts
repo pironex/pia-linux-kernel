@@ -328,7 +328,7 @@
 	/* wl18xx card enable/irq GPIOs. */
 	wlan_pins_default: pinmux_wlan_pins_default {
 		pinctrl-single,pins = <
-			0x020 (PIN_INPUT | MUX_MODE7)		/* WLAN_IRQ gpmc_ad9.gpio0_22 */
+			0x020 (PIN_INPUT | MUX_MODE7)		/* WLAN_IRQ gpmc_ad8.gpio0_22 */
 			0x02C (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* WLAN_EN gpmc_ad11.gpio0_27 */
 			0x164 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* BT_EN ecap0_in_pwm0_out.gpio0_7 */
 		>;
@@ -475,14 +475,14 @@
 	#size-cells = <0>;
 
 	status = "okay";
-/*
+
 	wlcore: wlcore@0 {
 		compatible = "ti,wl1831";
 		reg = <2>;
 		interrupt-parent = <&gpio0>;
-		interrupts = <23 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <22 IRQ_TYPE_EDGE_RISING>;
 	};
-*/
+
 };
 
 /* SPI Busses */
