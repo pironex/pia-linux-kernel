@@ -56,6 +56,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		gpio = <&gpio0 27 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>; /* wait 70 ms for WL18xx startup */
 		enable-active-high;
 		/* turned on with vmmc from TPS, powered by vcc_5v0,
 		   GPIO is used to turn the WL18xx module on via WLAN_EN */
