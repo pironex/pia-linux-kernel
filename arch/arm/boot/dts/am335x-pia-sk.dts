@@ -131,10 +131,10 @@
 };
 
 &mac {
-	/* dual_emac = <1>; */
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&cpsw_default>;
 	pinctrl-1 = <&cpsw_sleep>;
+	active_slave = <1>; /* only MII2 connected */
 
 	status = "okay";
 };
@@ -145,12 +145,6 @@
 	pinctrl-1 = <&davinci_mdio_sleep>;
 
 	status = "okay";
-};
-
-&cpsw_emac0 {
-	/* TODO not connected, do we need to add an illegal PHY address? */
-	phy_id = <&davinci_mdio>, <1>;
-	phy-mode = "mii";
 };
 
 &cpsw_emac1 {
