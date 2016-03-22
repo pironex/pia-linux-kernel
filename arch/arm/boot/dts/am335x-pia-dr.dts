@@ -96,15 +96,6 @@
 	};
 };
 
-&gpio3 {
-	gpio_gsm_fligthmode {
-		gpio-hog;
-		gpios = <20 GPIO_ACTIVE_HIGH>;
-		output-high;
-		line-name = "gsm-flightmode";
-	};
-};
-
 &am33xx_pinmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&board_pins &clkout2_pin>;
@@ -116,7 +107,6 @@
 			0x0EC (PIN_INPUT | MUX_MODE7)		/* GSM_RESET: lcd_ac_bias_en.gpio2_25 */
 			0x114 (PIN_INPUT | MUX_MODE7)		/* GSM_STATUS: mii1_txen.gpio3_3 */
 			0x1A0 (PIN_INPUT_PULLDOWN  | MUX_MODE7)	/* GSM_PWR_KEY: mcasp0_aclkr.gpio3_18 */
-			0x1A8 (PIN_INPUT | MUX_MODE7)		/* FLIGHTMODE: mcasp0_axr1.gpio3_20 */
 			0x1b4 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* xdma_event_intr1.clkout2 */
 		>;
 	};
@@ -129,7 +119,7 @@
 
 	charger_pins: pinmux_charger_pins {
 		pinctrl-single,pins = <
-			0x074 (PIN_INPUT_PULLUP | MUX_MODE7)	/* charging_f: gpmc_wpn.gpio0_31 */
+			0x074 (PIN_INPUT_PULLUP | MUX_MODE7)	/* PowerGood: gpmc_wpn.gpio0_31 */
 			0x0E8 (PIN_INPUT | MUX_MODE7)		/* CHR_EN: lcd_pclk.gpio2_24 */
 			0x128 (PIN_INPUT_PULLUP | MUX_MODE7)	/* charging: mii1_txd0_ale.gpio0_28 */
 		>;
