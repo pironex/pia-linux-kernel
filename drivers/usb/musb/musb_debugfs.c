@@ -288,6 +288,8 @@ static ssize_t musb_softconnect_write(struct file *file,
 		switch (musb->xceiv->otg->state) {
 		case OTG_STATE_A_HOST:
 			musb_root_disconnect(musb);
+			/* FALL THROUGH */
+		case OTG_STATE_A_WAIT_BCON:
 			reg = musb_readb(musb->mregs, MUSB_DEVCTL);
 			reg &= ~MUSB_DEVCTL_SESSION;
 			musb_writeb(musb->mregs, MUSB_DEVCTL, reg);
