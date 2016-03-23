@@ -38,6 +38,8 @@
 		enable-active-high;
 		gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>; /* GSM_PWR_EN */
 		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+
+		status = "disabled";
 	};
 
 	wl18_3v3_reg: fixedregulator@3 {
@@ -93,6 +95,14 @@
 
 		compatible = "gpio-poweroff";
 		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+	};
+};
+&gpio2 {
+	gpio_gsm_reset {
+		gpio-hog;
+		gpios = <25 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "gsm-reset";
 	};
 };
 
