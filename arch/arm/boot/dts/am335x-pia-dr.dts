@@ -65,6 +65,17 @@
 		vin-supply = <&vmmc_reg>;
 	};
 
+	charger_reg: fixedregulator@5 {
+		compatible = "regulator-fixed";
+		regulator-name = "charger-regulator";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+		gpio = <&gpio2 24 GPIO_ACTIVE_LOW>;
+		vin-supply = <&vcc_5v0_in>;
+	};
+
 	inputs_24v: inputs_24v {
 		compatible = "gpio-keys";
 	};
@@ -79,8 +90,8 @@
 		pinctrl-0 = <&charger_pins>;
 
 		compatible = "gpio-charger";
-		charger-type = "battery";
-		gpios = <&gpio0 28 GPIO_ACTIVE_LOW>;
+		charger-type = "mains";
+		gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
 	};
 
 	main_battery: battery {
@@ -97,6 +108,7 @@
 		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
 	};
 };
+
 &gpio2 {
 	gpio_gsm_reset {
 		gpio-hog;
