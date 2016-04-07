@@ -402,10 +402,3 @@
 	status = "okay";
 };
 
-&sham {
-	status = "okay";
-};
-
-&aes {
-	status = "okay";
-};

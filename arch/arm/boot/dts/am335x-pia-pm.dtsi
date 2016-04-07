@@ -331,3 +331,11 @@
 
 	status = "okay"; /* present on PM module */
 };
+
+&sham {
+	status = "okay";
+};
+
+&aes {
+	status = "okay";
+};
