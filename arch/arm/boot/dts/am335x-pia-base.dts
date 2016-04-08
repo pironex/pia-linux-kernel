@@ -113,6 +113,7 @@
 			0x028 (PIN_INPUT | MUX_MODE7)		/* PM-OUTPUT: gpmc_ad10.gpio0_26*/
 			0x090 (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_PWR_EN: gpmc_advn_ale.gpio2_2 */
 			0x098 (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_PWR_OK: gpmc_wen.gpio2_4 */
+			0x0A8 (PIN_INPUT | MUX_MODE7)		/* SYSBOOT2/S2: lcd_data2.gpio2_8 */
 			0x0E4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* LDO_EN: lcd_hsync.gpio2_23 */
 			0x128 (PIN_INPUT | MUX_MODE7)	/* FLIGHT-MODE: mii1_txd0.gpio0_28 */
 			0x164 (PIN_INPUT | MUX_MODE7)		/* ISO-IN: ecap0_in_pwm0_out.gpio0_7 */

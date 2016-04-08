@@ -25,9 +25,31 @@
 		regulator-always-on;
 		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
 	};
+
+	buttons: gpio_buttons@0 {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		switch@1 {
+			label = "Key S1 BootMode";
+			linux,code = <0x100>;
+			gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
 };
 
 &am33xx_pinmux {
+	pinctrl-names = "default";
+	pinctrl-0 = <&board_pins>;
+
+	board_pins: pinmux_board_pins {
+		pinctrl-single,pins = <
+			0x0A8 (PIN_INPUT | MUX_MODE7)	/* SYSBOOT2/S2: lcd_data2.gpio2_8 */
+		>;
+	};
+
 	cpsw_default: cpsw_default {
 		pinctrl-single,pins = <
 			/* Slave 2 */
