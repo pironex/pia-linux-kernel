@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/soc/ti/knav_qmss.h>
 #include <linux/soc/ti/knav_dma.h>
+#include <linux/soc/ti/knav_helpers.h>
 
 #include "netcp.h"
 
@@ -53,20 +54,6 @@
 		    NETIF_MSG_RX_STATUS)
 
 #define NETCP_EFUSE_ADDR_SWAP	2
-
-#define knav_queue_get_id(q)	knav_queue_device_control(q, \
-				KNAV_QUEUE_GET_ID, (unsigned long)NULL)
-
-#define knav_queue_enable_notify(q) knav_queue_device_control(q,	\
-					KNAV_QUEUE_ENABLE_NOTIFY,	\
-					(unsigned long)NULL)
-
-#define knav_queue_disable_notify(q) knav_queue_device_control(q,	\
-					KNAV_QUEUE_DISABLE_NOTIFY,	\
-					(unsigned long)NULL)
-
-#define knav_queue_get_count(q)	knav_queue_device_control(q, \
-				KNAV_QUEUE_GET_COUNT, (unsigned long)NULL)
 
 #define for_each_netcp_module(module)			\
 	list_for_each_entry(module, &netcp_modules, module_list)
@@ -107,72 +94,6 @@ static DEFINE_MUTEX(netcp_modules_lock);
 static int netcp_debug_level = -1;
 module_param(netcp_debug_level, int, 0);
 MODULE_PARM_DESC(netcp_debug_level, "Netcp debug level (NETIF_MSG bits) (0=none,...,16=all)");
-
-/* Helper functions - Get/Set */
-static void get_pkt_info(u32 *buff, u32 *buff_len, u32 *ndesc,
-			 struct knav_dma_desc *desc)
-{
-	*buff_len = desc->buff_len;
-	*buff = desc->buff;
-	*ndesc = desc->next_desc;
-}
-
-static void get_pad_info(u32 *pad0, u32 *pad1, struct knav_dma_desc *desc)
-{
-	*pad0 = desc->pad[0];
-	*pad1 = desc->pad[1];
-}
-
-static void get_org_pkt_info(u32 *buff, u32 *buff_len,
-			     struct knav_dma_desc *desc)
-{
-	*buff = desc->orig_buff;
-	*buff_len = desc->orig_len;
-}
-
-static void get_words(u32 *words, int num_words, u32 *desc)
-{
-	int i;
-
-	for (i = 0; i < num_words; i++)
-		words[i] = desc[i];
-}
-
-static void set_pkt_info(u32 buff, u32 buff_len, u32 ndesc,
-			 struct knav_dma_desc *desc)
-{
-	desc->buff_len = buff_len;
-	desc->buff = buff;
-	desc->next_desc = ndesc;
-}
-
-static void set_desc_info(u32 desc_info, u32 pkt_info,
-			  struct knav_dma_desc *desc)
-{
-	desc->desc_info = desc_info;
-	desc->packet_info = pkt_info;
-}
-
-static void set_pad_info(u32 pad0, u32 pad1, struct knav_dma_desc *desc)
-{
-	desc->pad[0] = pad0;
-	desc->pad[1] = pad1;
-}
-
-static void set_org_pkt_info(u32 buff, u32 buff_len,
-			     struct knav_dma_desc *desc)
-{
-	desc->orig_buff = buff;
-	desc->orig_len = buff_len;
-}
-
-static void set_words(u32 *words, int num_words, u32 *desc)
-{
-	int i;
-
-	for (i = 0; i < num_words; i++)
-		desc[i] = words[i];
-}
 
 /* Read the e-fuse value as 32 bit values to be endian independent */
 static int emac_arch_get_mac_addr(char *x, void __iomem *efuse_mac, u32 swap)
@@ -532,6 +453,7 @@ int netcp_register_rxhook(struct netcp_intf *netcp_priv, int order,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(netcp_register_rxhook);
 
 int netcp_unregister_rxhook(struct netcp_intf *netcp_priv, int order,
 			    netcp_hook_rtn *hook_rtn, void *hook_data)
@@ -554,6 +476,7 @@ int netcp_unregister_rxhook(struct netcp_intf *netcp_priv, int order,
 
 	return -ENOENT;
 }
+EXPORT_SYMBOL_GPL(netcp_unregister_rxhook);
 
 static void netcp_frag_free(bool is_frag, void *ptr)
 {
@@ -572,7 +495,7 @@ static void netcp_free_rx_desc_chain(struct netcp_intf *netcp,
 	void *buf_ptr;
 	u32 tmp;
 
-	get_words(&dma_desc, 1, &desc->next_desc);
+	knav_dma_get_words(&dma_desc, 1, &desc->next_desc);
 
 	while (dma_desc) {
 		ndesc = knav_pool_desc_unmap(netcp->rx_pool, dma_desc, dma_sz);
@@ -580,14 +503,14 @@ static void netcp_free_rx_desc_chain(struct netcp_intf *netcp,
 			dev_err(netcp->ndev_dev, "failed to unmap Rx desc\n");
 			break;
 		}
-		get_pkt_info(&dma_buf, &tmp, &dma_desc, ndesc);
-		get_pad_info((u32 *)&buf_ptr, &tmp, ndesc);
+		knav_dma_get_pkt_info(&dma_buf, &tmp, &dma_desc, ndesc);
+		knav_dma_get_pad_info((u32 *)&buf_ptr, &tmp, ndesc);
 		dma_unmap_page(netcp->dev, dma_buf, PAGE_SIZE, DMA_FROM_DEVICE);
 		__free_page(buf_ptr);
 		knav_pool_desc_put(netcp->rx_pool, desc);
 	}
 
-	get_pad_info((u32 *)&buf_ptr, &buf_len, desc);
+	knav_dma_get_pad_info((u32 *)&buf_ptr, &buf_len, desc);
 	if (buf_ptr)
 		netcp_frag_free(buf_len <= PAGE_SIZE, buf_ptr);
 	knav_pool_desc_put(netcp->rx_pool, desc);
@@ -595,6 +518,7 @@ static void netcp_free_rx_desc_chain(struct netcp_intf *netcp,
 
 static void netcp_empty_rx_queue(struct netcp_intf *netcp)
 {
+	struct netcp_stats *rx_stats = &netcp->stats;
 	struct knav_dma_desc *desc;
 	unsigned int dma_sz;
 	dma_addr_t dma;
@@ -608,16 +532,17 @@ static void netcp_empty_rx_queue(struct netcp_intf *netcp)
 		if (unlikely(!desc)) {
 			dev_err(netcp->ndev_dev, "%s: failed to unmap Rx desc\n",
 				__func__);
-			netcp->ndev->stats.rx_errors++;
+			rx_stats->rx_errors++;
 			continue;
 		}
 		netcp_free_rx_desc_chain(netcp, desc);
-		netcp->ndev->stats.rx_dropped++;
+		rx_stats->rx_dropped++;
 	}
 }
 
 static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 {
+	struct netcp_stats *rx_stats = &netcp->stats;
 	unsigned int dma_sz, buf_len, org_buf_len;
 	struct knav_dma_desc *desc, *ndesc;
 	unsigned int pkt_sz = 0, accum_sz;
@@ -638,8 +563,8 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 		return 0;
 	}
 
-	get_pkt_info(&dma_buff, &buf_len, &dma_desc, desc);
-	get_pad_info((u32 *)&org_buf_ptr, &org_buf_len, desc);
+	knav_dma_get_pkt_info(&dma_buff, &buf_len, &dma_desc, desc);
+	knav_dma_get_pad_info((u32 *)&org_buf_ptr, &org_buf_len, desc);
 
 	if (unlikely(!org_buf_ptr)) {
 		dev_err(netcp->ndev_dev, "NULL bufptr in desc\n");
@@ -671,8 +596,8 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 			goto free_desc;
 		}
 
-		get_pkt_info(&dma_buff, &buf_len, &dma_desc, ndesc);
-		get_pad_info((u32 *)&page, &tmp, ndesc);
+		knav_dma_get_pkt_info(&dma_buff, &buf_len, &dma_desc, ndesc);
+		knav_dma_get_pad_info((u32 *)&page, &tmp, ndesc);
 
 		if (likely(dma_buff && buf_len && page)) {
 			dma_unmap_page(netcp->dev, dma_buff, PAGE_SIZE,
@@ -691,9 +616,6 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 		knav_pool_desc_put(netcp->rx_pool, ndesc);
 	}
 
-	/* Free the primary descriptor */
-	knav_pool_desc_put(netcp->rx_pool, desc);
-
 	/* check for packet len and warn */
 	if (unlikely(pkt_sz != accum_sz))
 		dev_dbg(netcp->ndev_dev, "mismatch in packet size(%d) & sum of fragments(%d)\n",
@@ -705,6 +627,11 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 	/* Call each of the RX hooks */
 	p_info.skb = skb;
 	p_info.rxtstamp_complete = false;
+	knav_dma_get_desc_info(&tmp, &p_info.eflags, desc);
+	p_info.epib = desc->epib;
+	p_info.psdata = desc->psdata;
+	p_info.eflags = ((p_info.eflags >> KNAV_DMA_DESC_EFLAGS_SHIFT) &
+			 KNAV_DMA_DESC_EFLAGS_MASK);
 	list_for_each_entry(rx_hook, &netcp->rxhook_list_head, list) {
 		int ret;
 
@@ -713,14 +640,20 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 		if (unlikely(ret)) {
 			dev_err(netcp->ndev_dev, "RX hook %d failed: %d\n",
 				rx_hook->order, ret);
-			netcp->ndev->stats.rx_errors++;
+			/* Free the primary descriptor */
+			rx_stats->rx_dropped++;
+			knav_pool_desc_put(netcp->rx_pool, desc);
 			dev_kfree_skb(skb);
 			return 0;
 		}
 	}
+	/* Free the primary descriptor */
+	knav_pool_desc_put(netcp->rx_pool, desc);
 
-	netcp->ndev->stats.rx_packets++;
-	netcp->ndev->stats.rx_bytes += skb->len;
+	u64_stats_update_begin(&rx_stats->syncp_rx);
+	rx_stats->rx_packets++;
+	rx_stats->rx_bytes += skb->len;
+	u64_stats_update_end(&rx_stats->syncp_rx);
 
 	/* push skb up the stack */
 	skb->protocol = eth_type_trans(skb, netcp->ndev);
@@ -729,7 +662,7 @@ static int netcp_process_one_rx_packet(struct netcp_intf *netcp)
 
 free_desc:
 	netcp_free_rx_desc_chain(netcp, desc);
-	netcp->ndev->stats.rx_errors++;
+	rx_stats->rx_errors++;
 	return 0;
 }
 
@@ -760,8 +693,8 @@ static void netcp_free_rx_buf(struct netcp_intf *netcp, int fdq)
 			continue;
 		}
 
-		get_org_pkt_info(&dma, &buf_len, desc);
-		get_pad_info((u32 *)&buf_ptr, &tmp, desc);
+		knav_get_org_pkt_info(&dma, &buf_len, desc);
+		knav_dma_get_pad_info((u32 *)&buf_ptr, &tmp, desc);
 
 		if (unlikely(!dma)) {
 			dev_err(netcp->ndev_dev, "NULL orig_buff in desc\n");
@@ -863,9 +796,9 @@ static int netcp_allocate_rx_buf(struct netcp_intf *netcp, int fdq)
 	pkt_info |= KNAV_DMA_NUM_PS_WORDS << KNAV_DMA_DESC_PSLEN_SHIFT;
 	pkt_info |= (netcp->rx_queue_id & KNAV_DMA_DESC_RETQ_MASK) <<
 		    KNAV_DMA_DESC_RETQ_SHIFT;
-	set_org_pkt_info(dma, buf_len, hwdesc);
-	set_pad_info(pad[0], pad[1], hwdesc);
-	set_desc_info(desc_info, pkt_info, hwdesc);
+	knav_dma_set_org_pkt_info(dma, buf_len, hwdesc);
+	knav_dma_set_pad_info(pad[0], pad[1], hwdesc);
+	knav_dma_set_desc_info(desc_info, pkt_info, hwdesc);
 
 	/* Push to FDQs */
 	knav_pool_desc_map(netcp->rx_pool, hwdesc, sizeof(*hwdesc), &dma,
@@ -929,7 +862,7 @@ static void netcp_free_tx_desc_chain(struct netcp_intf *netcp,
 	unsigned int buf_len;
 
 	while (ndesc) {
-		get_pkt_info(&dma_buf, &buf_len, &dma_desc, ndesc);
+		knav_dma_get_pkt_info(&dma_buf, &buf_len, &dma_desc, ndesc);
 
 		if (dma_buf && buf_len)
 			dma_unmap_single(netcp->dev, dma_buf, buf_len,
@@ -952,6 +885,7 @@ static void netcp_free_tx_desc_chain(struct netcp_intf *netcp,
 static int netcp_process_tx_compl_packets(struct netcp_intf *netcp,
 					  unsigned int budget)
 {
+	struct netcp_stats *tx_stats = &netcp->stats;
 	struct knav_dma_desc *desc;
 	struct sk_buff *skb;
 	unsigned int dma_sz;
@@ -966,15 +900,15 @@ static int netcp_process_tx_compl_packets(struct netcp_intf *netcp,
 		desc = knav_pool_desc_unmap(netcp->tx_pool, dma, dma_sz);
 		if (unlikely(!desc)) {
 			dev_err(netcp->ndev_dev, "failed to unmap Tx desc\n");
-			netcp->ndev->stats.tx_errors++;
+			tx_stats->tx_errors++;
 			continue;
 		}
 
-		get_pad_info((u32 *)&skb, &tmp, desc);
+		knav_dma_get_pad_info((u32 *)&skb, &tmp, desc);
 		netcp_free_tx_desc_chain(netcp, desc, dma_sz);
 		if (!skb) {
 			dev_err(netcp->ndev_dev, "No skb in Tx desc\n");
-			netcp->ndev->stats.tx_errors++;
+			tx_stats->tx_errors++;
 			continue;
 		}
 
@@ -987,8 +921,10 @@ static int netcp_process_tx_compl_packets(struct netcp_intf *netcp,
 			netif_wake_subqueue(netcp->ndev, subqueue);
 		}
 
-		netcp->ndev->stats.tx_packets++;
-		netcp->ndev->stats.tx_bytes += skb->len;
+		u64_stats_update_begin(&tx_stats->syncp_tx);
+		tx_stats->tx_packets++;
+		tx_stats->tx_bytes += skb->len;
+		u64_stats_update_end(&tx_stats->syncp_tx);
 		dev_kfree_skb(skb);
 		pkts++;
 	}
@@ -1042,7 +978,7 @@ netcp_tx_map_skb(struct sk_buff *skb, struct netcp_intf *netcp)
 		return NULL;
 	}
 
-	set_pkt_info(dma_addr, pkt_len, 0, desc);
+	knav_dma_set_pkt_info(dma_addr, pkt_len, 0, desc);
 	if (skb_is_nonlinear(skb)) {
 		prefetchw(skb_shinfo(skb));
 	} else {
@@ -1080,8 +1016,8 @@ netcp_tx_map_skb(struct sk_buff *skb, struct netcp_intf *netcp)
 		pkt_info =
 			(netcp->tx_compl_qid & KNAV_DMA_DESC_RETQ_MASK) <<
 				KNAV_DMA_DESC_RETQ_SHIFT;
-		set_pkt_info(dma_addr, buf_len, 0, ndesc);
-		set_words(&desc_dma, 1, &pdesc->next_desc);
+		knav_dma_set_pkt_info(dma_addr, buf_len, 0, ndesc);
+		knav_dma_set_words(&desc_dma, 1, &pdesc->next_desc);
 		pkt_len += buf_len;
 		if (pdesc != desc)
 			knav_pool_desc_map(netcp->tx_pool, pdesc,
@@ -1102,7 +1038,7 @@ upd_pkt_len:
 	WARN_ON(pkt_len != skb->len);
 
 	pkt_len &= KNAV_DMA_DESC_PKT_LEN_MASK;
-	set_words(&pkt_len, 1, &desc->desc_info);
+	knav_dma_set_words(&pkt_len, 1, &desc->desc_info);
 	return desc;
 
 free_descs:
@@ -1156,9 +1092,9 @@ static int netcp_tx_submit_skb(struct netcp_intf *netcp,
 	if (p_info.psdata_len) {
 		u32 *psdata = p_info.psdata;
 
-		memmove(p_info.psdata, p_info.psdata + p_info.psdata_len,
-			p_info.psdata_len);
-		set_words(psdata, p_info.psdata_len, psdata);
+		knav_dma_set_words(
+			psdata + (KNAV_DMA_NUM_PS_WORDS - p_info.psdata_len),
+			p_info.psdata_len, psdata);
 		tmp |= (p_info.psdata_len & KNAV_DMA_DESC_PSLEN_MASK) <<
 			KNAV_DMA_DESC_PSLEN_SHIFT;
 	}
@@ -1172,12 +1108,12 @@ static int netcp_tx_submit_skb(struct netcp_intf *netcp,
 			KNAV_DMA_DESC_PSFLAG_SHIFT);
 	}
 
-	set_words(&tmp, 1, &desc->packet_info);
-	set_words((u32 *)&skb, 1, &desc->pad[0]);
+	knav_dma_set_words(&tmp, 1, &desc->packet_info);
+	knav_dma_set_words((u32 *)&skb, 1, &desc->pad[0]);
 
 	if (tx_pipe->flags & SWITCH_TO_PORT_IN_TAGINFO) {
 		tmp = tx_pipe->switch_to_port;
-		set_words((u32 *)&tmp, 1, &desc->tag_info);
+		knav_dma_set_words((u32 *)&tmp, 1, &desc->tag_info);
 	}
 
 	/* submit packet descriptor */
@@ -1199,6 +1135,7 @@ out:
 static int netcp_ndo_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct netcp_intf *netcp = netdev_priv(ndev);
+	struct netcp_stats *tx_stats = &netcp->stats;
 	int subqueue = skb_get_queue_mapping(skb);
 	struct knav_dma_desc *desc;
 	int desc_count, ret = 0;
@@ -1214,7 +1151,7 @@ static int netcp_ndo_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 			/* If we get here, the skb has already been dropped */
 			dev_warn(netcp->ndev_dev, "padding failed (%d), packet dropped\n",
 				 ret);
-			ndev->stats.tx_dropped++;
+			tx_stats->tx_dropped++;
 			return ret;
 		}
 		skb->len = NETCP_MIN_PACKET_SIZE;
@@ -1242,7 +1179,7 @@ static int netcp_ndo_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	return NETDEV_TX_OK;
 
 drop:
-	ndev->stats.tx_dropped++;
+	tx_stats->tx_dropped++;
 	if (desc)
 		netcp_free_tx_desc_chain(netcp, desc, sizeof(*desc));
 	dev_kfree_skb(skb);
@@ -1835,6 +1772,39 @@ static int netcp_setup_tc(struct net_device *dev, u8 num_tc)
 	return 0;
 }
 
+static struct rtnl_link_stats64 *
+netcp_get_stats(struct net_device *ndev, struct rtnl_link_stats64 *stats)
+{
+	struct netcp_intf *netcp = netdev_priv(ndev);
+	struct netcp_stats *p = &netcp->stats;
+	u64 rxpackets, rxbytes, txpackets, txbytes;
+	unsigned int start;
+
+	do {
+		start = u64_stats_fetch_begin_irq(&p->syncp_rx);
+		rxpackets       = p->rx_packets;
+		rxbytes         = p->rx_bytes;
+	} while (u64_stats_fetch_retry_irq(&p->syncp_rx, start));
+
+	do {
+		start = u64_stats_fetch_begin_irq(&p->syncp_tx);
+		txpackets       = p->tx_packets;
+		txbytes         = p->tx_bytes;
+	} while (u64_stats_fetch_retry_irq(&p->syncp_tx, start));
+
+	stats->rx_packets = rxpackets;
+	stats->rx_bytes = rxbytes;
+	stats->tx_packets = txpackets;
+	stats->tx_bytes = txbytes;
+
+	/* The following are stored as 32 bit */
+	stats->rx_errors = p->rx_errors;
+	stats->rx_dropped = p->rx_dropped;
+	stats->tx_dropped = p->tx_dropped;
+
+	return stats;
+}
+
 static const struct net_device_ops netcp_netdev_ops = {
 	.ndo_open		= netcp_ndo_open,
 	.ndo_stop		= netcp_ndo_stop,
@@ -1842,6 +1812,7 @@ static const struct net_device_ops netcp_netdev_ops = {
 	.ndo_set_rx_mode	= netcp_set_rx_mode,
 	.ndo_do_ioctl           = netcp_ndo_ioctl,
 	.ndo_change_mtu		= netcp_ndo_change_mtu,
+	.ndo_get_stats64        = netcp_get_stats,
 	.ndo_set_mac_address	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_vlan_rx_add_vid	= netcp_rx_add_vid,
@@ -1884,6 +1855,8 @@ static int netcp_create_interface(struct netcp_device *netcp_device,
 	INIT_LIST_HEAD(&netcp->txhook_list_head);
 	INIT_LIST_HEAD(&netcp->rxhook_list_head);
 	INIT_LIST_HEAD(&netcp->addr_list);
+	u64_stats_init(&netcp->stats.syncp_rx);
+	u64_stats_init(&netcp->stats.syncp_tx);
 	netcp->netcp_device = netcp_device;
 	netcp->dev = netcp_device->device;
 	netcp->ndev = ndev;
@@ -2045,7 +2018,12 @@ static int netcp_probe(struct platform_device *pdev)
 	struct device_node *child, *interfaces;
 	struct netcp_device *netcp_device;
 	struct device *dev = &pdev->dev;
+	struct netcp_module *module;
 	int ret;
+
+	if (!knav_dma_device_ready() ||
+	    !knav_qmss_device_ready())
+		return -EPROBE_DEFER;
 
 	if (!node) {
 		dev_err(dev, "could not find device info\n");
@@ -2091,6 +2069,14 @@ static int netcp_probe(struct platform_device *pdev)
 	/* Add the device instance to the list */
 	list_add_tail(&netcp_device->device_list, &netcp_devices);
 
+	/* Probe & attach any modules already registered */
+	mutex_lock(&netcp_modules_lock);
+	for_each_netcp_module(module) {
+		ret = netcp_module_probe(netcp_device, module);
+		if (ret < 0)
+			dev_err(dev, "module(%s) probe failed\n", module->name);
+	}
+	mutex_unlock(&netcp_modules_lock);
 	return 0;
 
 probe_quit_interface:

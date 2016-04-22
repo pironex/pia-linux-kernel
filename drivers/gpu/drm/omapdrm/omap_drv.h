@@ -31,16 +31,14 @@
 #include <drm/drm_gem.h>
 #include <drm/omap_drm.h>
 
+#include "dss/omapdss.h"
+
 #define DBG(fmt, ...) DRM_DEBUG(fmt"\n", ##__VA_ARGS__)
 #define VERB(fmt, ...) if (0) DRM_DEBUG(fmt, ##__VA_ARGS__) /* verbose debug */
 
 #define MODULE_NAME     "omapdrm"
 
-/* max # of mapper-id's that can be assigned.. todo, come up with a better
- * (but still inexpensive) way to store/access per-buffer mapper private
- * data..
- */
-#define MAX_MAPPERS 2
+struct omap_drm_usergart;
 
 /* parameters which describe (unrotated) coordinates of scanout within a fb: */
 struct omap_drm_window {
@@ -75,6 +73,8 @@ int omap_irq_wait(struct drm_device *dev, struct omap_irq_wait *wait,
 struct omap_drm_private {
 	uint32_t omaprev;
 
+	const struct dispc_ops *dispc_ops;
+
 	unsigned int num_crtcs;
 	struct drm_crtc *crtcs[8];
 
@@ -97,15 +97,27 @@ struct omap_drm_private {
 	/* list of GEM objects: */
 	struct list_head obj_list;
 
+	struct omap_drm_usergart *usergart;
 	bool has_dmm;
 
-	/* properties: */
+	/* plane properties */
 	struct drm_property *zorder_prop;
+	struct drm_property *global_alpha_prop;
+	struct drm_property *pre_mult_alpha_prop;
+
+	/* crtc properties */
+	struct drm_property *trans_key_mode_prop;
+	struct drm_property *trans_key_prop;
+	struct drm_property *background_color_prop;
+	struct drm_property *alpha_blender_prop;
 
 	/* irq handling: */
 	struct list_head irq_list;    /* list of omap_drm_irq */
 	uint32_t vblank_mask;         /* irq bits set for userspace vblank */
 	struct omap_drm_irq error_handler;
+
+	void *wb_private;	      /* Write-back private data */
+	bool wb_initialized;
 
 	/* atomic commit */
 	struct {
@@ -138,8 +150,18 @@ void omap_irq_unregister(struct drm_device *dev, struct omap_drm_irq *irq);
 void omap_drm_irq_uninstall(struct drm_device *dev);
 int omap_drm_irq_install(struct drm_device *dev);
 
+#ifdef CONFIG_DRM_FBDEV_EMULATION
 struct drm_fb_helper *omap_fbdev_init(struct drm_device *dev);
 void omap_fbdev_free(struct drm_device *dev);
+#else
+static inline struct drm_fb_helper *omap_fbdev_init(struct drm_device *dev)
+{
+	return NULL;
+}
+static inline void omap_fbdev_free(struct drm_device *dev)
+{
+}
+#endif
 
 struct omap_video_timings *omap_crtc_timings(struct drm_crtc *crtc);
 enum omap_channel omap_crtc_channel(struct drm_crtc *crtc);
@@ -153,6 +175,9 @@ struct drm_plane *omap_plane_init(struct drm_device *dev,
 		int id, enum drm_plane_type type);
 void omap_plane_install_properties(struct drm_plane *plane,
 		struct drm_mode_object *obj);
+int omap_plane_id(struct drm_plane *plane);
+struct drm_plane *omap_plane_reserve_wb(struct drm_device *dev);
+void omap_plane_release_wb(struct drm_plane *plane);
 
 struct drm_encoder *omap_encoder_init(struct drm_device *dev,
 		struct omap_dss_device *dssdev);
@@ -182,12 +207,15 @@ void omap_framebuffer_update_scanout(struct drm_framebuffer *fb,
 		struct omap_drm_window *win, struct omap_overlay_info *info);
 struct drm_connector *omap_framebuffer_get_next_connector(
 		struct drm_framebuffer *fb, struct drm_connector *from);
+bool omap_framebuffer_supports_rotation(struct drm_framebuffer *fb);
 
 void omap_gem_init(struct drm_device *dev);
 void omap_gem_deinit(struct drm_device *dev);
 
 struct drm_gem_object *omap_gem_new(struct drm_device *dev,
 		union omap_gem_size gsize, uint32_t flags);
+struct drm_gem_object *omap_gem_new_dmabuf(struct drm_device *dev, size_t size,
+		struct sg_table *sgt);
 int omap_gem_new_handle(struct drm_device *dev, struct drm_file *file,
 		union omap_gem_size gsize, uint32_t flags, uint32_t *handle);
 void omap_gem_free_object(struct drm_gem_object *obj);
@@ -267,5 +295,17 @@ fail:
 
 	return -ENOENT;
 }
+
+#if IS_ENABLED(CONFIG_DRM_OMAP_WB_M2M)
+
+int wbm2m_init(struct drm_device *drmdev);
+void wbm2m_cleanup(struct drm_device *drmdev);
+
+#else
+
+static inline int wbm2m_init(struct drm_device *drmdev) { return 0; }
+static inline void wbm2m_cleanup(struct drm_device *drmdev) { }
+
+#endif
 
 #endif /* __OMAP_DRV_H__ */

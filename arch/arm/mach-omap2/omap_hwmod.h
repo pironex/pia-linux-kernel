@@ -106,6 +106,11 @@ extern struct omap_hwmod_sysc_fields omap_hwmod_sysc_type3;
 #define DEBUG_TI81XXUART2_FLAGS	0
 #define DEBUG_TI81XXUART3_FLAGS	0
 #define DEBUG_AM33XXUART1_FLAGS	0
+#define DEBUG_AM33XXUART2_FLAGS	0
+#define DEBUG_AM33XXUART3_FLAGS	0
+#define DEBUG_AM33XXUART4_FLAGS	0
+#define DEBUG_AM33XXUART5_FLAGS	0
+#define DEBUG_AM33XXUART6_FLAGS	0
 
 #define DEBUG_OMAPUART_FLAGS	(HWMOD_INIT_NO_IDLE | HWMOD_INIT_NO_RESET)
 
@@ -148,6 +153,21 @@ extern struct omap_hwmod_sysc_fields omap_hwmod_sysc_type3;
 #elif defined(CONFIG_DEBUG_AM33XXUART1)
 #undef DEBUG_AM33XXUART1_FLAGS
 #define DEBUG_AM33XXUART1_FLAGS DEBUG_OMAPUART_FLAGS
+#elif defined(CONFIG_DEBUG_AM33XXUART2)
+#undef DEBUG_AM33XXUART2_FLAGS
+#define DEBUG_AM33XXUART2_FLAGS DEBUG_OMAPUART_FLAGS
+#elif defined(CONFIG_DEBUG_AM33XXUART3)
+#undef DEBUG_AM33XXUART3_FLAGS
+#define DEBUG_AM33XXUART3_FLAGS DEBUG_OMAPUART_FLAGS
+#elif defined(CONFIG_DEBUG_AM33XXUART4)
+#undef DEBUG_AM33XXUART4_FLAGS
+#define DEBUG_AM33XXUART4_FLAGS DEBUG_OMAPUART_FLAGS
+#elif defined(CONFIG_DEBUG_AM33XXUART5)
+#undef DEBUG_AM33XXUART5_FLAGS
+#define DEBUG_AM33XXUART5_FLAGS DEBUG_OMAPUART_FLAGS
+#elif defined(CONFIG_DEBUG_AM33XXUART6)
+#undef DEBUG_AM33XXUART6_FLAGS
+#define DEBUG_AM33XXUART6_FLAGS DEBUG_OMAPUART_FLAGS
 #endif
 
 /**
@@ -207,6 +227,7 @@ struct omap_hwmod_rst_info {
 	const char	*name;
 	u8		rst_shift;
 	u8		st_shift;
+	u8		context;
 };
 
 /**
@@ -549,6 +570,7 @@ struct omap_hwmod_omap4_prcm {
 #define HWMOD_OPT_CLKS_NEEDED			(1 << 14)
 #define HWMOD_NO_IDLE				(1 << 15)
 #define HWMOD_NEEDS_REIDLE			(1 << 16)
+#define HWMOD_CLKDM_NOAUTO			(1 << 17)
 
 /*
  * omap_hwmod._int_flags definitions
@@ -766,11 +788,16 @@ extern void __init omap_hwmod_init(void);
 
 const char *omap_hwmod_get_main_clk(struct omap_hwmod *oh);
 
+void omap_hwmods_save_context(void);
+void omap_hwmods_restore_context(void);
+
 /*
  *
  */
 
 extern int omap_hwmod_aess_preprogram(struct omap_hwmod *oh);
+void omap_hwmod_rtc_unlock(struct omap_hwmod *oh);
+void omap_hwmod_rtc_lock(struct omap_hwmod *oh);
 
 /*
  * Chip variant-specific hwmod init routines - XXX should be converted

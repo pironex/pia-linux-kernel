@@ -450,18 +450,6 @@ struct omap_hwmod_class am33xx_epwmss_hwmod_class = {
 	.sysc		= &am33xx_epwmss_sysc,
 };
 
-static struct omap_hwmod_class am33xx_ecap_hwmod_class = {
-	.name		= "ecap",
-};
-
-static struct omap_hwmod_class am33xx_eqep_hwmod_class = {
-	.name		= "eqep",
-};
-
-struct omap_hwmod_class am33xx_ehrpwm_hwmod_class = {
-	.name		= "ehrpwm",
-};
-
 /* epwmss0 */
 struct omap_hwmod am33xx_epwmss0_hwmod = {
 	.name		= "epwmss0",
@@ -473,30 +461,6 @@ struct omap_hwmod am33xx_epwmss0_hwmod = {
 			.modulemode	= MODULEMODE_SWCTRL,
 		},
 	},
-};
-
-/* ecap0 */
-struct omap_hwmod am33xx_ecap0_hwmod = {
-	.name		= "ecap0",
-	.class		= &am33xx_ecap_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* eqep0 */
-struct omap_hwmod am33xx_eqep0_hwmod = {
-	.name		= "eqep0",
-	.class		= &am33xx_eqep_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* ehrpwm0 */
-struct omap_hwmod am33xx_ehrpwm0_hwmod = {
-	.name		= "ehrpwm0",
-	.class		= &am33xx_ehrpwm_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
 };
 
 /* epwmss1 */
@@ -512,30 +476,6 @@ struct omap_hwmod am33xx_epwmss1_hwmod = {
 	},
 };
 
-/* ecap1 */
-struct omap_hwmod am33xx_ecap1_hwmod = {
-	.name		= "ecap1",
-	.class		= &am33xx_ecap_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* eqep1 */
-struct omap_hwmod am33xx_eqep1_hwmod = {
-	.name		= "eqep1",
-	.class		= &am33xx_eqep_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* ehrpwm1 */
-struct omap_hwmod am33xx_ehrpwm1_hwmod = {
-	.name		= "ehrpwm1",
-	.class		= &am33xx_ehrpwm_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
 /* epwmss2 */
 struct omap_hwmod am33xx_epwmss2_hwmod = {
 	.name		= "epwmss2",
@@ -547,30 +487,6 @@ struct omap_hwmod am33xx_epwmss2_hwmod = {
 			.modulemode	= MODULEMODE_SWCTRL,
 		},
 	},
-};
-
-/* ecap2 */
-struct omap_hwmod am33xx_ecap2_hwmod = {
-	.name		= "ecap2",
-	.class		= &am33xx_ecap_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* eqep2 */
-struct omap_hwmod am33xx_eqep2_hwmod = {
-	.name		= "eqep2",
-	.class		= &am33xx_eqep_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
-};
-
-/* ehrpwm2 */
-struct omap_hwmod am33xx_ehrpwm2_hwmod = {
-	.name		= "ehrpwm2",
-	.class		= &am33xx_ehrpwm_hwmod_class,
-	.clkdm_name	= "l4ls_clkdm",
-	.main_clk	= "l4ls_gclk",
 };
 
 /*
@@ -919,6 +835,8 @@ static struct omap_hwmod_class_sysconfig am33xx_rtc_sysc = {
 static struct omap_hwmod_class am33xx_rtc_hwmod_class = {
 	.name		= "rtc",
 	.sysc		= &am33xx_rtc_sysc,
+	.unlock		= &omap_hwmod_rtc_unlock,
+	.lock		= &omap_hwmod_rtc_lock,
 };
 
 struct omap_hwmod am33xx_rtc_hwmod = {
@@ -1244,7 +1162,7 @@ struct omap_hwmod am33xx_uart2_hwmod = {
 	.name		= "uart2",
 	.class		= &uart_class,
 	.clkdm_name	= "l4ls_clkdm",
-	.flags		= HWMOD_SWSUP_SIDLE_ACT,
+	.flags		= DEBUG_AM33XXUART2_FLAGS | HWMOD_SWSUP_SIDLE_ACT,
 	.main_clk	= "dpll_per_m2_div4_ck",
 	.prcm		= {
 		.omap4	= {
@@ -1258,7 +1176,7 @@ struct omap_hwmod am33xx_uart3_hwmod = {
 	.name		= "uart3",
 	.class		= &uart_class,
 	.clkdm_name	= "l4ls_clkdm",
-	.flags		= HWMOD_SWSUP_SIDLE_ACT,
+	.flags		= DEBUG_AM33XXUART3_FLAGS | HWMOD_SWSUP_SIDLE_ACT,
 	.main_clk	= "dpll_per_m2_div4_ck",
 	.prcm		= {
 		.omap4	= {
@@ -1271,7 +1189,7 @@ struct omap_hwmod am33xx_uart4_hwmod = {
 	.name		= "uart4",
 	.class		= &uart_class,
 	.clkdm_name	= "l4ls_clkdm",
-	.flags		= HWMOD_SWSUP_SIDLE_ACT,
+	.flags		= DEBUG_AM33XXUART4_FLAGS | HWMOD_SWSUP_SIDLE_ACT,
 	.main_clk	= "dpll_per_m2_div4_ck",
 	.prcm		= {
 		.omap4	= {
@@ -1284,7 +1202,7 @@ struct omap_hwmod am33xx_uart5_hwmod = {
 	.name		= "uart5",
 	.class		= &uart_class,
 	.clkdm_name	= "l4ls_clkdm",
-	.flags		= HWMOD_SWSUP_SIDLE_ACT,
+	.flags		= DEBUG_AM33XXUART5_FLAGS | HWMOD_SWSUP_SIDLE_ACT,
 	.main_clk	= "dpll_per_m2_div4_ck",
 	.prcm		= {
 		.omap4	= {
@@ -1297,7 +1215,7 @@ struct omap_hwmod am33xx_uart6_hwmod = {
 	.name		= "uart6",
 	.class		= &uart_class,
 	.clkdm_name	= "l4ls_clkdm",
-	.flags		= HWMOD_SWSUP_SIDLE_ACT,
+	.flags		= DEBUG_AM33XXUART6_FLAGS | HWMOD_SWSUP_SIDLE_ACT,
 	.main_clk	= "dpll_per_m2_div4_ck",
 	.prcm		= {
 		.omap4	= {
