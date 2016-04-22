@@ -502,9 +502,6 @@
 
 /* RS485 */
 &uart1 {
-	/* use old omap3-uart to ensure proper RS485 support via RTS GPIO */
-	compatible = "ti,omap3-uart";
-
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart1_pins>;
 
