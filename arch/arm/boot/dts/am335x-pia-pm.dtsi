@@ -180,8 +180,7 @@
 
 		#address-cells = <1>;
 		#size-cells = <1>;
-		/*compatible = "m25p128-nonjedec";*/
-		compatible = "spansion,s25fl129p1";
+		compatible = "s25fl128s", "jedec,spi-nor";
 		m25p,fast-read;
 		spi-max-frequency = <24000000>;
 		reg = <0>;
