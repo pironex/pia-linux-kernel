@@ -325,6 +325,16 @@
 	status = "okay";
 };
 
+&tscadc {
+	status = "okay";
+
+	/*tsc { };*/
+	adc {
+		ti,adc-channels = <6>;
+		ti,chan-step-avg = <16>;
+	};
+};
+
 /* SIMCOM GSM AT */
 &uart2 {
 	pinctrl-names = "default";
