@@ -25,7 +25,7 @@
 		regulator-boot-on;
 		regulator-always-on;
 		enable-active-high;
-		gpio = <&gpio2 23 GPIO_ACTIVE_HIGH>; /* LDO_EN */
+		/*gpio = <&gpio2 23 GPIO_ACTIVE_HIGH>; *//* LDO_EN */
 		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
 	};
 
@@ -38,7 +38,7 @@
 		regulator-boot-on;
 		regulator-always-on;
 		enable-active-high;
-		gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>; /* GSM_PWR_EN */
+		/*gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;*/ /* GSM_PWR_EN */
 		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
 	};
 
@@ -114,8 +114,11 @@
 			0x090 (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_PWR_EN: gpmc_advn_ale.gpio2_2 */
 			0x098 (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_PWR_OK: gpmc_wen.gpio2_4 */
 			0x0A8 (PIN_INPUT | MUX_MODE7)		/* SYSBOOT2/S2: lcd_data2.gpio2_8 */
-			0x0E4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* LDO_EN: lcd_hsync.gpio2_23 */
-			0x128 (PIN_INPUT | MUX_MODE7)	/* FLIGHT-MODE: mii1_txd0.gpio0_28 */
+			0x0E4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* LDO_EN: lcd_hsync.gpio2_23 
+								 * unused since Rev 00.02 */
+			0x0EC (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_RESET: lcd_ac_bias_en.gpio2_25 */ 
+			0x128 (PIN_INPUT | MUX_MODE7)		/* FLIGHT-MODE: mii1_txd0.gpio0_28 
+								 * unused since Rev 00.02 */
 			0x164 (PIN_INPUT | MUX_MODE7)		/* ISO-IN: ecap0_in_pwm0_out.gpio0_7 */
 			0x178 (PIN_OUTPUT | MUX_MODE7)		/* WDI: uart1_ctsn.gpio0_12 */
 			0x17C (PIN_OUTPUT | MUX_MODE7)		/* WD_SET2: uart1_rtsn.gpio0_13 */
@@ -350,7 +353,7 @@
 
 	rts-gpio = <&gpio2 17 GPIO_ACTIVE_HIGH>;
 	rs485-rts-active-high;
-	rs485-rts-delay = <1 1>;
+	rs485-rts-delay = <1 0>;
 	linux,rs485-enabled-at-boot-time;
 
 	status = "okay";
