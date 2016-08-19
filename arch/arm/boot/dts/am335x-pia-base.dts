@@ -260,7 +260,7 @@
 
 	usb0_pins: pinmux_usb0_pins {
 		pinctrl-single,pins = <
-			0x21c (PIN_OUTPUT | MUX_MODE0)	/* usb0_drvvbus.usb0_drvvbus */
+			0x21c (PIN_OUTPUT | MUX_MODE7)	/* usb0_drvvbus.usb0_drvvbus */
 		>;
 	};
 
