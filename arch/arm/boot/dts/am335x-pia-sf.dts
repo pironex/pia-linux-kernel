@@ -8,6 +8,7 @@
 /dts-v1/;
 
 #include "am335x-pia-pm.dtsi"
+#include <dt-bindings/interrupt-controller/irq.h>
 
 / {
 	model = "pironex piA-AM3352-SF";
@@ -40,6 +41,16 @@
 		enable-active-high;
 		/*gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;*/ /* GSM_PWR_EN */
 		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+	};
+
+	vcc_12v_reg: fixedregulator@3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_12v_reg";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		regulator-max-microamp = <2000000>;
+		regulator-boot-on;
+		regulator-always-on;
 	};
 
 	watchdog: watchdog {
@@ -119,22 +130,27 @@
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "PIA-SF";
-		/*simple-audio-card,widgets =
-			"Headphone", "Headphone Jack";
+		simple-audio-card,widgets = 
+			"Speaker", "Speaker Out Left",
+			"Speaker", "Speaker Out Right";
 		simple-audio-card,routing =
-			"Headphone Jack",	"HPLOUT",
-			"Headphone Jack",	"HPROUT";
-		simple-audio-card,format = "dsp_b";
+			"Speaker Out Left",	"OUT_A",
+			"Speaker Out Left",	"OUT_B",
+			"Speaker Out Right",	"OUT_C",
+			"Speaker Out Right",	"OUT_D";
+		/*simple-audio-card,format = "dsp_b";
 		simple-audio-card,bitclock-inversion;*/
 		simple-audio-card,format = "i2s";
 		simple-audio-card,bitclock-master = <&sound_master>;
 		simple-audio-card,frame-master = <&sound_master>;
+		simple-audio-card,mclk-fs = <512>;
 
-		simple-audio-card,cpu {
+		sound_master: simple-audio-card,cpu {
 			sound-dai = <&mcasp0>;
+			/*clocks = <&clk_mcasp0>;*/
 		};
 
-		sound_master: simple-audio-card,codec {
+		/*sound_master:*/ simple-audio-card,codec {
 			sound-dai = <&tas5717>;
 			system-clock-frequency = <24000000>;
 		};
@@ -168,22 +184,14 @@
 			0x08C (PIN_INPUT_PULLUP | MUX_MODE7)	/* Taster_1: gpmc_clk.gpio2_1 */
 			0x090 (PIN_OUTPUT | MUX_MODE7)		/* OUTPUT_2: gpmc_advn_ale.gpio2_2 */
 			0x098 (PIN_OUTPUT | MUX_MODE7)		/* OUTPUT_1: gpmc_wen.gpio2_4 */
-			0x09C (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_RESET: gpmc_be0n_cle.gpio2_5 */ 
+			/*0x09C (PIN_INPUT_PULLUP | MUX_MODE7)*/	/* GSM_RESET conf as eMMC reset: gpmc_be0n_cle.gpio2_5 */ 
 			0x114 (PIN_INPUT | MUX_MODE7)		/* GSM_STATUS: mii1_txen.gpio3_3 */
+			0x138 (PIN_INPUT | MUX_MODE7)		/* mii1_rxd2.gpio2_19 */
 			0x178 (PIN_OUTPUT | MUX_MODE7)		/* WDI: uart1_ctsn.gpio0_12 */
 			0x19C (PIN_INPUT_PULLUP | MUX_MODE7)	/* UART2.RI: mcasp0_ahclkr.gpio3_17 */
 			0x1A0 (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_PWR_KEY: mcasp0_aclkr.gpio3_18 */
-			0x1A4 (PIN_INPUT | MUX_MODE7)		/* UART2.DTR: mcasp0_fsr.gpio3_19 */
-		>;
-	};
-
-	mcasp0_pins: pinmux_mcasp0_pins {
-		pinctrl-single,pins = <
-			0x190 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.SCK: mcasp0_aclkx.mcasp0_aclkx */
-			0x194 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.LRCLK: mcasp0_fsx.mcasp0_fsx */
-			0x198 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* I2S.SD: mcasp0_axr0.mcasp0_axr0 */
-			0x1A8 (PIN_INPUT_PULLUP | MUX_MODE7)	/* AUDIO-NRESET: mcasp0_axr1.gpio3_20 */
-			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* I2S.MCLK: xdma_event_intr0.clkout1 */
+			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* SP1ML-SHDN: mcasp0_fsr.gpio3_19 */
+			0x1B4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* SP1ML-RESET: xdma_event_intr1.gpio0_20 */
 		>;
 	};
 
@@ -263,13 +271,6 @@
 		>;
 	};
 
-//	led_pins: pinmux_led {
-//		pinctrl-single,pins = <
-//			0x07c (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* LED1 gpmc_csn0.gpio1_29 */
-//			0x094 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* LED2 gpmc_oen_ren.gpio2_3 */
-//		>;
-//	};
-
 	davinci_mdio_default: pinmux_mdio_default {
 		pinctrl-single,pins = <
 			/* MDIO */
@@ -300,6 +301,16 @@
 		>;
 	};
 
+	mcasp0_pins: pinmux_mcasp0_pins {
+		pinctrl-single,pins = <
+			0x190 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.SCK: mcasp0_aclkx.mcasp0_aclkx */
+			0x194 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.LRCLK: mcasp0_fsx.mcasp0_fsx */
+			0x198 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* I2S.SD: mcasp0_axr0.mcasp0_axr0 */
+			0x1A8 (PIN_INPUT_PULLUP | MUX_MODE7)	/* AUDIO-NRESET: mcasp0_axr1.gpio3_20 */
+			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* I2S.MCLK: xdma_event_intr0.clkout1 */
+		>;
+	};
+
 	mmc1_pins: pinmux_mmc1_pins {
 		pinctrl-single,pins = <
 			0x0f0 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mmc0_dat0.mmc0_dat0 */
@@ -314,7 +325,7 @@
 	
 	trf7970a_pins: pinmux_trf7970a_pins {
 		pinctrl-single,pins = <
-			0x160 (PIN_INPUT_PULLUP | MUX_MODE0)		/* CS  spi0_cs1.spi0_cs1 */
+			0x160 (PIN_INPUT_PULLUP | MUX_MODE0)	/* CS  spi0_cs1.spi0_cs1 */
 			0x164 (PIN_INPUT_PULLUP | MUX_MODE7)	/* IRQ ecap0_in_pwm0_out.gpio0_7 */ 
 			0x1ac (PIN_OUTPUT | MUX_MODE7)		/* EN  mcasp0_ahclkx.gpio3_21 */
 			0x134 (PIN_OUTPUT | MUX_MODE7)		/* EN2 mii1_rxd3.gpio2_18 */
@@ -337,28 +348,10 @@
 		>;
 	};
 
-//	uart3_pins: pinmux_uart3_pins {
-//		pinctrl-single,pins = <
-//			0x02C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* RES gpmc_ad11.gpio0_27 */
-//			0x0CC (PIN_OUTPUT | MUX_MODE7)		/* RTSn lcd_data11.gpio2_17 */
-//			/*0x0CC (PIN_INPUT | MUX_MODE6)*/		/* RTSn lcd_data11.uart3_rtsn */
-//			0x134 (PIN_INPUT_PULLUP | MUX_MODE1)	/* mii1_rxd3.uart3_rxd */
-//			0x138 (PIN_OUTPUT_PULLDOWN | MUX_MODE1)	/* mii1_rxd2.uart3_txd */
-//		>;
-//	};
-//
-//	uart4_pins: pinmux_uart4_pins {
-//		pinctrl-single,pins = <
-//			0x168 (PIN_INPUT_PULLUP | MUX_MODE1)	/* uart0_rxd.uart4_rxd */
-//			0x16C (PIN_OUTPUT_PULLDOWN | MUX_MODE1)	/* uart0_txd.uart4_txd */
-//		>;
-//	};
-
 	uart5_pins: pinmux_uart5_pins {
 		pinctrl-single,pins = <
 			0x108 (PIN_INPUT_PULLUP | MUX_MODE3)	/* mii1_col.uart5_rxd */
 			0x144 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* rmii1_refclk.uart5_txd */
-			0x1B4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* SP1ML-RESET: xdma_event_intr1.gpio0_20 */
 		>;
 	};
 
@@ -515,15 +508,16 @@
 };
 
 &spi0 {
-	nfc@0 {
+	nfc@1 {
 		pinctrl-0 = <&trf7970a_pins>;
 		pinctrl-names = "default";
 
 		compatible = "ti,trf7970a";
 		spi-max-frequency = <2000000>;
-		reg = <0>;
+		reg = <1>;
 
 		interrupt-parent = <&gpio0>;
+		/*interrupts = <7 IRQ_TYPE_EDGE_RISING>;*/
 		interrupts = <7 0>;
 		ti,enable-gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>,
 				  <&gpio2 18 GPIO_ACTIVE_HIGH>;
@@ -531,7 +525,7 @@
 		vin-voltage-override = <5000000>;
 		autosuspend-delay = <30000>;
 		irq-status-read-quirk;
-		/*en2-rf-quirk;*/
+		en2-rf-quirk;
 		t5t-rmb-extra-byte-quirk;
 		status = "okay";
 	};
