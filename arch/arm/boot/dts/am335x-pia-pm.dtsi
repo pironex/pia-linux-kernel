@@ -92,7 +92,7 @@
 			0x18 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad6.mmc1_dat6 */
 			0x1c (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_ad7.mmc1_dat7 */
 			/* reset GPIO */
-			0x9c (PIN_INPUT_PULLUP | MUX_MODE7) /* gpmc_be0n_cle.gpio2_5 */
+			/*0x9c (PIN_INPUT_PULLUP | MUX_MODE7)*/ /* gpmc_be0n_cle.gpio2_5 */
 		>;
 	};
 
