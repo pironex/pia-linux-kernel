@@ -17,20 +17,43 @@
 	/* cpus: defined in PM */
 	/* memory: defined in PM, TODO different memory configurations */
 
-	vcc_3v3_reg: fixedregulator@1 {
+	vcc_12v_reg: fixedregulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_12v_reg";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		regulator-max-microamp = <2100000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc_3v3_reg: fixedregulator@2 {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_3v3_reg";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		regulator-max-microamp = <1000000>;
+		regulator-max-microamp = <2000000>;
 		regulator-boot-on;
 		regulator-always-on;
 		enable-active-high;
 		/*gpio = <&gpio2 23 GPIO_ACTIVE_HIGH>; *//* LDO_EN */
-		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
+		vin-supply = <&vcc_12v_reg>;
 	};
 
-	gsm_vbat_reg: fixedregulator@2 {
+	vcc_5v_reg: fixedregulator@3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_reg";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-max-microamp = <4000000>;
+		regulator-boot-on;
+		regulator-always-on;
+		enable-active-high;
+		/*gpio = <&gpio2 23 GPIO_ACTIVE_HIGH>; *//* LDO_EN */
+		vin-supply = <&vcc_12v_reg>;
+	};
+
+	gsm_vbat_reg: fixedregulator@4 {
 		compatible = "regulator-fixed";
 		regulator-name = "gsm_vbat_reg";
 		regulator-min-microvolt = <4200000>;
@@ -39,18 +62,7 @@
 		regulator-boot-on;
 		regulator-always-on;
 		enable-active-high;
-		/*gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;*/ /* GSM_PWR_EN */
-		vin-supply = <&vcc_5v0_in>; /* turned on with vaux2, supplied by vcc_5v0 */
-	};
-
-	vcc_12v_reg: fixedregulator@3 {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_12v_reg";
-		regulator-min-microvolt = <12000000>;
-		regulator-max-microvolt = <12000000>;
-		regulator-max-microamp = <2000000>;
-		regulator-boot-on;
-		regulator-always-on;
+		vin-supply = <&vcc_5v_reg>; /* turned on with vaux2, supplied by vcc_5v0 */
 	};
 
 	watchdog: watchdog {
@@ -114,6 +126,14 @@
 		};
 	};
 
+	/* Clock is provided by an external 24.576 MHz OSC connected
+	 * to MCASP0_AHCLKX */
+	clk_mcasp0_fixed: clk_mcasp0_fixed {
+		#clock-cells = <0>;
+		compatible = "fixed-clock";
+		clock-frequency = <24576000>;
+	};
+
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "PIA-SF";
@@ -125,21 +145,18 @@
 			"Speaker Out Left",	"OUT_B",
 			"Speaker Out Right",	"OUT_C",
 			"Speaker Out Right",	"OUT_D";
-		/*simple-audio-card,format = "dsp_b";
-		simple-audio-card,bitclock-inversion;*/
 		simple-audio-card,format = "i2s";
 		simple-audio-card,bitclock-master = <&sound_master>;
 		simple-audio-card,frame-master = <&sound_master>;
-		simple-audio-card,mclk-fs = <512>;
 
 		sound_master: simple-audio-card,cpu {
 			sound-dai = <&mcasp0>;
-			/*clocks = <&clk_mcasp0>;*/
+			clocks = <&clk_mcasp0_fixed>;
 		};
 
-		/*sound_master:*/ simple-audio-card,codec {
+		simple-audio-card,codec {
 			sound-dai = <&tas5717>;
-			system-clock-frequency = <24000000>;
+			clocks = <&clk_mcasp0_fixed>;
 		};
 	};
 
@@ -178,12 +195,14 @@
 			0x098 (PIN_OUTPUT | MUX_MODE7)		/* OUTPUT_1: gpmc_wen.gpio2_4 */
 			0x09C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* GSM_RESET conf as eMMC reset: gpmc_be0n_cle.gpio2_5 */ 
 			0x114 (PIN_INPUT | MUX_MODE7)		/* GSM_STATUS: mii1_txen.gpio3_3 */
+			0x118 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* SP1ML-BOOT: mii1_rxdv.gpio3_4 */
 			0x138 (PIN_INPUT | MUX_MODE7)		/* Power_Good: mii1_rxd2.gpio2_19 */
 			0x178 (PIN_OUTPUT | MUX_MODE7)		/* WDI: uart1_ctsn.gpio0_12 */
 			0x19C (PIN_INPUT_PULLUP | MUX_MODE7)	/* UART2.RI: mcasp0_ahclkr.gpio3_17 */
 			0x1A0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* GSM_PWR_KEY: mcasp0_aclkr.gpio3_18 */
-			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* SP1ML-SHDN: mcasp0_fsr.gpio3_19 */
+			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* UART2.DTR: mcasp0_fsr.gpio3_19 */
 			0x1B4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* SP1ML-RESET: xdma_event_intr1.gpio0_20 */
+			0x1E8 (PIN_INPUT_PULLUP | MUX_MODE7)	/* SP1ML-SHDN: emu1.gpio3_8 */
 		>;
 	};
 
@@ -329,11 +348,11 @@
 
 	mcasp0_pins: pinmux_mcasp0_pins {
 		pinctrl-single,pins = <
+			0x1ac (PIN_INPUT_PULLUP | MUX_MODE0)	/* I2S.MCLK: mcasp0_ahclkx.mcasp0_ahclkx */
 			0x190 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.SCK: mcasp0_aclkx.mcasp0_aclkx */
 			0x194 (PIN_INPUT_PULLDOWN | MUX_MODE0)	/* I2S.LRCLK: mcasp0_fsx.mcasp0_fsx */
 			0x198 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* I2S.SD: mcasp0_axr0.mcasp0_axr0 */
 			0x1A8 (PIN_INPUT_PULLUP | MUX_MODE7)	/* AUDIO-NRESET: mcasp0_axr1.gpio3_20 */
-			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* I2S.MCLK: xdma_event_intr0.clkout1 */
 		>;
 	};
 
@@ -345,7 +364,6 @@
 			0x0fc (PIN_INPUT_PULLUP | MUX_MODE0)	/* mmc0_dat3.mmc0_dat3 */
 			0x100 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mmc0_clk.mmc0_clk */
 			0x104 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mmc0_cmd.mmc0_cmd */
-			0x118 (PIN_INPUT_PULLUP | MUX_MODE7)	/* mii1_rxdv.gpio3_4 */
 		>;
 	};
 	
@@ -353,7 +371,7 @@
 		pinctrl-single,pins = <
 			0x160 (PIN_INPUT_PULLUP | MUX_MODE0)	/* CS  spi0_cs1.spi0_cs1 */
 			0x164 (PIN_INPUT_PULLUP | MUX_MODE7)	/* IRQ ecap0_in_pwm0_out.gpio0_7 */ 
-			0x1ac (PIN_OUTPUT | MUX_MODE7)		/* EN  mcasp0_ahclkx.gpio3_21 */
+			0x1B0 (PIN_OUTPUT | MUX_MODE7)		/* EN  xdma_event_intr0.gpio0_19 */
 			0x134 (PIN_OUTPUT | MUX_MODE7)		/* EN2 mii1_rxd3.gpio2_18 */
 		>;
 	};
@@ -461,7 +479,7 @@
 			reg = <3>;
 			linux,default-trigger = "none";
 		};
-		backlight@4 {
+		backlightled: backlight@4 {
 			label = "lcd:led_pwm";
 			reg = <4>;
 			linux,default-trigger = "backlight";
@@ -476,8 +494,8 @@
 			reg = <6>;
 			linux,default-trigger = "default-on";
 		};
-		red@7 {
-			label = "lcd:led_en";
+		nc@7 {
+			label = "unused";
 			reg = <7>;
 			linux,default-trigger = "none";
 		};
@@ -489,8 +507,13 @@
 		#sound-dai-cells = <0>;
 
 		reset-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;
-		clocks = <&mcasp0_fck>;
+		clocks = <&clk_mcasp0_fixed>;
 		clock-names = "mclk";
+
+		AVDD-supply = <&vcc_3v3_reg>;
+		DVDD-supply = <&vcc_3v3_reg>;
+		PVDD_AB-supply = <&vcc_12v_reg>;
+		PVDD_CD-supply = <&vcc_12v_reg>;
 	};
 };
 
@@ -540,7 +563,7 @@
 		interrupt-parent = <&gpio0>;
 		/*interrupts = <7 IRQ_TYPE_EDGE_RISING>;*/
 		interrupts = <7 0>;
-		ti,enable-gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>,
+		ti,enable-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>,
 				  <&gpio2 18 GPIO_ACTIVE_HIGH>;
 		vin-supply = <&vcc_5v0_in>;
 		vin-voltage-override = <5000000>;
