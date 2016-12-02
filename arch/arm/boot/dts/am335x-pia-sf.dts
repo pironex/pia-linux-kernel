@@ -63,11 +63,11 @@
 
 	panel {
 		compatible = "ti,tilcdc,panel";
-		/*pinctrl-names = "default", "sleep";*/
-		pinctrl-names = "default";
+		pinctrl-names = "default", "sleep";
+		/*pinctrl-names = "default";*/
 		pinctrl-0 = <&lcd_pins_default>;
-		/*pinctrl-1 = <&lcd_pins_sleep>;*/
-		/*backlight = <&backlight>;*/
+		pinctrl-1 = <&lcd_pins_sleep>;
+		backlight = <&backlightled>;
 		enable-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 
@@ -84,21 +84,8 @@
 		};
 
 		display-timings {
-			native-mode = <&timing1>;
-//			1280x800 {
-//				hactive         = <1280>;
-//				vactive         = <800>;
-//				hback-porch     = <39>; /* 39 */
-//				hfront-porch    = <39>; /* 39 */
-//				hsync-len       = <47>; /* 47 */
-//				vback-porch     = <10>; /* 29 */
-//				vfront-porch    = <10>; /* 13 */
-//				vsync-len       = <10>; /* 10 */
-//				clock-frequency = <71100000>;
-//				hsync-active    = <0>;
-//				vsync-active    = <0>;
-//			};
-			timing0: 1280x800 {
+			native-mode = <&timing0>;
+			timing0: 1280x800-30 {
 				hactive         = <1280>;
 				vactive         = <800>;
 				hback-porch     = <50>; /* 39 */
@@ -107,7 +94,7 @@
 				vback-porch     = <10>; /* 29 */
 				vfront-porch    = <10>; /* 13 */
 				vsync-len       = <10>; /* 10 */
-				clock-frequency = <72000000>;
+				clock-frequency = <31000000>;
 				hsync-active    = <0>;
 				vsync-active    = <0>;
 			};
@@ -120,7 +107,7 @@
 				vback-porch     = <10>; /* 29 */
 				vfront-porch    = <10>; /* 13 */
 				vsync-len       = <10>; /* 10 */
-				clock-frequency = <31000000>;
+				clock-frequency = <72000000>;
 				hsync-active    = <0>;
 				vsync-active    = <0>;
 			};
@@ -174,6 +161,11 @@
 	};
 };
 
+&wdt2 {
+	// disable CPU internal watchdog driver
+	status = "disable";
+};
+
 &am33xx_pinmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&board_pins>;
@@ -184,7 +176,7 @@
 			0x08C (PIN_INPUT_PULLUP | MUX_MODE7)	/* Taster_1: gpmc_clk.gpio2_1 */
 			0x090 (PIN_OUTPUT | MUX_MODE7)		/* OUTPUT_2: gpmc_advn_ale.gpio2_2 */
 			0x098 (PIN_OUTPUT | MUX_MODE7)		/* OUTPUT_1: gpmc_wen.gpio2_4 */
-			0x09C (PIN_INPUT_PULLUP | MUX_MODE7)	/* GSM_RESET conf as eMMC reset: gpmc_be0n_cle.gpio2_5 */ 
+			0x09C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* GSM_RESET conf as eMMC reset: gpmc_be0n_cle.gpio2_5 */ 
 			0x114 (PIN_INPUT | MUX_MODE7)		/* GSM_STATUS: mii1_txen.gpio3_3 */
 			0x138 (PIN_INPUT | MUX_MODE7)		/* Power_Good: mii1_rxd2.gpio2_19 */
 			0x178 (PIN_OUTPUT | MUX_MODE7)		/* WDI: uart1_ctsn.gpio0_12 */
@@ -239,7 +231,7 @@
 
 	lcd_pins_default: lcd_pins_default {
 		pinctrl-single,pins = <
-			0x94 (PIN_OUTPUT | MUX_MODE7)	/* gpmc_oen_ren.gpio2_3 */
+			0x94 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren.gpio2_3 */
 			0x20 (PIN_OUTPUT | MUX_MODE1)	/* gpmc_ad8.lcd_data23 */
 			0x24 (PIN_OUTPUT | MUX_MODE1)	/* gpmc_ad9.lcd_data22 */
 			0x28 (PIN_OUTPUT | MUX_MODE1)	/* gpmc_ad10.lcd_data21 */
@@ -268,6 +260,40 @@
 			0xe4 (PIN_OUTPUT | MUX_MODE0)	/* lcd_hsync.lcd_hsync */
 			0xe8 (PIN_OUTPUT | MUX_MODE0)	/* lcd_pclk.lcd_pclk */
 			0xec (PIN_OUTPUT | MUX_MODE0)	/* lcd_ac_bias_en.lcd_ac_bias_en */
+		>;
+	};
+
+	lcd_pins_sleep: lcd_pins_sleep {
+		pinctrl-single,pins = <
+			0x94 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren.gpio2_3 */
+			0x20 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad8.lcd_data23 */
+			0x24 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad9.lcd_data22 */
+			0x28 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad10.lcd_data21 */
+			0x2c (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad11.lcd_data20 */
+			0x30 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad12.lcd_data19 */
+			0x34 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad13.lcd_data18 */
+			0x38 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad14.lcd_data17 */
+			0x3c (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad15.lcd_data16 */
+			0xa0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data0.lcd_data0 */
+			0xa4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data1.lcd_data1 */
+			0xa8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data2.lcd_data2 */
+			0xac (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data3.lcd_data3 */
+			0xb0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data4.lcd_data4 */
+			0xb4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data5.lcd_data5 */
+			0xb8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data6.lcd_data6 */
+			0xbc (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data7.lcd_data7 */
+			0xc0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data8.lcd_data8 */
+			0xc4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data9.lcd_data9 */
+			0xc8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data10.lcd_data10 */
+			0xcc (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data11.lcd_data11 */
+			0xd0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data12.lcd_data12 */
+			0xd4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data13.lcd_data13 */
+			0xd8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data14.lcd_data14 */
+			0xdc (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data15.lcd_data15 */
+			0xe0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_vsync.lcd_vsync */
+			0xe4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_hsync.lcd_hsync */
+			0xe8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_pclk.lcd_pclk */
+			0xec (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_ac_bias_en.lcd_ac_bias_en */
 		>;
 	};
 
@@ -408,9 +434,6 @@
 	mma8452@1C {
 		compatible = "fsl,mma8452";
 		reg = <0x1C>;
-		/* no interrupt pin used */
-//		interrupt-parent = <&gpio0>;
-//		interrupts = <20 2>; /* low flank */
 	};
 	pca9634: pca9634@2A {
 		compatible = "nxp,pca9634";
@@ -466,8 +489,6 @@
 		#sound-dai-cells = <0>;
 
 		reset-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;
-		/*pdn-gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;*/
-
 		clocks = <&mcasp0_fck>;
 		clock-names = "mclk";
 	};
@@ -588,8 +609,6 @@
 &usb1_phy {
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb1_pins>;
-
-//	vcc-supply = <&gsm_vbat_reg>;
 
 	status = "okay";
 };
