@@ -42,7 +42,7 @@
 
 	vcc_5v_reg: fixedregulator@3 {
 		compatible = "regulator-fixed";
-		regulator-name = "vcc_3v3_reg";
+		regulator-name = "vcc_5v_reg";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		regulator-max-microamp = <4000000>;
@@ -65,16 +65,6 @@
 		vin-supply = <&vcc_5v_reg>; /* turned on with vaux2, supplied by vcc_5v0 */
 	};
 
-	vcc_12v_reg: fixedregulator@3 {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_12v_reg";
-		regulator-min-microvolt = <12000000>;
-		regulator-max-microvolt = <12000000>;
-		regulator-max-microamp = <2000000>;
-		regulator-boot-on;
-		regulator-always-on;
-	};
-
 	watchdog: watchdog {
 		/* MAX6371 */
 		compatible = "linux,wdt-gpio";
@@ -89,7 +79,6 @@
 		/*pinctrl-names = "default";*/
 		pinctrl-0 = <&lcd_pins_default>;
 		pinctrl-1 = <&lcd_pins_sleep>;
-		backlight = <&backlightled>;
 		enable-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 
@@ -380,10 +369,10 @@
 	
 	trf7970a_pins: pinmux_trf7970a_pins {
 		pinctrl-single,pins = <
-			0x160 (PIN_INPUT_PULLUP | MUX_MODE0)	/* CS  spi0_cs1.spi0_cs1 */
-			0x164 (PIN_INPUT_PULLUP | MUX_MODE7)	/* IRQ ecap0_in_pwm0_out.gpio0_7 */ 
-			0x1B0 (PIN_OUTPUT | MUX_MODE7)		/* EN  xdma_event_intr0.gpio0_19 */
-			0x134 (PIN_OUTPUT | MUX_MODE7)		/* EN2 mii1_rxd3.gpio2_18 */
+			0x160 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* CS  spi0_cs1.spi0_cs1 */
+			0x164 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* IRQ ecap0_in_pwm0_out.gpio0_7 */ 
+			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* EN  xdma_event_intr0.gpio0_19 */
+			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* EN2 mii1_rxd3.gpio2_18 */
 		>;
 	};
 
@@ -557,33 +546,41 @@
 	bus-width = <4>; /* 4 data lines */
 	pinctrl-names = "default";
 	pinctrl-0 = <&mmc1_pins>;
-	cd-gpios = <&gpio3 4 GPIO_ACTIVE_LOW>;
 
 	status = "okay";
 };
 
 &spi0 {
+//	nfc@1 {
+//		pinctrl-0 = <&trf7970a_pins>;
+//		pinctrl-names = "default";
+//
+//		compatible = "ti,trf7970a";
+//		spi-max-frequency = <2000000>;
+//		reg = <1>;
+//
+//		interrupt-parent = <&gpio0>;
+//		interrupts = <7 IRQ_TYPE_EDGE_RISING>;
+//		/*interrupts = <7 0>;*/
+//		ti,enable-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>,
+//				  <&gpio2 18 GPIO_ACTIVE_HIGH>;
+//		vin-supply = <&vcc_5v0_in>;
+//		vin-voltage-override = <5000000>;
+//		autosuspend-delay = <30000>;
+//		irq-status-read-quirk;
+//		en2-rf-quirk;
+//		t5t-rmb-extra-byte-quirk;
+//		status = "okay";
+//	};
 	nfc@1 {
 		pinctrl-0 = <&trf7970a_pins>;
 		pinctrl-names = "default";
-
-		compatible = "ti,trf7970a";
-		spi-max-frequency = <2000000>;
+		compatible = "ti,trf7970araw";
 		reg = <1>;
-
-		interrupt-parent = <&gpio0>;
-		/*interrupts = <7 IRQ_TYPE_EDGE_RISING>;*/
-		interrupts = <7 0>;
-		ti,enable-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>,
-				  <&gpio2 18 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc_5v0_in>;
-		vin-voltage-override = <5000000>;
-		autosuspend-delay = <30000>;
-		irq-status-read-quirk;
-		en2-rf-quirk;
-		t5t-rmb-extra-byte-quirk;
-		status = "okay";
+		spi-max-frequency = <2000000>;
+		status = "ok";
 	};
+
 };
 
 &tscadc {
