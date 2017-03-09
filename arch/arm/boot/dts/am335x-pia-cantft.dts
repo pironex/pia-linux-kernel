@@ -181,7 +181,7 @@
 
 	ecap1_pins: buzzer_pins {
 		pinctrl-single,pins = <
-			0x160 (PIN_OUTPUT | MUX_MODE2)	/* mcasp0_ahclkr.ecap2_in_pwm2_out MODE4 */
+			0x160 (PIN_OUTPUT | MUX_MODE2)	/* spi0_cs1.ecap1_in_pwm1_out MODE4 */
 		>;
 	};
 
@@ -246,7 +246,7 @@
 		>;
 	};
 
-	trf7970a_default: pinmux_trf7970a_default {
+	trf7970a_pins: pinmux_trf7970a_default {
 		pinctrl-single,pins = <
 			0x108 (PIN_OUTPUT | MUX_MODE7)		/* mii1_col.gpio3_0 */
 			0x118 (PIN_INPUT_PULLUP | MUX_MODE7)	/* mii1_rxdv.gpio3_4 */ 
@@ -394,24 +394,33 @@
 
 	status = "okay";
 
+//	nfc@0 {
+//		compatible = "ti,trf7970a";
+//		reg = <0>;
+//		pinctrl-names = "default";
+//		pinctrl-0 = <&trf7970a_default>;
+//		spi-max-frequency = <2000000>;
+//		interrupt-parent = <&gpio3>;
+//		interrupts = <4 0>;
+//		ti,enable-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>,
+//				  <&gpio3 18 GPIO_ACTIVE_HIGH>;
+//		vin-supply = <&vcc_5v0_in>;
+//		vin-voltage-override = <5000000>;
+//		autosuspend-delay = <30000>;
+//		irq-status-read-quirk;
+//		/*en2-rf-quirk;*/
+//		t5t-rmb-extra-byte-quirk;
+//		status = "okay";
+//	};
 	nfc@0 {
-		compatible = "ti,trf7970a";
-		reg = <0>;
+		pinctrl-0 = <&trf7970a_pins>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&trf7970a_default>;
+		compatible = "ti,trf7970araw";
+		reg = <0>;
 		spi-max-frequency = <2000000>;
-		interrupt-parent = <&gpio3>;
-		interrupts = <4 0>;
-		ti,enable-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>,
-				  <&gpio3 18 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc_5v0_in>;
-		vin-voltage-override = <5000000>;
-		autosuspend-delay = <30000>;
-		irq-status-read-quirk;
-		/*en2-rf-quirk;*/
-		t5t-rmb-extra-byte-quirk;
-		status = "okay";
+		status = "ok";
 	};
+
 };
 
 &tscadc {
