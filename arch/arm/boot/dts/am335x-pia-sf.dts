@@ -136,18 +136,14 @@
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "PIA-SF";
-		simple-audio-card,widgets = 
-			"Speaker", "Speaker Out Left",
-			"Speaker", "Speaker Out Right";
+
+		simple-audio-card,widgets =  "Speaker", "Speaker Out";
 		simple-audio-card,routing =
-			"Speaker Out Left",	"OUT_A",
-			"Speaker Out Left",	"OUT_B",
-			"Speaker Out Right",	"OUT_C",
-			"Speaker Out Right",	"OUT_D";
+			"Speaker Out",	"DACL", // OUT_A + OUT_B
+			"Speaker Out",	"DACR"; // OUT_C + OUT_D
 		simple-audio-card,format = "i2s";
 		simple-audio-card,bitclock-master = <&sound_master>;
 		simple-audio-card,frame-master = <&sound_master>;
-		simple-audio-card,mclk-fs = <512>;
 
 		sound_master: simple-audio-card,cpu {
 			sound-dai = <&mcasp0>;
