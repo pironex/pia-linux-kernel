@@ -10,6 +10,7 @@
 #include <linux/slab.h>
 #include <linux/acpi.h>
 #include <linux/pci.h>
+#include <linux/delay.h>
 
 #include "amdgpu_acpi.h"
 
@@ -61,10 +62,6 @@ struct atpx_mux {
 
 bool amdgpu_has_atpx(void) {
 	return amdgpu_atpx_priv.atpx_detected;
-}
-
-bool amdgpu_has_atpx_dgpu_power_cntl(void) {
-	return amdgpu_atpx_priv.atpx.functions.power_cntl;
 }
 
 /**
@@ -146,6 +143,10 @@ static void amdgpu_atpx_parse_functions(struct amdgpu_atpx_functions *f, u32 mas
  */
 static int amdgpu_atpx_validate(struct amdgpu_atpx *atpx)
 {
+	/* make sure required functions are enabled */
+	/* dGPU power control is required */
+	atpx->functions.power_cntl = true;
+
 	if (atpx->functions.px_params) {
 		union acpi_object *info;
 		struct atpx_px_params output;
@@ -256,6 +257,10 @@ static int amdgpu_atpx_set_discrete_state(struct amdgpu_atpx *atpx, u8 state)
 		if (!info)
 			return -EIO;
 		kfree(info);
+
+		/* 200ms delay is required after off */
+		if (state == 0)
+			msleep(200);
 	}
 	return 0;
 }

@@ -61,12 +61,6 @@ static const char *amdgpu_asic_name[] = {
 	"LAST",
 };
 
-#if defined(CONFIG_VGA_SWITCHEROO)
-bool amdgpu_has_atpx_dgpu_power_cntl(void);
-#else
-static inline bool amdgpu_has_atpx_dgpu_power_cntl(void) { return false; }
-#endif
-
 bool amdgpu_device_is_px(struct drm_device *dev)
 {
 	struct amdgpu_device *adev = dev->dev_private;
@@ -1475,7 +1469,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
 
 	if (amdgpu_runtime_pm == 1)
 		runtime = true;
-	if (amdgpu_device_is_px(ddev) && amdgpu_has_atpx_dgpu_power_cntl())
+	if (amdgpu_device_is_px(ddev))
 		runtime = true;
 	vga_switcheroo_register_client(adev->pdev, &amdgpu_switcheroo_ops, runtime);
 	if (runtime)
@@ -1799,7 +1793,23 @@ int amdgpu_resume_kms(struct drm_device *dev, bool resume, bool fbcon)
 	}
 
 	drm_kms_helper_poll_enable(dev);
+
+	/*
+	 * Most of the connector probing functions try to acquire runtime pm
+	 * refs to ensure that the GPU is powered on when connector polling is
+	 * performed. Since we're calling this from a runtime PM callback,
+	 * trying to acquire rpm refs will cause us to deadlock.
+	 *
+	 * Since we're guaranteed to be holding the rpm lock, it's safe to
+	 * temporarily disable the rpm helpers so this doesn't deadlock us.
+	 */
+#ifdef CONFIG_PM
+	dev->dev->power.disable_depth++;
+#endif
 	drm_helper_hpd_irq_event(dev);
+#ifdef CONFIG_PM
+	dev->dev->power.disable_depth--;
+#endif
 
 	if (fbcon) {
 		amdgpu_fbdev_set_suspend(adev, 0);

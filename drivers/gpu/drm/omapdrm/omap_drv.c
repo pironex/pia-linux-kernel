@@ -215,6 +215,8 @@ static int get_connector_type(struct omap_dss_device *dssdev)
 		return DRM_MODE_CONNECTOR_HDMIA;
 	case OMAP_DISPLAY_TYPE_DVI:
 		return DRM_MODE_CONNECTOR_DVID;
+	case OMAP_DISPLAY_TYPE_DSI:
+		return DRM_MODE_CONNECTOR_DSI;
 	default:
 		return DRM_MODE_CONNECTOR_Unknown;
 	}
@@ -242,38 +244,13 @@ static void omap_disconnect_dssdevs(void)
 		dssdev->driver->disconnect(dssdev);
 }
 
-static bool dssdev_with_alias_exists(const char *alias)
-{
-	struct omap_dss_device *dssdev = NULL;
-
-	for_each_dss_dev(dssdev) {
-		if (strcmp(alias, dssdev->alias) == 0) {
-			omap_dss_put_device(dssdev);
-			return true;
-		}
-	}
-
-	return false;
-}
-
 static int omap_connect_dssdevs(void)
 {
 	int r;
 	struct omap_dss_device *dssdev = NULL;
-	bool no_displays = true;
-	struct device_node *aliases;
-	struct property *pp;
 
-	aliases = of_find_node_by_path("/aliases");
-	if (aliases) {
-		for_each_property_of_node(aliases, pp) {
-			if (strncmp(pp->name, "display", 7) != 0)
-				continue;
-
-			if (dssdev_with_alias_exists(pp->name) == false)
-				return -EPROBE_DEFER;
-		}
-	}
+	if (!omapdss_stack_is_ready())
+		return -EPROBE_DEFER;
 
 	for_each_dss_dev(dssdev) {
 		r = dssdev->driver->connect(dssdev);
@@ -283,13 +260,8 @@ static int omap_connect_dssdevs(void)
 		} else if (r) {
 			dev_warn(dssdev->dev, "could not connect display: %s\n",
 				dssdev->name);
-		} else {
-			no_displays = false;
 		}
 	}
-
-	if (no_displays)
-		return -EPROBE_DEFER;
 
 	return 0;
 
@@ -557,8 +529,8 @@ static int omap_modeset_init(struct drm_device *dev)
 		priv->num_planes, priv->num_crtcs, priv->num_encoders,
 		priv->num_connectors);
 
-	dev->mode_config.min_width = 32;
-	dev->mode_config.min_height = 32;
+	dev->mode_config.min_width = 8;
+	dev->mode_config.min_height = 2;
 
 	/* note: eventually will need some cpu_is_omapXYZ() type stuff here
 	 * to fill in these limits properly on different OMAP generations..
@@ -701,12 +673,18 @@ static int ioctl_gem_info(struct drm_device *dev, void *data,
 }
 
 static const struct drm_ioctl_desc ioctls[DRM_COMMAND_END - DRM_COMMAND_BASE] = {
-	DRM_IOCTL_DEF_DRV(OMAP_GET_PARAM, ioctl_get_param, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(OMAP_SET_PARAM, ioctl_set_param, DRM_AUTH|DRM_MASTER|DRM_ROOT_ONLY),
-	DRM_IOCTL_DEF_DRV(OMAP_GEM_NEW, ioctl_gem_new, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(OMAP_GEM_CPU_PREP, ioctl_gem_cpu_prep, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(OMAP_GEM_CPU_FINI, ioctl_gem_cpu_fini, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(OMAP_GEM_INFO, ioctl_gem_info, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(OMAP_GET_PARAM, ioctl_get_param,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(OMAP_SET_PARAM, ioctl_set_param,
+			  DRM_AUTH | DRM_MASTER | DRM_ROOT_ONLY),
+	DRM_IOCTL_DEF_DRV(OMAP_GEM_NEW, ioctl_gem_new,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(OMAP_GEM_CPU_PREP, ioctl_gem_cpu_prep,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(OMAP_GEM_CPU_FINI, ioctl_gem_cpu_fini,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(OMAP_GEM_INFO, ioctl_gem_info,
+			  DRM_AUTH | DRM_RENDER_ALLOW),
 };
 
 /*
@@ -776,7 +754,7 @@ static int dev_load(struct drm_device *dev, unsigned long flags)
 	drm_kms_helper_poll_init(dev);
 
 	if (priv->dispc_ops->has_writeback()) {
-		ret = wbm2m_init(dev);
+		ret = wb_init(dev);
 		if (ret)
 			dev_warn(dev->dev, "failed to initialize writeback\n");
 		else
@@ -793,7 +771,7 @@ static int dev_unload(struct drm_device *dev)
 	DBG("unload: dev=%p", dev);
 
 	if (priv->wb_initialized)
-		wbm2m_cleanup(dev);
+		wb_cleanup(dev);
 
 	drm_kms_helper_poll_fini(dev);
 
@@ -916,7 +894,7 @@ static const struct file_operations omapdriver_fops = {
 
 static struct drm_driver omap_drm_driver = {
 	.driver_features = DRIVER_MODESET | DRIVER_GEM  | DRIVER_PRIME |
-		DRIVER_ATOMIC,
+		DRIVER_ATOMIC | DRIVER_RENDER,
 	.load = dev_load,
 	.unload = dev_unload,
 	.open = dev_open,

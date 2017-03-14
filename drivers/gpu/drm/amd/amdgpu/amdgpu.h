@@ -710,9 +710,9 @@ int amdgpu_gart_table_vram_pin(struct amdgpu_device *adev);
 void amdgpu_gart_table_vram_unpin(struct amdgpu_device *adev);
 int amdgpu_gart_init(struct amdgpu_device *adev);
 void amdgpu_gart_fini(struct amdgpu_device *adev);
-void amdgpu_gart_unbind(struct amdgpu_device *adev, unsigned offset,
+void amdgpu_gart_unbind(struct amdgpu_device *adev, uint64_t offset,
 			int pages);
-int amdgpu_gart_bind(struct amdgpu_device *adev, unsigned offset,
+int amdgpu_gart_bind(struct amdgpu_device *adev, uint64_t offset,
 		     int pages, struct page **pagelist,
 		     dma_addr_t *dma_addr, uint32_t flags);
 
@@ -1673,6 +1673,7 @@ struct amdgpu_uvd {
 	struct amdgpu_bo	*vcpu_bo;
 	void			*cpu_addr;
 	uint64_t		gpu_addr;
+	unsigned		fw_version;
 	atomic_t		handles[AMDGPU_MAX_UVD_HANDLES];
 	struct drm_file		*filp[AMDGPU_MAX_UVD_HANDLES];
 	struct delayed_work	idle_work;

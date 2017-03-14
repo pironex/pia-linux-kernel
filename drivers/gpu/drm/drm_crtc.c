@@ -1470,6 +1470,41 @@ static int drm_mode_create_standard_properties(struct drm_device *dev)
 		return -ENOMEM;
 	dev->mode_config.prop_mode_id = prop;
 
+	prop = drm_property_create(dev,
+			DRM_MODE_PROP_BLOB,
+			"DEGAMMA_LUT", 0);
+	if (!prop)
+		return -ENOMEM;
+	dev->mode_config.degamma_lut_property = prop;
+
+	prop = drm_property_create_range(dev,
+			DRM_MODE_PROP_IMMUTABLE,
+			"DEGAMMA_LUT_SIZE", 0, UINT_MAX);
+	if (!prop)
+		return -ENOMEM;
+	dev->mode_config.degamma_lut_size_property = prop;
+
+	prop = drm_property_create(dev,
+			DRM_MODE_PROP_BLOB,
+			"CTM", 0);
+	if (!prop)
+		return -ENOMEM;
+	dev->mode_config.ctm_property = prop;
+
+	prop = drm_property_create(dev,
+			DRM_MODE_PROP_BLOB,
+			"GAMMA_LUT", 0);
+	if (!prop)
+		return -ENOMEM;
+	dev->mode_config.gamma_lut_property = prop;
+
+	prop = drm_property_create_range(dev,
+			DRM_MODE_PROP_IMMUTABLE,
+			"GAMMA_LUT_SIZE", 0, UINT_MAX);
+	if (!prop)
+		return -ENOMEM;
+	dev->mode_config.gamma_lut_size_property = prop;
+
 	return 0;
 }
 
@@ -2682,8 +2717,6 @@ int drm_mode_setcrtc(struct drm_device *dev, void *data,
 			goto out;
 		}
 
-		drm_mode_set_crtcinfo(mode, CRTC_INTERLACE_HALVE_V);
-
 		/*
 		 * Check whether the primary plane supports the fb pixel format.
 		 * Drivers not implementing the universal planes API use a
@@ -3316,6 +3349,24 @@ int drm_mode_addfb2(struct drm_device *dev,
 	return 0;
 }
 
+struct drm_mode_rmfb_work {
+	struct work_struct work;
+	struct list_head fbs;
+};
+
+static void drm_mode_rmfb_work_fn(struct work_struct *w)
+{
+	struct drm_mode_rmfb_work *arg = container_of(w, typeof(*arg), work);
+
+	while (!list_empty(&arg->fbs)) {
+		struct drm_framebuffer *fb =
+			list_first_entry(&arg->fbs, typeof(*fb), filp_head);
+
+		list_del_init(&fb->filp_head);
+		drm_framebuffer_remove(fb);
+	}
+}
+
 /**
  * drm_mode_rmfb - remove an FB from the configuration
  * @dev: drm device for the ioctl
@@ -3356,7 +3407,25 @@ int drm_mode_rmfb(struct drm_device *dev,
 	mutex_unlock(&dev->mode_config.fb_lock);
 	mutex_unlock(&file_priv->fbs_lock);
 
-	drm_framebuffer_unreference(fb);
+	/*
+	 * we now own the reference that was stored in the fbs list
+	 *
+	 * drm_framebuffer_remove may fail with -EINTR on pending signals,
+	 * so run this in a separate stack as there's no way to correctly
+	 * handle this after the fb is already removed from the lookup table.
+	 */
+	if (atomic_read(&fb->refcount.refcount) > 1) {
+		struct drm_mode_rmfb_work arg;
+
+		INIT_WORK_ONSTACK(&arg.work, drm_mode_rmfb_work_fn);
+		INIT_LIST_HEAD(&arg.fbs);
+		list_add_tail(&fb->filp_head, &arg.fbs);
+
+		schedule_work(&arg.work);
+		flush_work(&arg.work);
+		destroy_work_on_stack(&arg.work);
+	} else
+		drm_framebuffer_unreference(fb);
 
 	return 0;
 
@@ -3509,7 +3578,6 @@ out_err1:
 	return ret;
 }
 
-
 /**
  * drm_fb_release - remove and free the FBs on this file
  * @priv: drm file for the ioctl
@@ -3524,6 +3592,9 @@ out_err1:
 void drm_fb_release(struct drm_file *priv)
 {
 	struct drm_framebuffer *fb, *tfb;
+	struct drm_mode_rmfb_work arg;
+
+	INIT_LIST_HEAD(&arg.fbs);
 
 	/*
 	 * When the file gets released that means no one else can access the fb
@@ -3536,10 +3607,22 @@ void drm_fb_release(struct drm_file *priv)
 	 * at it any more.
 	 */
 	list_for_each_entry_safe(fb, tfb, &priv->fbs, filp_head) {
-		list_del_init(&fb->filp_head);
+		if (atomic_read(&fb->refcount.refcount) > 1) {
+			list_move_tail(&fb->filp_head, &arg.fbs);
+		} else {
+			list_del_init(&fb->filp_head);
 
-		/* This drops the fpriv->fbs reference. */
-		drm_framebuffer_unreference(fb);
+			/* This drops the fpriv->fbs reference. */
+			drm_framebuffer_unreference(fb);
+		}
+	}
+
+	if (!list_empty(&arg.fbs)) {
+		INIT_WORK_ONSTACK(&arg.work, drm_mode_rmfb_work_fn);
+
+		schedule_work(&arg.work);
+		flush_work(&arg.work);
+		destroy_work_on_stack(&arg.work);
 	}
 }
 
@@ -4983,6 +5066,20 @@ int drm_mode_connector_attach_encoder(struct drm_connector *connector,
 {
 	int i;
 
+	/*
+	 * In the past, drivers have attempted to model the static association
+	 * of connector to encoder in simple connector/encoder devices using a
+	 * direct assignment of connector->encoder = encoder. This connection
+	 * is a logical one and the responsibility of the core, so drivers are
+	 * expected not to mess with this.
+	 *
+	 * Note that the error return should've been enough here, but a large
+	 * majority of drivers ignores the return value, so add in a big WARN
+	 * to get people's attention.
+	 */
+	if (WARN_ON(connector->encoder))
+		return -EINVAL;
+
 	for (i = 0; i < DRM_CONNECTOR_MAX_ENCODER; i++) {
 		if (connector->encoder_ids[i] == 0) {
 			connector->encoder_ids[i] = encoder->base.id;
@@ -5182,6 +5279,9 @@ int drm_mode_page_flip_ioctl(struct drm_device *dev,
 	struct drm_pending_vblank_event *e = NULL;
 	unsigned long flags;
 	int ret = -EINVAL;
+
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		return -EINVAL;
 
 	if (page_flip->flags & ~DRM_MODE_PAGE_FLIP_FLAGS ||
 	    page_flip->reserved != 0)
@@ -5906,3 +6006,48 @@ struct drm_tile_group *drm_mode_create_tile_group(struct drm_device *dev,
 	return tg;
 }
 EXPORT_SYMBOL(drm_mode_create_tile_group);
+
+/**
+ * drm_crtc_enable_color_mgmt - enable color management properties
+ * @crtc: DRM CRTC
+ * @degamma_lut_size: the size of the degamma lut (before CSC)
+ * @has_ctm: whether to attach ctm_property for CSC matrix
+ * @gamma_lut_size: the size of the gamma lut (after CSC)
+ *
+ * This function lets the driver enable the color correction
+ * properties on a CRTC. This includes 3 degamma, csc and gamma
+ * properties that userspace can set and 2 size properties to inform
+ * the userspace of the lut sizes. Each of the properties are
+ * optional. The gamma and degamma properties are only attached if
+ * their size is not 0 and ctm_property is only attached if has_ctm is
+ * true.
+ */
+void drm_crtc_enable_color_mgmt(struct drm_crtc *crtc,
+				uint degamma_lut_size,
+				bool has_ctm,
+				uint gamma_lut_size)
+{
+	struct drm_device *dev = crtc->dev;
+	struct drm_mode_config *config = &dev->mode_config;
+
+	if (degamma_lut_size) {
+		drm_object_attach_property(&crtc->base,
+					   config->degamma_lut_property, 0);
+		drm_object_attach_property(&crtc->base,
+					   config->degamma_lut_size_property,
+					   degamma_lut_size);
+	}
+
+	if (has_ctm)
+		drm_object_attach_property(&crtc->base,
+					   config->ctm_property, 0);
+
+	if (gamma_lut_size) {
+		drm_object_attach_property(&crtc->base,
+					   config->gamma_lut_property, 0);
+		drm_object_attach_property(&crtc->base,
+					   config->gamma_lut_size_property,
+					   gamma_lut_size);
+	}
+}
+EXPORT_SYMBOL(drm_crtc_enable_color_mgmt);

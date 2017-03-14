@@ -24,7 +24,6 @@
 #include <linux/platform_data/omap_drm.h>
 #include <linux/types.h>
 #include <linux/wait.h>
-#include <video/omapdss.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
@@ -256,17 +255,6 @@ struct dma_buf *omap_gem_prime_export(struct drm_device *dev,
 struct drm_gem_object *omap_gem_prime_import(struct drm_device *dev,
 		struct dma_buf *buffer);
 
-static inline int align_pitch(int pitch, int width, int bpp)
-{
-	int bytespp = (bpp + 7) / 8;
-	/* in case someone tries to feed us a completely bogus stride: */
-	pitch = max(pitch, width * bytespp);
-	/* PVR needs alignment to 8 pixels.. right now that is the most
-	 * restrictive stride requirement..
-	 */
-	return roundup(pitch, 8 * bytespp);
-}
-
 /* map crtc to vblank mask */
 uint32_t pipe2vbl(struct drm_crtc *crtc);
 struct omap_dss_device *omap_encoder_get_dssdev(struct drm_encoder *encoder);
@@ -296,15 +284,15 @@ fail:
 	return -ENOENT;
 }
 
-#if IS_ENABLED(CONFIG_DRM_OMAP_WB_M2M)
+#if IS_ENABLED(CONFIG_DRM_OMAP_WB)
 
-int wbm2m_init(struct drm_device *drmdev);
-void wbm2m_cleanup(struct drm_device *drmdev);
+int wb_init(struct drm_device *drmdev);
+void wb_cleanup(struct drm_device *drmdev);
 
 #else
 
-static inline int wbm2m_init(struct drm_device *drmdev) { return 0; }
-static inline void wbm2m_cleanup(struct drm_device *drmdev) { }
+static inline int wb_init(struct drm_device *drmdev) { return 0; }
+static inline void wb_cleanup(struct drm_device *drmdev) { }
 
 #endif
 

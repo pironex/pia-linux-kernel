@@ -111,13 +111,7 @@ static void __init omap2_init_processor_devices(void)
 
 int omap_pm_clkdms_setup(struct clockdomain *clkdm, void *unused)
 {
-	/* XXX The usecount test is racy */
-	if ((clkdm->flags & CLKDM_CAN_ENABLE_AUTO) &&
-	    !(clkdm->flags & CLKDM_MISSING_IDLE_REPORTING))
-		clkdm_allow_idle(clkdm);
-	else if (clkdm->flags & CLKDM_CAN_FORCE_SLEEP &&
-		 clkdm->usecount == 0)
-		clkdm_sleep(clkdm);
+	clkdm_allow_idle(clkdm);
 	return 0;
 }
 
@@ -283,7 +277,7 @@ static inline void omap_init_cpufreq(void)
 	if (!of_have_populated_dt())
 		devinfo.name = "omap-cpufreq";
 	else
-		devinfo.name = "cpufreq-dt";
+		devinfo.name = "ti-cpufreq";
 	platform_device_register_full(&devinfo);
 }
 

@@ -57,6 +57,9 @@
 
 	aliases {
 		display0 = &hdmi0;
+
+		sound0 = &sound0;
+		sound1 = &hdmi;
 	};
 
 	evm_3v3_sd: fixedregulator-sd {
@@ -83,6 +86,16 @@
 		vin-supply = <&evm_3v3_sw>;
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
+	};
+
+	vmmcwl_fixed: fixedregulator-mmcwl {
+		compatible = "regulator-fixed";
+		regulator-name = "vmmcwl_fixed";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&gpio5 8 0>;	/* gpio5_8 */
+		startup-delay-us = <70000>;
+		enable-active-high;
 	};
 
 	extcon_usb1: extcon_usb1 {
@@ -409,6 +422,50 @@
 			0x98 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1) /* gpmc_a22.mmc2_dat7 */
 		>;
 	};
+
+	mmc4_pins_default: mmc4_pins_default {
+		pinctrl-single,pins = <
+			0x3e8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_ctsn.mmc4_clk */
+			0x3ec (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_rtsn.mmc4_cmd */
+			0x3f0 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rxd.mmc4_dat0 */
+			0x3f4 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_txd.mmc4_dat1 */
+			0x3f8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_ctsn.mmc4_dat2 */
+			0x3fC (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rtsn.mmc4_dat3 */
+		>;
+	};
+
+	mmc4_pins_hs: mmc4_pins_hs {
+		pinctrl-single,pins = <
+			0x3e8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_ctsn.mmc4_clk */
+			0x3ec (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_rtsn.mmc4_cmd */
+			0x3f0 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rxd.mmc4_dat0 */
+			0x3f4 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_txd.mmc4_dat1 */
+			0x3f8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_ctsn.mmc4_dat2 */
+			0x3fC (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rtsn.mmc4_dat3 */
+		>;
+	};
+
+	mmc4_pins_sdr12: mmc4_pins_sdr12 {
+		pinctrl-single,pins = <
+			0x3e8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_ctsn.mmc4_clk */
+			0x3eC (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_rtsn.mmc4_cmd */
+			0x3f0 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rxd.mmc4_dat0 */
+			0x3f4 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_txd.mmc4_dat1 */
+			0x3f8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_ctsn.mmc4_dat2 */
+			0x3fc (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rtsn.mmc4_dat3 */
+		>;
+	};
+
+	mmc4_pins_sdr25: mmc4_pins_sdr25 {
+		pinctrl-single,pins = <
+			0x3e8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_ctsn.mmc4_clk */
+			0x3eC (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart1_rtsn.mmc4_cmd */
+			0x3f0 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rxd.mmc4_dat0 */
+			0x3f4 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_txd.mmc4_dat1 */
+			0x3f8 (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_ctsn.mmc4_dat2 */
+			0x3fc (PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE3) /* uart2_rtsn.mmc4_dat3 */
+		>;
+	};
 };
 
 &dra7_iodelay_core {
@@ -603,6 +660,94 @@
 			0x368 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_CS1_OUT */
 		>;
 	};
+
+	mmc4_iodelay_ds_rev11_conf: mmc4_iodelay_ds_rev11_conf {
+		pinctrl-single,pins = <
+			0x840 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_IN */
+			0x848 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_OUT */
+			0x84c (A_DELAY(96) | G_DELAY(0))	/* CFG_UART1_RTSN_IN */
+			0x850 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OEN */
+			0x854 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OUT */
+			0x870 (A_DELAY(582) | G_DELAY(0))	/* CFG_UART2_CTSN_IN */
+			0x874 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OEN */
+			0x878 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OUT */
+			0x87c (A_DELAY(391) | G_DELAY(0))	/* CFG_UART2_RTSN_IN */
+			0x880 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OEN */
+			0x884 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OUT */
+			0x888 (A_DELAY(561) | G_DELAY(0))	/* CFG_UART2_RXD_IN */
+			0x88c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OEN */
+			0x890 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OUT */
+			0x894 (A_DELAY(588) | G_DELAY(0))	/* CFG_UART2_TXD_IN */
+			0x898 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OEN */
+			0x89c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OUT */
+		>;
+	};
+
+	mmc4_iodelay_ds_rev20_conf: mmc4_iodelay_ds_rev20_conf {
+		pinctrl-single,pins = <
+			0x840 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_IN */
+			0x848 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_OUT */
+			0x84c (A_DELAY(307) | G_DELAY(0))	/* CFG_UART1_RTSN_IN */
+			0x850 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OEN */
+			0x854 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OUT */
+			0x870 (A_DELAY(785) | G_DELAY(0))	/* CFG_UART2_CTSN_IN */
+			0x874 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OEN */
+			0x878 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OUT */
+			0x87c (A_DELAY(613) | G_DELAY(0))	/* CFG_UART2_RTSN_IN */
+			0x880 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OEN */
+			0x884 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OUT */
+			0x888 (A_DELAY(683) | G_DELAY(0))	/* CFG_UART2_RXD_IN */
+			0x88c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OEN */
+			0x890 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OUT */
+			0x894 (A_DELAY(835) | G_DELAY(0))	/* CFG_UART2_TXD_IN */
+			0x898 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OEN */
+			0x89c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OUT */
+		>;
+	};
+
+	mmc4_iodelay_sdr12_hs_sdr25_rev11_conf: mmc4_iodelay_sdr12_hs_sdr25_rev11_conf {
+		pinctrl-single,pins = <
+			0x840 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_IN */
+			0x848 (A_DELAY(2651) | G_DELAY(0))	/* CFG_UART1_CTSN_OUT */
+			0x84c (A_DELAY(1572) | G_DELAY(0))	/* CFG_UART1_RTSN_IN */
+			0x850 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OEN */
+			0x854 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OUT */
+			0x870 (A_DELAY(1913) | G_DELAY(0))	/* CFG_UART2_CTSN_IN */
+			0x874 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OEN */
+			0x878 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OUT */
+			0x87c (A_DELAY(1721) | G_DELAY(0))	/* CFG_UART2_RTSN_IN */
+			0x880 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OEN */
+			0x884 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OUT */
+			0x888 (A_DELAY(1891) | G_DELAY(0))	/* CFG_UART2_RXD_IN */
+			0x88c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OEN */
+			0x890 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OUT */
+			0x894 (A_DELAY(1919) | G_DELAY(0))	/* CFG_UART2_TXD_IN */
+			0x898 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OEN */
+			0x89c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OUT */
+		>;
+	};
+
+	mmc4_iodelay_sdr12_hs_sdr25_rev20_conf: mmc4_iodelay_sdr12_hs_sdr25_rev20_conf {
+		pinctrl-single,pins = <
+			0x840 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_CTSN_IN */
+			0x848 (A_DELAY(1147) | G_DELAY(0))	/* CFG_UART1_CTSN_OUT */
+			0x84c (A_DELAY(1834) | G_DELAY(0))	/* CFG_UART1_RTSN_IN */
+			0x850 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OEN */
+			0x854 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART1_RTSN_OUT */
+			0x870 (A_DELAY(2165) | G_DELAY(0))	/* CFG_UART2_CTSN_IN */
+			0x874 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OEN */
+			0x878 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_CTSN_OUT */
+			0x87c (A_DELAY(1929) | G_DELAY(64))	/* CFG_UART2_RTSN_IN */
+			0x880 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OEN */
+			0x884 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RTSN_OUT */
+			0x888 (A_DELAY(1935) | G_DELAY(128))	/* CFG_UART2_RXD_IN */
+			0x88c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OEN */
+			0x890 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_RXD_OUT */
+			0x894 (A_DELAY(2172) | G_DELAY(44))	/* CFG_UART2_TXD_IN */
+			0x898 (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OEN */
+			0x89c (A_DELAY(0) | G_DELAY(0))		/* CFG_UART2_TXD_OUT */
+		>;
+	};
 };
 
 &i2c1 {
@@ -630,7 +775,7 @@
 					/* VDD_DSPEVE */
 					regulator-name = "smps45";
 					regulator-min-microvolt = < 850000>;
-					regulator-max-microvolt = <1150000>;
+					regulator-max-microvolt = <1250000>;
 					regulator-always-on;
 					regulator-boot-on;
 				};
@@ -648,7 +793,7 @@
 					/* CORE_VDD */
 					regulator-name = "smps7";
 					regulator-min-microvolt = <850000>;
-					regulator-max-microvolt = <1060000>;
+					regulator-max-microvolt = <1150000>;
 					regulator-always-on;
 					regulator-boot-on;
 				};
@@ -891,17 +1036,61 @@
 	pinctrl-5 = <&mmc2_pins_hs200_1_8v &mmc2_iodelay_hs200_1_8v_rev20_conf>;
 };
 
-&cpu0 {
-	cpu0-supply = <&smps123_reg>;
+&mmc4 {
+	status = "okay";
+	vmmc-supply = <&vmmcwl_fixed>;
+	bus-width = <4>;
+	cap-power-off-card;
+	keep-power-in-suspend;
+	ti,non-removable;
+
+	pinctrl-names = "default-rev11", "default", "hs-rev11", "hs", "sdr12-rev11", "sdr12", "sdr25-rev11", "sdr25";
+	pinctrl-0 = <&mmc4_pins_default &mmc4_iodelay_ds_rev11_conf>;
+	pinctrl-1 = <&mmc4_pins_default &mmc4_iodelay_ds_rev20_conf>;
+	pinctrl-2 = <&mmc4_pins_hs &mmc4_iodelay_sdr12_hs_sdr25_rev11_conf>;
+	pinctrl-3 = <&mmc4_pins_hs &mmc4_iodelay_sdr12_hs_sdr25_rev20_conf>;
+	pinctrl-4 = <&mmc4_pins_sdr12 &mmc4_iodelay_sdr12_hs_sdr25_rev11_conf>;
+	pinctrl-5 = <&mmc4_pins_sdr12 &mmc4_iodelay_sdr12_hs_sdr25_rev20_conf>;
+	pinctrl-6 = <&mmc4_pins_sdr25 &mmc4_iodelay_sdr12_hs_sdr25_rev11_conf>;
+	pinctrl-7 = <&mmc4_pins_sdr25 &mmc4_iodelay_sdr12_hs_sdr25_rev20_conf>;
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+	wlcore: wlcore@0 {
+		compatible = "ti,wl1835";
+		reg = <2>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <7 IRQ_TYPE_LEVEL_HIGH>;
+	};
+};
+
+&oppdm_mpu {
+	vdd-supply = <&smps123_reg>;
+};
+
+&oppdm_dspeve {
+	vdd-supply = <&smps45_reg>;
+};
+
+&oppdm_gpu {
+	vdd-supply = <&smps6_reg>;
+};
+
+&oppdm_ivahd {
+	vdd-supply = <&smps8_reg>;
+};
+
+&oppdm_core {
+	vdd-supply = <&smps7_reg>;
 };
 
 &qspi {
 	status = "okay";
 
-	spi-max-frequency = <64000000>;
+	spi-max-frequency = <76800000>;
 	m25p80@0 {
 		compatible = "s25fl256s1";
-		spi-max-frequency = <64000000>;
+		spi-max-frequency = <76800000>;
 		reg = <0>;
 		spi-tx-bus-width = <1>;
 		spi-rx-bus-width = <4>;
@@ -915,41 +1104,29 @@
 		 */
 		partition@0 {
 			label = "QSPI.SPL";
-			reg = <0x00000000 0x000010000>;
+			reg = <0x00000000 0x000040000>;
 		};
 		partition@1 {
-			label = "QSPI.SPL.backup1";
-			reg = <0x00010000 0x00010000>;
-		};
-		partition@2 {
-			label = "QSPI.SPL.backup2";
-			reg = <0x00020000 0x00010000>;
-		};
-		partition@3 {
-			label = "QSPI.SPL.backup3";
-			reg = <0x00030000 0x00010000>;
-		};
-		partition@4 {
 			label = "QSPI.u-boot";
 			reg = <0x00040000 0x00100000>;
 		};
-		partition@5 {
+		partition@2 {
 			label = "QSPI.u-boot-spl-os";
 			reg = <0x00140000 0x00080000>;
 		};
-		partition@6 {
+		partition@3 {
 			label = "QSPI.u-boot-env";
 			reg = <0x001c0000 0x00010000>;
 		};
-		partition@7 {
+		partition@4 {
 			label = "QSPI.u-boot-env.backup1";
 			reg = <0x001d0000 0x0010000>;
 		};
-		partition@8 {
+		partition@5 {
 			label = "QSPI.kernel";
 			reg = <0x001e0000 0x0800000>;
 		};
-		partition@9 {
+		partition@6 {
 			label = "QSPI.file-system";
 			reg = <0x009e0000 0x01620000>;
 		};
@@ -1193,6 +1370,7 @@
 	memory-region = <&ipu1_cma_pool>;
 	mboxes = <&mailbox5 &mbox_ipu1_ipc3x>;
 	timers = <&timer11>;
+	watchdog-timers = <&timer7>, <&timer8>;
 };
 
 &dsp1 {
@@ -1200,6 +1378,7 @@
 	memory-region = <&dsp1_cma_pool>;
 	mboxes = <&mailbox5 &mbox_dsp1_ipc3x>;
 	timers = <&timer5>;
+	watchdog-timers = <&timer10>;
 };
 
 &dsp2 {
@@ -1213,6 +1392,10 @@
 	status = "ok";
 
 	vdda_video-supply = <&ldoln_reg>;
+};
+
+&bb2d {
+	status = "okay";
 };
 
 &hdmi {

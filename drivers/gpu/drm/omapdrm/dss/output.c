@@ -21,8 +21,6 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 
-#include <video/omapdss.h>
-
 #include "omapdss.h"
 
 static LIST_HEAD(output_list);
@@ -108,6 +106,19 @@ void omapdss_unregister_output(struct omap_dss_device *out)
 	list_del(&out->list);
 }
 EXPORT_SYMBOL(omapdss_unregister_output);
+
+bool omapdss_component_is_output(struct device_node *node)
+{
+	struct omap_dss_device *out;
+
+	list_for_each_entry(out, &output_list, list) {
+		if (out->dev->of_node == node)
+			return true;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL(omapdss_component_is_output);
 
 struct omap_dss_device *omap_dss_get_output(enum omap_dss_output_id id)
 {

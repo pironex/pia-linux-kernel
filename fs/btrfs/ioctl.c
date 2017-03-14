@@ -1648,7 +1648,7 @@ static noinline int btrfs_ioctl_snap_create_transid(struct file *file,
 
 		src_inode = file_inode(src.file);
 		if (src_inode->i_sb != file_inode(file)->i_sb) {
-			btrfs_info(BTRFS_I(src_inode)->root->fs_info,
+			btrfs_info(BTRFS_I(file_inode(file))->root->fs_info,
 				   "Snapshot src from another FS");
 			ret = -EXDEV;
 		} else if (!inode_owner_or_capable(src_inode)) {
@@ -5121,7 +5121,7 @@ static long btrfs_ioctl_quota_rescan_wait(struct file *file, void __user *arg)
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
 
-	return btrfs_qgroup_wait_for_completion(root->fs_info);
+	return btrfs_qgroup_wait_for_completion(root->fs_info, true);
 }
 
 static long _btrfs_ioctl_set_received_subvol(struct file *file,

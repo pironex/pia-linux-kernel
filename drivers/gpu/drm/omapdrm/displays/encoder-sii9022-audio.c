@@ -20,8 +20,6 @@
 #include <linux/device.h>
 #include <linux/regmap.h>
 
-#include <video/omapdss.h>
-
 #include <drm/drm_edid.h>
 
 #include <linux/hdmi.h>
@@ -32,6 +30,7 @@
 
 #include <dt-bindings/sound/sii9022-audio.h>
 
+#include "../dss/omapdss.h"
 #include "encoder-sii9022.h"
 
 struct sii9022_audio {
@@ -192,8 +191,8 @@ static int sii9022_audio_start(struct snd_soc_dai *dai,
 	ret = sii9022_select_mclk_div(&i2s_config_reg, params_rate(params),
 				      dd->audio->mclk);
 	if (ret)
-		dev_warn(dai->dev, "Inaccurate reference clock (%u/%d != %u)\n",
-			 dd->audio->mclk, ret, params_rate(params));
+		dev_dbg(dai->dev, "Inaccurate reference clock (%u/%d != %u)\n",
+			dd->audio->mclk, ret, params_rate(params));
 
 	switch (params_rate(params)) {
 	case 32000:

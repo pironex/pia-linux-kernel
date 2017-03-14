@@ -20,10 +20,13 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 
+#include <linux/platform_data/hsmmc-omap.h>
 #include <linux/platform_data/pinctrl-single.h>
 #include <linux/platform_data/iommu-omap.h>
 #include <linux/platform_data/remoteproc-omap.h>
 #include <linux/platform_data/wkup_m3.h>
+#include <linux/platform_data/remoteproc-pruss.h>
+#include <linux/platform_data/sgx-omap.h>
 
 #include "common.h"
 #include "common-board-devices.h"
@@ -42,6 +45,14 @@ struct pdata_init {
 
 static struct of_dev_auxdata omap_auxdata_lookup[];
 static struct twl4030_gpio_platform_data twl_gpio_auxdata;
+
+#if defined(CONFIG_SOC_AM33XX) || defined(CONFIG_SOC_AM43XX)
+static struct gfx_sgx_platform_data sgx_pdata = {
+	.reset_name = "gfx",
+	.assert_reset = omap_device_assert_hardreset,
+	.deassert_reset = omap_device_deassert_hardreset,
+};
+#endif
 
 #if IS_ENABLED(CONFIG_OMAP_IOMMU)
 int omap_iommu_set_pwrdm_constraint(struct platform_device *pdev, bool request,
@@ -434,6 +445,12 @@ static struct wkup_m3_platform_data wkup_m3_data = {
 	.assert_reset = omap_device_assert_hardreset,
 	.deassert_reset = omap_device_deassert_hardreset,
 };
+
+static struct pruss_platform_data pruss_pdata = {
+	.reset_name = "pruss",
+	.assert_reset = omap_device_assert_hardreset,
+	.deassert_reset = omap_device_deassert_hardreset,
+};
 #endif
 
 #if defined(CONFIG_SOC_AM33XX)
@@ -485,6 +502,24 @@ static struct iommu_platform_data dra7_dsp_mmu_edma_pdata = {
 	.device_enable = omap_device_enable,
 	.device_idle = omap_device_idle,
 };
+
+static struct omap_hsmmc_platform_data dra7_hsmmc_data_mmc1;
+static struct omap_hsmmc_platform_data dra7_hsmmc_data_mmc2;
+static struct omap_hsmmc_platform_data dra7_hsmmc_data_mmc3;
+
+static void __init dra7x_evm_mmc_quirk(void)
+{
+	if (omap_rev() == DRA752_REV_ES1_1 || omap_rev() == DRA752_REV_ES1_0) {
+		dra7_hsmmc_data_mmc1.version = "rev11";
+		dra7_hsmmc_data_mmc1.max_freq = 96000000;
+
+		dra7_hsmmc_data_mmc2.version = "rev11";
+		dra7_hsmmc_data_mmc2.max_freq = 48000000;
+
+		dra7_hsmmc_data_mmc3.version = "rev11";
+		dra7_hsmmc_data_mmc3.max_freq = 48000000;
+	}
+}
 #endif
 
 static struct pcs_pdata pcs_pdata;
@@ -548,6 +583,10 @@ static struct of_dev_auxdata omap_auxdata_lookup[] __initdata = {
 #ifdef CONFIG_SOC_AM33XX
 	OF_DEV_AUXDATA("ti,am3352-wkup-m3", 0x44d00000, "44d00000.wkup_m3",
 		       &wkup_m3_data),
+	OF_DEV_AUXDATA("ti,am3352-pruss", 0x4a300000, "4a300000.pruss",
+		       &pruss_pdata),
+	OF_DEV_AUXDATA("ti,am3352-sgx530", 0x56000000, "56000000.sgx",
+		       &sgx_pdata),
 #endif
 #ifdef CONFIG_ARCH_OMAP4
 	OF_DEV_AUXDATA("ti,omap4-padconf", 0x4a100040, "4a100040.pinmux", &pcs_pdata),
@@ -583,11 +622,21 @@ static struct of_dev_auxdata omap_auxdata_lookup[] __initdata = {
 		       &omap4_ipu_dsp_pdata),
 	OF_DEV_AUXDATA("ti,dra7-dsp", 0x41000000, "41000000.dsp",
 		       &omap4_ipu_dsp_pdata),
+	OF_DEV_AUXDATA("ti,dra7-hsmmc", 0x4809c000, "4809c000.mmc",
+		       &dra7_hsmmc_data_mmc1),
+	OF_DEV_AUXDATA("ti,dra7-hsmmc", 0x480b4000, "480b4000.mmc",
+		       &dra7_hsmmc_data_mmc2),
+	OF_DEV_AUXDATA("ti,dra7-hsmmc", 0x480ad000, "480ad000.mmc",
+		       &dra7_hsmmc_data_mmc3),
 #endif
 #ifdef CONFIG_SOC_AM43XX
 	OF_DEV_AUXDATA("ti,am437-padconf", 0x44e10800, "44e10800.pinmux", &pcs_pdata),
 	OF_DEV_AUXDATA("ti,am4372-wkup-m3", 0x44d00000, "44d00000.wkup_m3",
 		       &wkup_m3_data),
+	OF_DEV_AUXDATA("ti,am4372-pruss-wrapper", 0x54426000,
+		       "54426000.pruss_wrapper", &pruss_pdata),
+	OF_DEV_AUXDATA("ti,am4376-sgx530", 0x56000000, "56000000.sgx",
+		       &sgx_pdata),
 #endif
 #if defined(CONFIG_ARCH_OMAP4) || defined(CONFIG_SOC_OMAP5)
 	OF_DEV_AUXDATA("ti,omap4-iommu", 0x4a066000, "4a066000.mmu",
@@ -624,6 +673,9 @@ static struct pdata_init pdata_quirks[] __initdata = {
 #endif
 #ifdef CONFIG_SOC_OMAP5
 	{ "ti,omap5-uevm", omap5_uevm_legacy_init, },
+#endif
+#ifdef CONFIG_SOC_DRA7XX
+	{ "ti,dra7-evm", dra7x_evm_mmc_quirk, },
 #endif
 	{ /* sentinel */ },
 };

@@ -399,7 +399,7 @@ static void gpmc_cs_bool_timings(int cs, const struct gpmc_bool_timings *p)
 	gpmc_cs_modify_reg(cs, GPMC_CS_CONFIG4,
 			   GPMC_CONFIG4_OEEXTRADELAY, p->oe_extra_delay);
 	gpmc_cs_modify_reg(cs, GPMC_CS_CONFIG4,
-			   GPMC_CONFIG4_OEEXTRADELAY, p->we_extra_delay);
+			   GPMC_CONFIG4_WEEXTRADELAY, p->we_extra_delay);
 	gpmc_cs_modify_reg(cs, GPMC_CS_CONFIG6,
 			   GPMC_CONFIG6_CYCLE2CYCLESAMECSEN,
 			   p->cycle2cyclesamecsen);
@@ -2380,11 +2380,18 @@ static int gpmc_suspend(struct device *dev)
 {
 	omap3_gpmc_save_context();
 	pm_runtime_put_sync(dev);
+
+	/* Select sleep pin state */
+	pinctrl_pm_select_sleep_state(dev);
+
 	return 0;
 }
 
 static int gpmc_resume(struct device *dev)
 {
+	/* Select default pin state */
+	pinctrl_pm_select_default_state(dev);
+
 	pm_runtime_get_sync(dev);
 	omap3_gpmc_restore_context();
 	return 0;

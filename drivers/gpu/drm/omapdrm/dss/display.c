@@ -28,7 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 
-#include <video/omapdss.h>
+#include "omapdss.h"
 
 void omapdss_default_get_resolution(struct omap_dss_device *dssdev,
 			u16 *xres, u16 *yres)
@@ -83,6 +83,7 @@ static int disp_num_counter;
 int omapdss_register_display(struct omap_dss_device *dssdev)
 {
 	struct omap_dss_driver *drv = dssdev->driver;
+	struct list_head *cur;
 	int id;
 
 	/*
@@ -118,7 +119,14 @@ int omapdss_register_display(struct omap_dss_device *dssdev)
 		drv->get_timings = omapdss_default_get_timings;
 
 	mutex_lock(&panel_list_mutex);
-	list_add_tail(&dssdev->panel_list, &panel_list);
+	list_for_each(cur, &panel_list) {
+		struct omap_dss_device *ldev = list_entry(cur,
+							 struct omap_dss_device,
+							 panel_list);
+		if (strcmp(ldev->alias, dssdev->alias) > 0)
+			break;
+	}
+	list_add_tail(&dssdev->panel_list, cur);
 	mutex_unlock(&panel_list_mutex);
 	return 0;
 }
@@ -131,6 +139,24 @@ void omapdss_unregister_display(struct omap_dss_device *dssdev)
 	mutex_unlock(&panel_list_mutex);
 }
 EXPORT_SYMBOL(omapdss_unregister_display);
+
+bool omapdss_component_is_display(struct device_node *node)
+{
+	struct omap_dss_device *dssdev;
+	bool found = false;
+
+	mutex_lock(&panel_list_mutex);
+	list_for_each_entry(dssdev, &panel_list, panel_list) {
+		if (dssdev->dev->of_node == node) {
+			found = true;
+			goto out;
+		}
+	}
+out:
+	mutex_unlock(&panel_list_mutex);
+	return found;
+}
+EXPORT_SYMBOL(omapdss_component_is_display);
 
 struct omap_dss_device *omap_dss_get_device(struct omap_dss_device *dssdev)
 {

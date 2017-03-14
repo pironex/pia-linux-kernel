@@ -4081,6 +4081,13 @@ S:     Supported
 F:     drivers/edac/xgene_edac.c
 F:     Documentation/devicetree/bindings/edac/apm-xgene-edac.txt
 
+EDAC-KEYSTONE
+TI KEYSTONE EDAC
+M:     Murali Karicheri <m-karicheri2@ti.com>
+S:     Supported
+F:     drivers/edac/keusyone_mc_edac.c
+F:     Documentation/devicetree/bindings/edac/keystone-mc-edac.txt
+
 EDIROL UA-101/UA-1000 DRIVER
 M:	Clemens Ladisch <clemens@ladisch.de>
 L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
@@ -4097,8 +4104,8 @@ F:	Documentation/efi-stub.txt
 F:	arch/ia64/kernel/efi.c
 F:	arch/x86/boot/compressed/eboot.[ch]
 F:	arch/x86/include/asm/efi.h
-F:	arch/x86/platform/efi/*
-F:	drivers/firmware/efi/*
+F:	arch/x86/platform/efi/
+F:	drivers/firmware/efi/
 F:	include/linux/efi*.h
 
 EFI VARIABLE FILESYSTEM
