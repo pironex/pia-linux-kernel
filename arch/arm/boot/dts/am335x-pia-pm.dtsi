@@ -158,6 +158,11 @@
 	};
 };
 
+&pruss {
+	/* piA-AM335x-PM use AM3352 or AM3354 - both don't have PRUSS */
+	status = "disabled";
+};
+
 &rtc {
 	/* RTC is used from TPS, make sure it is rtc0 */
 	status = "disabled";
