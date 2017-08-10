@@ -64,6 +64,10 @@
 			0x0A8 (PIN_INPUT | MUX_MODE7)	/* SYSBOOT2/S2: lcd_data2.gpio2_8 */
 			0x19C (PIN_OUTPUT | MUX_MODE7)	/* LED2: mcasp0_ahclkr.gpio3_17 */
 			0x1A0 (PIN_OUTPUT | MUX_MODE7)	/* LED3: mcasp0_aclkr.gpio3_18 */
+			0x17c (PIN_INPUT | MUX_MODE7)	/* GPIO0_13 */
+			0x178 (PIN_INPUT | MUX_MODE7)	/* GPIO0_12 */
+			0x164 (PIN_INPUT | MUX_MODE7)	/* GPIO0_7 */
+			0x1b4 (PIN_INPUT | MUX_MODE7)	/* GPIO0_20 */
 		>;
 	};
 
@@ -144,6 +148,40 @@
 		>;
 	};
 
+	spi1_pins: pinmux_spi1_pins {
+		pinctrl-single,pins = <
+			0x190 (PIN_INPUT_PULLUP | MUX_MODE3)	/* mcasp0_aclkx.spi1_sclk */
+			0x194 (PIN_INPUT_PULLUP | MUX_MODE3)	/* mcasp0_fsx.spi1_d0 */
+			0x198 (PIN_INPUT_PULLUP | MUX_MODE3)	/* mcasp_axr0.spi1_d1 */
+			0x144 (PIN_INPUT_PULLUP | MUX_MODE2)	/* rmii1_refclk.spi1_cs0 */
+		>;
+	};
+	extspi_pins: pinmux_extspi_pins {
+		pinctrl-single,pins = <
+		>;
+	};
+
+	uart1_pins: pinmux_uart1_pins {
+		pinctrl-single,pins = <
+			0x180 (PIN_INPUT_PULLUP | MUX_MODE0)	/* uart1_rxd.uart1_rxd */
+			0x184 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* uart1_txd.uart1_txd */
+		>;
+	};
+
+	uart2_pins: pinmux_uart2_pins {
+		pinctrl-single,pins = <
+			0x12c (PIN_INPUT_PULLUP | MUX_MODE1)	/* mii1_txclk.uart2_rxd */
+			0x130 (PIN_OUTPUT_PULLDOWN | MUX_MODE1)	/* mii1_rxclk.uart2_txd */
+		>;
+	};
+
+	uart4_pins: pinmux_uart4_pins {
+		pinctrl-single,pins = <
+			0x11c (PIN_INPUT_PULLUP | MUX_MODE3)	/* mii1_txd3.uart4_rxd */
+			0x120 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* mii1_txd2.uart4_txd */
+		>;
+	};
+
 	usb0_pins: pinmux_usb0_pins {
 		pinctrl-single,pins = <
 			0x21c (PIN_OUTPUT | MUX_MODE0)	/* usb0_drvvbus.usb0_drvvbus */
@@ -202,6 +240,49 @@
 	status = "okay";
 };
 
+/* Expansion SPI1.0 */
+&spi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi1_pins>;
+	ti,pindir-d0-out-d1-in;
+
+	status = "okay";
+
+	pinctrl-names = "default";
+	princtrl-0 = <&spi1_pins>;
+
+	extspi@1 {
+		// SPI bus on external port, reuse the TRF7970a name
+		// to remove the warning during boot
+		compatible = "ti,trf7970araw";
+		reg = <0>;
+		spi-max-frequency = <2000000>; // 2 MHz
+
+		status = "okay";
+	};
+};
+/* Expansion UART 1 */
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1_pins>;
+
+	status = "okay";
+};
+/* Expansion UART 2 */
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pins>;
+
+	status = "okay";
+};
+/* Expansion UART 4 */
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart4_pins>;
+
+	status = "okay";
+};
+
 &usb {
 	status = "okay";
 };
@@ -236,4 +317,14 @@
 
 &cppi41dma  {
 	status = "okay";
+};
+
+&tscadc {
+	status = "okay";
+
+	/*tsc { };*/
+	adc {
+		ti,adc-channels = <0 1 2 3 4 5 6>;
+		ti,chan-step-avg = <16>;
+	};
 };
