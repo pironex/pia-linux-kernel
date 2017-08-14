@@ -95,7 +95,7 @@
 		};
 
 		display-timings {
-			native-mode = <&timing0>;
+			native-mode = <&timing1>;
 			timing0: 1280x800-30 {
 				hactive         = <1280>;
 				vactive         = <800>;
@@ -514,6 +514,7 @@
 };
 
 &lcdc {
+	blue-and-red-wiring = "crossed";
 	status = "okay";
 };
 
