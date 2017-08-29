@@ -201,14 +201,14 @@ static void omap_aes_dma_stop(struct omap_aes_dev *dd)
 	omap_aes_write_mask(dd, AES_REG_MASK(dd), 0, mask);
 }
 
-struct omap_aes_dev *omap_aes_find_dev(struct omap_aes_ctx *ctx)
+struct omap_aes_dev *omap_aes_find_dev(struct omap_aes_reqctx *rctx)
 {
 	struct omap_aes_dev *dd;
 
 	spin_lock_bh(&list_lock);
 	dd = list_first_entry(&dev_list, struct omap_aes_dev, list);
 	list_move_tail(&dd->list, &dev_list);
-	ctx->dd = dd;
+	rctx->dd = dd;
 	spin_unlock_bh(&list_lock);
 
 	return dd;
@@ -413,18 +413,22 @@ int omap_aes_crypt_dma_stop(struct omap_aes_dev *dd)
 	return 0;
 }
 
-int omap_aes_check_aligned(struct scatterlist *sg, int total)
+bool omap_aes_copy_needed(struct scatterlist *sg, int total)
 {
 	int len = 0;
 
 	if (!IS_ALIGNED(total, AES_BLOCK_SIZE))
-		return -EINVAL;
+		return true;
 
 	while (sg) {
 		if (!IS_ALIGNED(sg->offset, 4))
-			return -1;
+			return true;
 		if (!IS_ALIGNED(sg->length, AES_BLOCK_SIZE))
-			return -1;
+			return true;
+#ifdef CONFIG_ZONE_DMA
+		if (page_zonenum(sg_page(sg)) != ZONE_DMA)
+			return true;
+#endif
 
 		len += sg->length;
 		sg = sg_next(sg);
@@ -434,9 +438,9 @@ int omap_aes_check_aligned(struct scatterlist *sg, int total)
 	}
 
 	if (len != total)
-		return -1;
+		return true;
 
-	return 0;
+	return false;
 }
 
 static int omap_aes_copy_sgs(struct omap_aes_dev *dd)
@@ -507,8 +511,8 @@ static int omap_aes_handle_queue(struct omap_aes_dev *dd,
 	dd->in_sg = req->src;
 	dd->out_sg = req->dst;
 
-	if (omap_aes_check_aligned(dd->in_sg, dd->total) ||
-	    omap_aes_check_aligned(dd->out_sg, dd->total)) {
+	if (omap_aes_copy_needed(dd->in_sg, dd->total) ||
+	    omap_aes_copy_needed(dd->out_sg, dd->total)) {
 		if (omap_aes_copy_sgs(dd))
 			pr_err("Failed to copy SGs for unaligned cases\n");
 		dd->sgs_copied = 1;
@@ -527,7 +531,7 @@ static int omap_aes_handle_queue(struct omap_aes_dev *dd,
 	dd->flags = (dd->flags & ~FLAGS_MODE_MASK) | rctx->mode;
 
 	dd->ctx = ctx;
-	ctx->dd = dd;
+	rctx->dd = dd;
 
 	err = omap_aes_write_ctrl(dd);
 
@@ -608,7 +612,7 @@ static int omap_aes_crypt(struct ablkcipher_request *req, unsigned long mode)
 		ablkcipher_request_set_tfm(req, __crypto_ablkcipher_cast(tfm));
 		return ret;
 	}
-	dd = omap_aes_find_dev(ctx);
+	dd = omap_aes_find_dev(rctx);
 	if (!dd)
 		return -ENODEV;
 
@@ -1171,6 +1175,8 @@ static struct attribute_group omap_aes_attr_group = {
 	.attrs = omap_aes_attrs,
 };
 
+static DEFINE_MUTEX(probe_lock);
+
 static int omap_aes_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1255,6 +1261,8 @@ static int omap_aes_probe(struct platform_device *pdev)
 	list_add_tail(&dd->list, &dev_list);
 	spin_unlock(&list_lock);
 
+	mutex_lock(&probe_lock);
+
 	for (i = 0; i < dd->pdata->algs_info_size; i++) {
 		if (!dd->pdata->algs_info[i].registered) {
 			for (j = 0; j < dd->pdata->algs_info[i].size; j++) {
@@ -1264,8 +1272,10 @@ static int omap_aes_probe(struct platform_device *pdev)
 				INIT_LIST_HEAD(&algp->cra_list);
 
 				err = crypto_register_alg(algp);
-				if (err)
+				if (err) {
+					mutex_unlock(&probe_lock);
 					goto err_algs;
+				}
 
 				dd->pdata->algs_info[i].registered++;
 			}
@@ -1281,12 +1291,16 @@ static int omap_aes_probe(struct platform_device *pdev)
 			INIT_LIST_HEAD(&algp->cra_list);
 
 			err = crypto_register_aead(aalg);
-			if (err)
+			if (err) {
+				mutex_unlock(&probe_lock);
 				goto err_aead_algs;
+			}
 
 			dd->pdata->aead_algs_info->registered++;
 		}
 	}
+
+	mutex_unlock(&probe_lock);
 
 	err = sysfs_create_group(&dev->kobj, &omap_aes_attr_group);
 	if (err) {

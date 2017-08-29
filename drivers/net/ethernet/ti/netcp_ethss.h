@@ -77,11 +77,19 @@ struct gbe_host_port_regs_ofs {
 
 struct gbe_emac_regs_ofs {
 	u16	mac_control;
+	u16	mac_status;
 	u16	soft_reset;
 	u16	rx_maxlen;
 };
 
 #define GBE_MAX_HW_STAT_MODS			9
+
+struct ts_ctl {
+	int	uni;
+	u8	dst_port_map;
+	u8	maddr_map;
+	u8	ts_mcast_type;
+};
 
 struct gbe_priv {
 	struct device			*dev;
@@ -107,6 +115,7 @@ struct gbe_priv {
 	void __iomem			*switch_regs;
 	void __iomem			*host_port_regs;
 	void __iomem			*ale_reg;
+	void __iomem			*cpts_reg;
 	void __iomem			*sgmii_port_regs;
 	void __iomem			*sgmii_port34_regs;
 	void __iomem			*hw_stats_regs[GBE_MAX_HW_STAT_MODS];
@@ -135,6 +144,10 @@ struct gbe_priv {
 	struct kobject			pvlan_kobj;
 	struct kobject			port_ts_kobj[MAX_SLAVES];
 	struct kobject			stats_kobj;
+
+	u32				cpts_rftclk_sel;
+	int                             cpts_registered;
+	struct cpts			*cpts;
 };
 
 struct gbe_slave {
@@ -159,7 +172,9 @@ struct gbe_slave {
 					/* 0:NOT, > 0:recovering */
 	u32				link_recovering;
 	struct delayed_work		link_recover_work;
+	struct device_node		*node;
 	struct device_node		*phy_node;
+	struct ts_ctl			ts_ctl;
 	struct list_head		slave_list;
 	struct phy			*serdes_phy;
 };

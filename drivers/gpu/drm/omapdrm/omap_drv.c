@@ -96,8 +96,22 @@ static void omap_atomic_complete(struct omap_atomic_state_commit *commit)
 	priv->dispc_ops->runtime_get();
 
 	drm_atomic_helper_commit_modeset_disables(dev, old_state);
-	drm_atomic_helper_commit_planes(dev, old_state, false);
+
+	/* With the current dss dispc implementation we have to enable
+	 * the new modeset before we can commit planes. The dispc ovl
+	 * configuration relies on the video mode configuration been
+	 * written into the HW when the ovl configuration is
+	 * calculated.
+	 *
+	 * This approach is not ideal because after a mode change the
+	 * plane update is executed only after the first vblank
+	 * interrupt. The dispc implementation should be fixed so that
+	 * it is able use uncommitted drm state information.
+	 */
 	drm_atomic_helper_commit_modeset_enables(dev, old_state);
+	omap_atomic_wait_for_completion(dev, old_state);
+
+	drm_atomic_helper_commit_planes(dev, old_state, 0);
 
 	omap_atomic_wait_for_completion(dev, old_state);
 
@@ -369,6 +383,7 @@ static int omap_modeset_init(struct drm_device *dev)
 	int num_crtcs;
 	int i, id = 0;
 	int ret;
+	u32 min_w, min_h, max_w, max_h;
 
 	drm_mode_config_init(dev);
 
@@ -529,14 +544,16 @@ static int omap_modeset_init(struct drm_device *dev)
 		priv->num_planes, priv->num_crtcs, priv->num_encoders,
 		priv->num_connectors);
 
-	dev->mode_config.min_width = 8;
-	dev->mode_config.min_height = 2;
+	priv->dispc_ops->get_min_max_size(&min_w, &min_h, &max_w, &max_h);
+
+	dev->mode_config.min_width = min_w;
+	dev->mode_config.min_height = min_h;
 
 	/* note: eventually will need some cpu_is_omapXYZ() type stuff here
 	 * to fill in these limits properly on different OMAP generations..
 	 */
-	dev->mode_config.max_width = 2048;
-	dev->mode_config.max_height = 2048;
+	dev->mode_config.max_width = max_w;
+	dev->mode_config.max_height = max_h;
 
 	dev->mode_config.funcs = &omap_mode_config_funcs;
 

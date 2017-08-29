@@ -120,6 +120,18 @@ static const struct clk_ops omap3_dpll_ck_ops = {
 	.round_rate	= &omap2_dpll_round_rate,
 };
 
+static const struct clk_ops omap3_dpll5_ck_ops = {
+	.enable		= &omap3_noncore_dpll_enable,
+	.disable	= &omap3_noncore_dpll_disable,
+	.get_parent	= &omap2_init_dpll_parent,
+	.recalc_rate	= &omap3_dpll_recalc,
+	.set_rate	= &omap3_dpll5_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_noncore_dpll_set_rate_and_parent,
+	.determine_rate	= &omap3_noncore_dpll_determine_rate,
+	.round_rate	= &omap2_dpll_round_rate,
+};
+
 static const struct clk_ops omap3_dpll_per_ck_ops = {
 	.enable		= &omap3_noncore_dpll_enable,
 	.disable	= &omap3_noncore_dpll_disable,
@@ -153,17 +165,30 @@ static void __init _register_dpll(struct clk_hw *hw,
 	struct dpll_data *dd = clk_hw->dpll_data;
 	struct clk *clk;
 
-	dd->clk_ref = of_clk_get(node, 0);
-	dd->clk_bypass = of_clk_get(node, 1);
-
-	if (IS_ERR(dd->clk_ref) || IS_ERR(dd->clk_bypass)) {
-		pr_debug("clk-ref or clk-bypass missing for %s, retry later\n",
+	clk = of_clk_get(node, 0);
+	if (IS_ERR(clk)) {
+		pr_debug("clk-ref missing for %s, retry later\n",
 			 node->name);
 		if (!ti_clk_retry_init(node, hw, _register_dpll))
 			return;
 
 		goto cleanup;
 	}
+
+	dd->clk_ref = __clk_get_hw(clk);
+
+	clk = of_clk_get(node, 1);
+
+	if (IS_ERR(clk)) {
+		pr_debug("clk-bypass missing for %s, retry later\n",
+			 node->name);
+		if (!ti_clk_retry_init(node, hw, _register_dpll))
+			return;
+
+		goto cleanup;
+	}
+
+	dd->clk_bypass = __clk_get_hw(clk);
 
 	/* register the clock */
 	clk = clk_register(NULL, &clk_hw->hw);
@@ -257,8 +282,8 @@ struct clk *ti_clk_register_dpll(struct ti_clk *setup)
 	dd->recal_en_bit = dpll->recal_en_bit;
 	dd->recal_st_bit = dpll->recal_st_bit;
 
-	dd->clk_ref = clk_ref;
-	dd->clk_bypass = clk_bypass;
+	dd->clk_ref = __clk_get_hw(clk_ref);
+	dd->clk_bypass = __clk_get_hw(clk_bypass);
 
 	if (dpll->flags & CLKF_CORE)
 		ops = &omap3_dpll_core_ck_ops;
@@ -467,7 +492,12 @@ static void __init of_ti_omap3_dpll_setup(struct device_node *node)
 		.modes = (1 << DPLL_LOW_POWER_BYPASS) | (1 << DPLL_LOCKED),
 	};
 
-	of_ti_dpll_setup(node, &omap3_dpll_ck_ops, &dd);
+	if ((of_machine_is_compatible("ti,omap3630") ||
+	     of_machine_is_compatible("ti,omap36xx")) &&
+	    !strcmp(node->name, "dpll5_ck"))
+		of_ti_dpll_setup(node, &omap3_dpll5_ck_ops, &dd);
+	else
+		of_ti_dpll_setup(node, &omap3_dpll_ck_ops, &dd);
 }
 CLK_OF_DECLARE(ti_omap3_dpll_clock, "ti,omap3-dpll-clock",
 	       of_ti_omap3_dpll_setup);

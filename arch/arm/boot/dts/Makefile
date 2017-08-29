@@ -152,7 +152,8 @@ dtb-$(CONFIG_ARCH_KEYSTONE) += \
 	keystone-k2l-evm.dtb \
 	keystone-k2e-evm.dtb \
 	keystone-k2g-evm.dtb \
-	keystone-k2g-evm-lcd.dtb
+	keystone-k2g-evm-lcd.dtb \
+	keystone-k2g-ice.dtb
 dtb-$(CONFIG_MACH_KIRKWOOD) += \
 	kirkwood-b3.dtb \
 	kirkwood-blackarmor-nas220.dtb \
@@ -511,7 +512,9 @@ dtb-$(CONFIG_SOC_DRA7XX) += \
 	dra72-evm-lcd-osd101t2587.dtb \
 	dra72-evm-revc.dtb \
 	dra72-evm-revc-lcd-osd101t2045.dtb \
-	dra72-evm-revc-lcd-osd101t2587.dtb
+	dra72-evm-revc-lcd-osd101t2587.dtb \
+	dra71-evm.dtb \
+	dra71-evm-lcd-auo-g101evn01.0.dtb
 dtb-$(CONFIG_ARCH_ORION5X) += \
 	orion5x-lacie-d2-network.dtb \
 	orion5x-lacie-ethernet-disk-mini-v2.dtb \

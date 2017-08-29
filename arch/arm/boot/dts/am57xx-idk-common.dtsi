@@ -200,6 +200,7 @@
 		#interrupt-cells = <2>;
 		interrupt-controller;
 		ti,system-power-controller;
+		ti,palmas-override-powerhold;
 
 		tps659038_pmic {
 			compatible = "ti,tps659038-pmic";
@@ -396,6 +397,13 @@
 			compatible = "ti,palmas-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
+		};
+
+		extcon_usb2: tps659038_usb {
+			compatible = "ti,palmas-usb-vid";
+			ti,enable-vbus-detection;
+			ti,enable-id-detection;
+			/* ID & VBUS GPIOs provided in board dts */
 		};
 	};
 

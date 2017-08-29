@@ -32,6 +32,7 @@
 #include "vpdma.h"
 #include "vpdma_priv.h"
 #include "sc.h"
+#include "csc.h"
 
 #define VIP_INSTANCE1	1
 #define VIP_INSTANCE2	2
@@ -64,7 +65,18 @@
  * vip_formats[].
  * When vip_formats[] is modified make sure to adjust this value also.
  */
-#define VIP_MAX_ACTIVE_FMT		10
+#define VIP_MAX_ACTIVE_FMT		15
+/*
+ * Colorspace conversion unit can be in one of 3 modes:
+ * NA  - Not Available on this port
+ * Y2R - Needed for YUV to RGB on this port
+ * R2Y - Needed for RGB to YUV on this port
+ */
+enum vip_csc_state {
+	VIP_CSC_NA = 0,
+	VIP_CSC_Y2R,
+	VIP_CSC_R2Y,
+};
 
 /* buffer for one video frame */
 struct vip_buffer {
@@ -144,7 +156,6 @@ struct vip_dev {
 	spinlock_t		lock; /* used in videobuf2 callback */
 
 	int			irq;
-	int			num_skip_irq;
 	void __iomem		*base;
 
 	struct vb2_alloc_ctx	*alloc_ctx;
@@ -157,6 +168,10 @@ struct vip_dev {
 	struct sc_data		*sc;
 	/* scaler port assignation */
 	int			sc_assigned;
+	/* csc data handle */
+	struct csc_data		*csc;
+	/* csc port assignation */
+	int			csc_assigned;
 };
 
 /*
@@ -198,6 +213,8 @@ struct vip_port {
 	struct vpdma_buf	sc_coeff_v;
 	/* Show if scaler resource is available on this port */
 	bool			scaler;
+	/* Show the csc resource state on this port */
+	enum vip_csc_state	csc;
 };
 
 /*
@@ -210,6 +227,8 @@ struct vip_stream {
 	int			stream_id;
 	int			list_num;
 	int			vfl_type;
+	struct work_struct	recovery_work;
+	int			num_recovery;
 	enum v4l2_field		field;		/* current field */
 	unsigned int		sequence;	/* current frame/field seq */
 	enum v4l2_field		sup_field;	/* supported field value */
@@ -222,6 +241,7 @@ struct vip_stream {
 	struct list_head	post_bufs;	/* vip_bufs to be DMAed */
 	/* Maintain a list of used channels - Needed for VPDMA cleanup */
 	int			vpdma_channels[VPDMA_MAX_CHANNELS];
+	int			vpdma_channels_to_abort[VPDMA_MAX_CHANNELS];
 	struct vpdma_desc_list	desc_list;	/* DMA descriptor list */
 	struct vpdma_dtd	*write_desc;
 	/* next unused desc_list addr */

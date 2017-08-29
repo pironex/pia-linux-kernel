@@ -2490,6 +2490,25 @@ static int dispc_ovl_calc_scaling_44xx(unsigned long pclk, unsigned long lclk,
 		return -EINVAL;
 	}
 
+	if (*decim_x > 4 && color_mode != OMAP_DSS_COLOR_NV12) {
+		/*
+		 * Let's disable all scaling that requires horizontal
+		 * decimation with higher factor than 4, until we have
+		 * better estimates of what we can and can not
+		 * do. However, NV12 color format appears to work Ok
+		 * with all decimation factors.
+		 *
+		 * When decimating horizontally by more that 4 the dss
+		 * is not able to fetch the data in burst mode. When
+		 * this happens it is hard to tell if there enough
+		 * bandwidth. Despite what theory says this appears to
+		 * be true also for 16-bit color formats.
+		 */
+		DSSERR("Not enough bandwidth, too much downscaling (x-decimation factor %d > 4)", *decim_x);
+
+		return -EINVAL;
+	}
+
 	*core_clk = dispc.feat->calc_core_clk(pclk, in_width, in_height,
 				out_width, out_height, mem_to_mem);
 	return 0;
@@ -4207,6 +4226,14 @@ static void dispc_free_irq(void *dev_id)
 	dispc.user_data = NULL;
 }
 
+static void dispc_get_min_max_size(u32 *min_w, u32 *min_h, u32 *max_w, u32 *max_h)
+{
+	*min_w = 8;
+	*min_h = 2;
+	*max_w = dispc.feat->mgr_width_max;
+	*max_h = dispc.feat->mgr_height_max;
+}
+
 static const struct dispc_ops dispc_ops = {
 	.read_irqstatus = dispc_read_irqstatus,
 	.clear_irqstatus = dispc_clear_irqstatus,
@@ -4221,6 +4248,7 @@ static const struct dispc_ops dispc_ops = {
 
 	.get_num_ovls = dispc_get_num_ovls,
 	.get_num_mgrs = dispc_get_num_mgrs,
+	.get_min_max_size = dispc_get_min_max_size,
 
 	.mgr_enable = dispc_mgr_enable,
 	.mgr_is_enabled = dispc_mgr_is_enabled,
