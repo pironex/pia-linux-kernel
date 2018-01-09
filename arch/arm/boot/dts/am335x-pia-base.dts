@@ -76,7 +76,7 @@
 	gpio_wd_set2 {
 		gpio-hog;
 		gpios = <13 GPIO_ACTIVE_HIGH>;
-		output-low;
+		output-high;
 		line-name = "watchdog-enable";
 	};
 
