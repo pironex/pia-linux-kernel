@@ -373,6 +373,7 @@
 };
 
 &lcdc {
+	blue-and-red-wiring = "crossed";
 	status = "okay";
 };
 
