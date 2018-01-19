@@ -73,13 +73,6 @@
 };
 
 &gpio0 {
-	gpio_wd_set2 {
-		gpio-hog;
-		gpios = <13 GPIO_ACTIVE_HIGH>;
-		output-high;
-		line-name = "watchdog-enable";
-	};
-
 	gpio_can0_stb {
 		gpio-hog;
 		gpios = <22 GPIO_ACTIVE_HIGH>;
@@ -412,4 +405,3 @@
 &cppi41dma  {
 	status = "okay";
 };
-
