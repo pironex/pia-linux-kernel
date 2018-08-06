@@ -1570,8 +1570,15 @@ static __init void mmc_extra_init(struct device *dev, int id)
 
 	switch (id) {
 	case PIA335_BB_EBTFT:
-		pd = dev->platform_data;
-		pd->init = ebtft_mmccd_init;
+		if (pia335x_exp_id.rev > 2) {
+			pd = dev->platform_data;
+			pd->slots[0].switch_pin = -EINVAL;
+			pr_info("piA335x: Disable MMC CD\n");
+			break;
+		} else {
+			pd = dev->platform_data;
+			pd->init = ebtft_mmccd_init;
+		}
 		break;
 	case PIA335_BB_SK:
 		if (pia335x_exp_id.rev == 1) {
