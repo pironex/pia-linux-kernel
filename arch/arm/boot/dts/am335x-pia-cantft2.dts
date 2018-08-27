@@ -93,11 +93,11 @@
 			480x272 {
 				hactive         = <480>;
 				vactive         = <272>;
-				hback-porch     = <43>; /* 2 */
-				hfront-porch    = <8>; /* 2 */
-				hsync-len       = <4>; /* 41 */
-				vback-porch     = <12>; /* 2 */
-				vfront-porch    = <4>; /* 2 */
+				hback-porch     = <2>; /* 43 */
+				hfront-porch    = <2>; /* 8*/
+				hsync-len       = <41>; /* 4 */
+				vback-porch     = <2>; /* 12 */
+				vfront-porch    = <2>; /* 4 */
 				vsync-len       = <10>; /* 10 */
 				clock-frequency = <9000000>;
 				hsync-active    = <0>;
@@ -489,7 +489,26 @@
 		spi-max-frequency = <2000000>;
 		status = "ok";
 	};
+	/* nfc@0 {
+		pinctrl-0 = <&trf7970a_pins>;
+		pinctrl-names = "default";
 
+		compatible = "ti,trf7970a";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+
+		interrupt-parent = <&gpio3>;
+		interrupts = <4 IRQ_TYPE_EDGE_RISING>;
+		ti,enable-gpios = <&gpio3 0 GPIO_ACTIVE_HIGH>,
+				  <&gpio3 8 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc_5v0_in>;
+		vin-voltage-override = <5000000>;
+		autosuspend-delay = <30000>;
+		irq-status-read-quirk;
+		en2-rf-quirk;
+		t5t-rmb-extra-byte-quirk;
+		status = "okay";
+	}; */
 };
 
 &tscadc {
