@@ -1,0 +1,147 @@
+/*
+ * Copyright (C) 2019 pironex GmbH (http://www.pironex.de)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+/dts-v1/;
+
+#include "am335x-pia-sf.dtsi"
+
+/ {
+	model = "pironex piA-AM3352-SF2";
+
+	buzzer: buzzer {
+		compatible = "pwm-beeper";
+		pwms = <&ecap1 0 250000 1>;
+	};
+};
+
+&am33xx_pinmux {
+	pinctrl-names = "default";
+	pinctrl-0 = <&board_pins &board_pins_extra>;
+
+	board_pins_extra: pinmux_board_pins {
+		pinctrl-single,pins = <
+			0x118 (PIN_INPUT_PULLUP   | MUX_MODE7)	/* BT-MODE: mii1_rxdv.gpio3_4 */
+			0x134 (PIN_INPUT_PULLUP   | MUX_MODE7)	/* WDSET mii1_rxd3.gpio2_18 */
+			0x164 (PIN_INPUT_PULLUP   | MUX_MODE7)	/* RFID_IRQ     ecap0_in_pwm0_out.gpio0_7 */ 
+			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* UART2.DTR: mcasp0_fsr.gpio3_19 */
+			0x1B0 (PIN_INPUT | MUX_MODE7)		/* RFID_POW_EN  xdma_event_intr0.gpio0_19 */
+		>;
+	};
+
+	buzzer_pins: pinmux_buzzer_pins {
+		pinctrl-single,pins = <
+			0x160 (PIN_OUTPUT | MUX_MODE2)	/* BUZZER  spi0_cs1.ecap1_in_pwm1_out */
+		>;
+			
+	};
+	
+	uart5_pins: pinmux_uart5_pins {
+		pinctrl-single,pins = <
+			0x1B4 (PIN_INPUT_PULLUP | MUX_MODE7)	/* BT-RST_N: xdma_event_intr1.gpio0_20 */
+			0x1E8 (PIN_INPUT | MUX_MODE7)		/* BT_STATUS: emu1.gpio3_8 */
+			0x108 (PIN_INPUT_PULLUP | MUX_MODE3)	/* mii1_col.uart5_rxd */
+			0x144 (PIN_OUTPUT_PULLDOWN | MUX_MODE3)	/* rmii1_refclk.uart5_txd */
+		>;
+	};
+};
+
+&epwmss1 {
+	// PWM for buzzer
+	status = "okay";
+};
+&ecap1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&buzzer_pins>;
+};
+
+&uart1_pins {
+	/* RS485 pins, res gpio as led7 */
+	pinctrl-single,pins = <
+		0x17C (PIN_OUTPUT | MUX_MODE7)		/* UART1.RTSn: uart1_rtsn.gpio0_13 */
+		0x180 (PIN_INPUT_PULLUP | MUX_MODE0)	/* UART1.RXD:  uart1_rxd.uart1_rxd */
+		0x184 (PIN_OUTPUT | MUX_MODE0)		/* UART1.TXD:  uart1_txd.uart1_txd */
+	>;
+};
+
+&i2c1 {
+	/* TODO NFC IC */
+	// handled in userspace with libnfc-nci and gpio and i2c-dev
+	// pn7150@28
+	// pin-int
+	// pin-enable
+	
+	// alternative: compatible = "nxp,nxp-nci-i2c" (using kernel NFC subsystem)
+	// or external driver from https://github.com/NXPNFCLinux/nxp-pn5xx.git
+};
+
+//&pca9634 {
+//	compatible = "nxp,pca9634";
+//	#address-cells = <1>;
+//	#size-cells = <0>;
+//	reg = <0x2A>;
+//
+//	led@0 {
+//		label = "led:led1";
+//		reg = <0>;
+//		linux,default-trigger = "none";
+//	};
+//	led@1 {
+//		label = "led:led2";
+//		reg = <1>;
+//		linux,default-trigger = "none";
+//	};
+//	led@2 {
+//		label = "led:power_led_dual1";
+//		reg = <2>;
+//		linux,default-trigger = "none";
+//	};
+//	led@3 {
+//		label = "led:power_led_dual2";
+//		reg = <3>;
+//		linux,default-trigger = "none";
+//	};
+//	backlightled: backlight@4 {
+//		label = "lcd:led_pwm";
+//		reg = <4>;
+//		linux,default-trigger = "backlight";
+//	};
+//	canres@5 {
+//		label = "can0_res";
+//		reg = <5>;
+//		linux,default-trigger = "default-on";
+//	};
+//	canres@6 {
+//		label = "can1_res";
+//		reg = <6>;
+//		linux,default-trigger = "default-on";
+//	};
+//	led7: nc@7 {
+//		label = "rs485_res";
+//		reg = <7>;
+//		linux,default-trigger = "none";
+//	};
+//};
+
+&led7 {
+	label = "rs485_res";
+	reg = <7>;
+	linux,default-trigger = "none";
+};
+
+&spi0 {
+	status = "disabled";
+};
+
+/* BT UART */
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5_pins>;
+
+	status = "okay";
+};
+
