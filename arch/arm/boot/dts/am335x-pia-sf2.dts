@@ -79,54 +79,6 @@
 	// or external driver from https://github.com/NXPNFCLinux/nxp-pn5xx.git
 };
 
-//&pca9634 {
-//	compatible = "nxp,pca9634";
-//	#address-cells = <1>;
-//	#size-cells = <0>;
-//	reg = <0x2A>;
-//
-//	led@0 {
-//		label = "led:led1";
-//		reg = <0>;
-//		linux,default-trigger = "none";
-//	};
-//	led@1 {
-//		label = "led:led2";
-//		reg = <1>;
-//		linux,default-trigger = "none";
-//	};
-//	led@2 {
-//		label = "led:power_led_dual1";
-//		reg = <2>;
-//		linux,default-trigger = "none";
-//	};
-//	led@3 {
-//		label = "led:power_led_dual2";
-//		reg = <3>;
-//		linux,default-trigger = "none";
-//	};
-//	backlightled: backlight@4 {
-//		label = "lcd:led_pwm";
-//		reg = <4>;
-//		linux,default-trigger = "backlight";
-//	};
-//	canres@5 {
-//		label = "can0_res";
-//		reg = <5>;
-//		linux,default-trigger = "default-on";
-//	};
-//	canres@6 {
-//		label = "can1_res";
-//		reg = <6>;
-//		linux,default-trigger = "default-on";
-//	};
-//	led7: nc@7 {
-//		label = "rs485_res";
-//		reg = <7>;
-//		linux,default-trigger = "none";
-//	};
-//};
-
 &led7 {
 	label = "rs485_res";
 	reg = <7>;
