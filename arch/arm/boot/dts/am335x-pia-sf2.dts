@@ -69,14 +69,18 @@
 };
 
 &i2c1 {
-	/* TODO NFC IC */
-	// handled in userspace with libnfc-nci and gpio and i2c-dev
-	// pn7150@28
-	// pin-int
-	// pin-enable
+	status = "okay";
 	
-	// alternative: compatible = "nxp,nxp-nci-i2c" (using kernel NFC subsystem)
-	// or external driver from https://github.com/NXPNFCLinux/nxp-pn5xx.git
+	pn7150: pn7150@28 {
+
+		compatible = "nxp,pn547";
+
+		reg = <0x28>;
+		clock-frequency = <400000>;
+
+		interrupt-gpios = <&gpio0 7 0>;
+		enable-gpios = <&gpio0 17 0>;
+	};
 };
 
 &led7 {
