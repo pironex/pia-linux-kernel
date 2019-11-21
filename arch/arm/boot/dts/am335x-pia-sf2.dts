@@ -79,7 +79,7 @@
 		clock-frequency = <400000>;
 
 		interrupt-gpios = <&gpio0 7 0>;
-		enable-gpios = <&gpio0 17 0>;
+		enable-gpios = <&gpio0 19 0>;
 	};
 };
 
