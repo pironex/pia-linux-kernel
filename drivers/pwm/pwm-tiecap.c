@@ -28,6 +28,7 @@
 #include <linux/of_device.h>
 
 /* ECAP registers and bits definitions */
+#define TSCTR			0x00
 #define CAP1			0x08
 #define CAP2			0x0C
 #define CAP3			0x10
@@ -147,6 +148,9 @@ static int ecap_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 
 	/* Leave clock enabled on enabling PWM */
 	pm_runtime_get_sync(pc->chip.dev);
+
+	/* fix 'sticky' timer register which is not always reset to 0 */
+	writel(0, pc->mmio_base + TSCTR);
 
 	/*
 	 * Enable 'Free run Time stamp counter mode' to start counter
