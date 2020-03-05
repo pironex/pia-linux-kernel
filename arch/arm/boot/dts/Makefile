@@ -468,6 +468,12 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-icev2.dtb \
 	am335x-nano.dtb \
 	am335x-pepper.dtb \
+	am335x-pia-base.dtb \
+	am335x-pia-cantft.dtb \
+	am335x-pia-cantft2.dtb \
+	am335x-pia-dr.dtb \
+	am335x-pia-sf.dtb \
+	am335x-pia-sk.dtb \
 	am335x-lxm.dtb \
 	am335x-chiliboard.dtb \
 	am335x-wega-rdk.dtb
