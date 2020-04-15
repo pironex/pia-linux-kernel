@@ -26,6 +26,11 @@ MODULE_PARM_DESC(wbdebug, "activates debug info");
 struct wb_fmt wb_formats[] = {
 	{
 		.fourcc		= V4L2_PIX_FMT_NV12,
+		.coplanar	= 0,
+		.depth		= {8, 4},
+	},
+	{
+		.fourcc		= V4L2_PIX_FMT_NV12M,
 		.coplanar	= 1,
 		.depth		= {8, 4},
 	},
@@ -64,21 +69,21 @@ struct wb_fmt *find_format(struct v4l2_format *f)
 	return NULL;
 }
 
-enum omap_color_mode fourcc_to_dss(u32 fourcc)
+int omap_wb_fourcc_v4l2_to_drm(u32 fourcc)
 {
 	switch (fourcc) {
-	case DRM_FORMAT_XRGB8888:
-		return OMAP_DSS_COLOR_RGB24U;
-
-	case DRM_FORMAT_NV12:
-		return OMAP_DSS_COLOR_NV12;
-	case DRM_FORMAT_YUYV:
-		return OMAP_DSS_COLOR_YUV2;
-	case DRM_FORMAT_UYVY:
-		return OMAP_DSS_COLOR_UYVY;
+	case V4L2_PIX_FMT_NV12:
+	case V4L2_PIX_FMT_NV12M:
+		return DRM_FORMAT_NV12;
+	case V4L2_PIX_FMT_YUYV:
+		return DRM_FORMAT_YUYV;
+	case V4L2_PIX_FMT_UYVY:
+		return DRM_FORMAT_UYVY;
+	case V4L2_PIX_FMT_XBGR32:
+		return DRM_FORMAT_XRGB8888;
 	default:
-		WARN_ONCE(1, "WB: unsupported fourcc code: 0x%x\n", fourcc);
-		return OMAP_DSS_COLOR_UYVY;
+		BUG();
+		return 0;
 	}
 }
 

@@ -238,6 +238,7 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 		int status)
 {
 	struct dwc3			*dwc = dep->dwc;
+	unsigned int			unmap_after_complete = false;
 	int				i;
 
 	if (req->queued) {
@@ -262,11 +263,19 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	if (req->request.status == -EINPROGRESS)
 		req->request.status = status;
 
-	if (dwc->ep0_bounced && dep->number <= 1)
+	/*
+	 * NOTICE we don't want to unmap before calling ->complete() if we're
+	 * dealing with a bounced ep0 request. If we unmap it here, we would end
+	 * up overwritting the contents of req->buf and this could confuse the
+	 * gadget driver.
+	 */
+	if (dwc->ep0_bounced && dep->number <= 1) {
 		dwc->ep0_bounced = false;
-
-	usb_gadget_unmap_request(&dwc->gadget, &req->request,
-			req->direction);
+		unmap_after_complete = true;
+	} else {
+		usb_gadget_unmap_request(&dwc->gadget,
+				&req->request, req->direction);
+	}
 
 	dev_dbg(dwc->dev, "request %p from %s completed %d/%d ===> %d\n",
 			req, dep->name, req->request.actual,
@@ -276,6 +285,10 @@ void dwc3_gadget_giveback(struct dwc3_ep *dep, struct dwc3_request *req,
 	spin_unlock(&dwc->lock);
 	usb_gadget_giveback_request(&dep->endpoint, &req->request);
 	spin_lock(&dwc->lock);
+
+	if (unmap_after_complete)
+		usb_gadget_unmap_request(&dwc->gadget,
+				&req->request, req->direction);
 }
 
 int dwc3_send_gadget_generic_command(struct dwc3 *dwc, unsigned cmd, u32 param)
@@ -1221,7 +1234,7 @@ static int dwc3_gadget_ep_queue(struct usb_ep *ep, struct usb_request *request,
 		goto out;
 	}
 
-	if (WARN(req->dep != dep, "request %p belongs to '%s'\n",
+	if (WARN(req->dep != dep, "request %pK belongs to '%s'\n",
 				request, req->dep->name)) {
 		ret = -EINVAL;
 		goto out;
@@ -1276,7 +1289,7 @@ static int dwc3_gadget_ep_dequeue(struct usb_ep *ep,
 			dwc3_stop_active_transfer(dwc, dep->number, true);
 			goto out1;
 		}
-		dev_err(dwc->dev, "request %p was not queued to %s\n",
+		dev_err(dwc->dev, "request %pK was not queued to %s\n",
 				request, ep->name);
 		ret = -EINVAL;
 		goto out0;
@@ -1566,11 +1579,10 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	is_on = !!is_on;
 
-	if (is_on)
-		reinit_completion(&dwc->reset_event);
-
 	spin_lock_irqsave(&dwc->lock, flags);
 	ret = dwc3_gadget_run_stop(dwc, is_on, false);
+	if (is_on)
+		dwc->reset_event = 0;
 	spin_unlock_irqrestore(&dwc->lock, flags);
 
 try:
@@ -1593,7 +1605,7 @@ try:
 	if (is_on && dwc->revision < DWC3_REVISION_220A &&
 	    dwc->current_mode == DWC3_GCTL_PRTCAP_DEVICE) {
 		u32 devspd, ltssm;
-		unsigned long t;
+		int i;
 
 		/* only applicable if devspd != SUPERSPEED */
 		devspd = dwc3_readl(dwc->regs, DWC3_DCFG) & DWC3_DCFG_SPEED_MASK;
@@ -1605,17 +1617,25 @@ try:
 		 * metastability issue. If we got a reset event then we are
 		 * safe and can continue.
 		 */
-		t = wait_for_completion_timeout(&dwc->reset_event,
-						msecs_to_jiffies(100));
-		if (t)
-			goto done;
+		for (i = 0; i < 100; i++) {
+			if (dwc->reset_event)
+				goto done;
 
-		/* get link state */
-		ltssm = dwc3_readl(dwc->regs, DWC3_GDBGLTSSM);
-		ltssm = (ltssm >> 22) & 0xf;
+			/* get link state */
+			ltssm = dwc3_readl(dwc->regs, DWC3_GDBGLTSSM);
+			ltssm = (ltssm >> 22) & 0xf;
+
+			/**
+			 * If link state != 4 we've hit the metastability issue.
+			 */
+			if (ltssm != 4)
+				break;
+
+			mdelay(1);
+		}
 
 		/**
-		 * If link state != 4 we've hit the metastability issue, soft reset.
+		 * If link state == 4 after 100ms, we've not hit the metastability issue.
 		 */
 		if (ltssm == 4)
 			goto done;
@@ -1643,7 +1663,6 @@ try:
 			return ret;
 		}
 
-		reinit_completion(&dwc->reset_event);
 		/* restart gadget */
 		ret = dwc3_gadget_restart(dwc);
 		if (ret) {
@@ -1983,7 +2002,7 @@ static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
 		 * would help. Lets hope that if this occurs, someone
 		 * fixes the root cause instead of looking away :)
 		 */
-		dev_err(dwc->dev, "%s's TRB (%p) still owned by HW\n",
+		dev_err(dwc->dev, "%s's TRB (%pK) still owned by HW\n",
 				dep->name, trb);
 	count = trb->size & DWC3_TRB_SIZE_MASK;
 
@@ -2417,7 +2436,7 @@ static void dwc3_gadget_reset_interrupt(struct dwc3 *dwc)
 	}
 
 	/* notify run/stop metastability workaround */
-	complete(&dwc->reset_event);
+	dwc->reset_event = 1;
 
 	dwc3_reset_gadget(dwc);
 
@@ -2512,6 +2531,8 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 		dwc->gadget.speed = USB_SPEED_LOW;
 		break;
 	}
+
+	dwc->eps[1]->endpoint.maxpacket = dwc->gadget.ep0->maxpacket;
 
 	/* Enable USB2 LPM Capability */
 
@@ -2957,8 +2978,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	 * on ep out.
 	 */
 	dwc->gadget.quirk_ep_out_aligned_size = true;
-
-	init_completion(&dwc->reset_event);
 
 	/*
 	 * REVISIT: Here we should clear all pending IRQs to be

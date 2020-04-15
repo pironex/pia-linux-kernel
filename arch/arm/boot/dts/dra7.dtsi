@@ -179,7 +179,7 @@
 						pbias_mmc_reg: pbias_mmc_omap5 {
 							regulator-name = "pbias_mmc_omap5";
 							regulator-min-microvolt = <1800000>;
-							regulator-max-microvolt = <3000000>;
+							regulator-max-microvolt = <3300000>;
 						};
 					};
 
@@ -300,7 +300,6 @@
 			 * node and enable pcie1_ep mode.
 			 */
 			pcie1_rc: pcie_rc@51000000 {
-				compatible = "ti,dra7-pcie";
 				reg = <0x51000000 0x2000>, <0x51002000 0x14c>, <0x1000 0x2000>;
 				reg-names = "rc_dbics", "ti_conf", "config";
 				interrupts = <0 232 0x4>, <0 233 0x4>;
@@ -309,17 +308,21 @@
 				device_type = "pci";
 				ranges = <0x81000000 0 0          0x03000 0 0x00010000
 					  0x82000000 0 0x20013000 0x13000 0 0xffed000>;
+				bus-range = <0x00 0xff>;
 				#interrupt-cells = <1>;
 				num-lanes = <1>;
 				linux,pci-domain = <0>;
 				ti,hwmods = "pcie1";
 				phys = <&pcie1_phy>;
 				phy-names = "pcie-phy0";
+				syscon-lane-conf = <&scm_conf 0x558>;
+				syscon-lane-sel = <&scm_conf_pcie 0x18>;
 				interrupt-map-mask = <0 0 0 7>;
 				interrupt-map = <0 0 0 1 &pcie1_intc 1>,
 						<0 0 0 2 &pcie1_intc 2>,
 						<0 0 0 3 &pcie1_intc 3>,
 						<0 0 0 4 &pcie1_intc 4>;
+				syscon-legacy-mode = <&scm_conf1 0x14 1>;
 				status = "disabled";
 				pcie1_intc: interrupt-controller {
 					interrupt-controller;
@@ -329,7 +332,6 @@
 			};
 
 			pcie1_ep: pcie_ep@51000000 {
-				compatible = "ti,dra7-pcie-ep";
 				reg = <0x51000000 0x28>, <0x51002000 0x14c>, <0x51001000 0x28>, <0x1000 0x10000000>;
 				reg-names = "ep_dbics", "ti_conf", "ep_dbics2", "addr_space";
 				interrupts = <0 232 0x4>;
@@ -339,7 +341,7 @@
 				ti,hwmods = "pcie1";
 				phys = <&pcie1_phy>;
 				phy-names = "pcie-phy0";
-				syscon-legacy-mode = <&scm_conf1 0x14 2>;
+				syscon-legacy-mode = <&scm_conf1 0x14 1>;
 				status = "disabled";
 			};
 		};
@@ -351,8 +353,7 @@
 			ranges = <0x51800000 0x51800000 0x3000
 				  0x0	     0x30000000 0x10000000>;
 			status = "disabled";
-			pcie@51800000 {
-				compatible = "ti,dra7-pcie";
+			pcie2_rc: pcie@51800000 {
 				reg = <0x51800000 0x2000>, <0x51802000 0x14c>, <0x1000 0x2000>;
 				reg-names = "rc_dbics", "ti_conf", "config";
 				interrupts = <0 355 0x4>, <0 356 0x4>;
@@ -361,6 +362,7 @@
 				device_type = "pci";
 				ranges = <0x81000000 0 0          0x03000 0 0x00010000
 					  0x82000000 0 0x30013000 0x13000 0 0xffed000>;
+				bus-range = <0x00 0xff>;
 				#interrupt-cells = <1>;
 				num-lanes = <1>;
 				linux,pci-domain = <1>;
@@ -372,6 +374,7 @@
 						<0 0 0 2 &pcie2_intc 2>,
 						<0 0 0 3 &pcie2_intc 3>,
 						<0 0 0 4 &pcie2_intc 4>;
+				syscon-legacy-mode = <&scm_conf1 0x14 2>;
 				pcie2_intc: interrupt-controller {
 					interrupt-controller;
 					#address-cells = <0>;
@@ -1003,7 +1006,7 @@
 		};
 
 		dmm@4e000000 {
-			compatible = "ti,omap5-dmm";
+			compatible = "ti,dra7-dmm", "ti,omap5-dmm";
 			reg = <0x4e000000 0x800>;
 			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
 			ti,hwmods = "dmm";
@@ -2385,6 +2388,26 @@
 
 &cpu_thermal {
 	polling-delay = <500>; /* milliseconds */
+};
+
+&cpu_crit {
+	temperature = <120000>; /* milli Celsius */
+};
+
+&core_crit {
+	temperature = <120000>; /* milli Celsius */
+};
+
+&gpu_crit {
+	temperature = <120000>; /* milli Celsius */
+};
+
+&dspeve_crit {
+	temperature = <120000>; /* milli Celsius */
+};
+
+&iva_crit {
+	temperature = <120000>; /* milli Celsius */
 };
 
 /include/ "dra7xx-clocks.dtsi"

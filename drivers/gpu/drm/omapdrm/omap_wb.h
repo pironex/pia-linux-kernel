@@ -93,9 +93,6 @@ struct wb_fmt {
 extern struct wb_fmt wb_formats[];
 extern unsigned int num_wb_formats;
 
-/* Return a specific unsigned byte from an unsigned int */
-#define GET_BYTE(c, b) ((c >> (b * 8)) & 0xff)
-
 struct wb_buffer {
 	struct vb2_v4l2_buffer	vb;
 	struct list_head	list;
@@ -222,7 +219,7 @@ static inline dma_addr_t vb2_dma_addr_plus_data_offset(struct vb2_buffer *vb,
 		vb->planes[plane_no].data_offset;
 }
 
-enum omap_color_mode fourcc_to_dss(u32 fourcc);
+int omap_wb_fourcc_v4l2_to_drm(u32 fourcc);
 
 void wbm2m_irq(struct wbm2m_dev *dev, uint32_t irqstatus);
 int wbm2m_init(struct wb_dev *dev);
